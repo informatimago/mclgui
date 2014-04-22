@@ -726,7 +726,7 @@ The valid value range is from -1.0 to 1.0. The value of 0.0 corresponds to 0 deg
                                                              NSFontNameAttribute            name
                                                              NSFontSizeAttribute            (coerce size 'ns:cgfloat)
                                                              NSForegroundColorAttributeName (if (zerop color)
-                                                                                              (make-color 65535 0 0)
+                                                                                              (make-color 0 0 0)
                                                                                               (error "Color for font not implemented yet."))
                                                              NSFontTraitsAttribute          (unwrap-plist
                                                                                              (list NSFontSymbolicTrait  (font-traits-to-mask traits)))
