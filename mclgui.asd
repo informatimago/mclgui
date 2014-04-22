@@ -16,7 +16,7 @@
 ;;;;LEGAL
 ;;;;    GPL3
 ;;;;    
-;;;;    Copyright Pascal J. Bourguignon 2012 - 2012
+;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
 ;;;;    
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
@@ -45,9 +45,9 @@
                  "alexandria"
                  "split-sequence"
                  "com.informatimago.objcl"
+                 "com.informatimago.clext"   ; closer-weak: wrapper.lisp uses weak lists
                  ;; While developping:
-                 "com.informatimago.common-lisp.cesarum"
-                 "com.informatimago.clext")  ; closer-weak
+                 "com.informatimago.common-lisp.cesarum")
     :components ((:file "package")
 
                  (:file "macros"
@@ -359,8 +359,10 @@
                  #+has-appleevent
                  (:file "apple-event"
                         :depends-on ("package" "application"))
-                 ;; MCLGUI:
 
+
+                 ;; MCLGUI:
+                 
                  (:file "mclgui"
                         :depends-on ("package"
                                      "macros" "variables" "process"
