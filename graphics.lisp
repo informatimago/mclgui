@@ -66,7 +66,6 @@
   str)
 
 
-
 (defun draw-point (x y)
   ;; (format-trace "draw-point" x y *current-view* (when *current-view* (view-window *current-view*)))
   (when *current-view*

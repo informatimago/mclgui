@@ -46,7 +46,8 @@
                  "split-sequence"
                  "com.informatimago.objcl"
                  ;; While developping:
-                 "com.informatimago.common-lisp.cesarum") 
+                 "com.informatimago.common-lisp.cesarum"
+                 "com.informatimago.clext")  ; closer-weak
     :components ((:file "package")
 
                  (:file "macros"
