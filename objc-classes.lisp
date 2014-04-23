@@ -892,6 +892,7 @@ or to NIL outside of drawRect:.")
   method:(mouseDown:(:id)event)
   resultType:(:void)
   body:
+  [super mouseDown:event]
   (format t "~&mouseDown: 1 *calling-super* ~S event ~S~%" *calling-super* event)
   (unless *calling-super*
     (format t "~&mouseDown: 2 *calling-super* ~S event ~S~%" *calling-super* event)
@@ -903,6 +904,7 @@ or to NIL outside of drawRect:.")
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
+  [super mouseUp:event]
   (unless *calling-super*
     (setf (slot-value self 'event) event)
     (objc-mouse-up self event)
@@ -912,6 +914,7 @@ or to NIL outside of drawRect:.")
   method:(keyDown:(:id)event)
   resultType:(:void)
   body:
+  [super keyDown:event]
   (unless *calling-super*
     (setf (slot-value self 'event) event)
     (objc-key-down (nsview-view self) event)
