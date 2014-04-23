@@ -1,6 +1,5 @@
 (in-package :ui)
 (initialize)
-(defparameter *w* (make-instance 'window :window-title "Test"))
 
 (defclass boxed-static-text-dialog-item (static-text-dialog-item)
   ())
@@ -19,6 +18,7 @@
                 (point-v (view-size item)))))
 
 
+(defparameter *w* (make-instance 'window :window-title "Test"))
 
 (progn
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
@@ -38,16 +38,41 @@
                  :dialog-item-action (lambda (item)
                                        (format t "~&~S ~S~%" item (dialog-item-text item)))
                  :view-position (make-point 20 30)
+                 :view-size     (make-point 100 20))
+
+                (make-instance
+                 'boxed-editable-text-dialog-item
+                 :dialog-item-text "Another edit"
+                 :dialog-item-action (lambda (item)
+                                       (format t "~&~S ~S~%" item (dialog-item-text item)))
+                 :view-position (make-point 20 50)
                  :view-size     (make-point 100 20))))
 
 
-(map 'list (lambda (x) (list (class-name (class-of x)) (dialog-item-enabled-p x)))
-  (view-subviews *w*))
-((boxed-static-text-dialog-item nil) (boxed-editable-text-dialog-item t))
+(defmethod first-responder ((w window))
+  (with-handle (winh w)
+    [winh firstResponder]))
 
-(view-draw-contents (aref (view-subviews *w*) 0))
-(invalidate-view (aref (view-subviews *w*) 0))
-(remove-subviews *w* (aref (view-subviews *w*) 0))
+#-(and)(progn
+         
+         (values (first-responder  (first (windows)))
+                 (handle (aref (view-subviews (first (windows))) 2)))
 
 
-(window-close *w*)
+         (values (map 'list 'dialog-item-text
+                   (view-subviews (first (windows))))
+                 (map 'list (lambda (x) (with-handle (h x) (objcl:lisp-string [h stringValue])))
+                   (view-subviews (first (windows)))))
+
+
+         (map 'list (lambda (x) (list (class-name (class-of x)) (dialog-item-enabled-p x)))
+           (view-subviews *w*))
+         ((boxed-static-text-dialog-item nil) (boxed-editable-text-dialog-item t))
+
+         (view-draw-contents (aref (view-subviews *w*) 0))
+         (invalidate-view (aref (view-subviews *w*) 0))
+         (remove-subviews *w* (aref (view-subviews *w*) 0))
+
+
+         (window-close *w*)
+         )
