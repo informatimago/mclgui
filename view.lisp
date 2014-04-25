@@ -73,22 +73,6 @@
 ;;                      (point-v size))))
 
 
-
-(defmethod update-handle ((view simple-view))
-  (let ((pos (or (slot-value view 'view-position) #@(0   0)))
-        (siz (or (slot-value view 'view-size)     #@(10 10))))
-   (setf (handle view) [[MclguiView alloc]
-                        initWithFrame:(ns:make-ns-rect (point-h pos) (point-v pos)
-                                                       (point-h siz) (point-v siz))]
-         (slot-value (handle view) 'view) view))
-  (handle view))
-
-
-(defmethod unwrap ((view simple-view))
-  (unwrapping view
-    (or (handle view) (update-handle view))))
-
-
 (defmethod initialize-instance ((view view) &key view-font &allow-other-keys)
   (declare (stepper trace))
   (unless (and (slot-boundp view 'view-position)
@@ -218,57 +202,57 @@ VIEW-OR-WINDOW: An instance of VIEW, that can be a WINDOW.
 HANDLE:         A variable.
 
 DO:             Evaluates the BODY in a lexical environment where
-                HANDLE is bound to the handle of the view or of the
-                contentView of the window.
+                HANDLE is bound to the handle of the contentView of
+                the window of the view.
 "
-  (let ((vov (gensym)))
-    `(let* ((,vov      ,view-or-window)
-            (,handle   (handle ,vov)))
-       (when ,handle
-         (let ((,handle (if (typep ,vov 'window)
-                            [,handle contentView]
-                            ,handle)))
+  (let ((vov (gensym))
+        (winh (gensym)))
+    `(let* ((,vov  ,view-or-window)
+            (,winh (handle (if (typep ,vov 'window)
+                               ,vov
+                               (view-window ,vov)))))
+       (when ,winh
+         (let ((,handle [,winh contentView]))
            ,@body)))))
 
 
 (defgeneric call-with-focused-view (view function &optional font-view)
   (:method ((view simple-view) function &optional font-view)
     (with-view-handle (handle view)
-      (when handle
-        (let ((unlock   nil))
-          #-(and) (or (null font-view) (eq font-view old-font-view))
-          (if  (or (eq view *current-view*) *view-draw-contents-from-drawRect*)
-               (if (eq font-view *current-font-view*)
-                   (let ((*current-view* view))
-                     (call-with-pen-state (lambda () (funcall function view))
-                                          (view-pen view)))
-                   (unwind-protect
-                        (let* ((*current-view* view)
-                               (*current-font-view*  font-view)
-                               (*current-font-codes* (set-font *current-font-view*))) ; change font
+      (let ((unlock   nil))
+        #-(and) (or (null font-view) (eq font-view old-font-view))
+        (if  (or (eq view *current-view*) *view-draw-contents-from-drawRect*)
+             (if (eq font-view *current-font-view*)
+                 (let ((*current-view* view))
+                   (call-with-pen-state (lambda () (funcall function view))
+                                        (view-pen view)))
+                 (unwind-protect
+                      (let* ((*current-view* view)
+                             (*current-font-view*  font-view)
+                             (*current-font-codes* (set-font *current-font-view*))) ; change font
+                        (call-with-pen-state (lambda () (funcall function view))
+                                             (view-pen view)))
+                   (set-font *current-font-view*))) ; revert font
+             (unwind-protect
+                  (let ((*current-view* view)
+                        (*current-font-view* (or font-view *current-font-view*))
+                        (*current-font-codes* (copy-list *current-font-codes*)))
+                    (if (setf unlock [handle lockFocusIfCanDraw])
+                        (progn
+                          ;; (format-trace "did lockFocusIfCanDraw" view)
+                          (focus-view *current-view* *current-font-view*)
+                          (apply (function set-current-font-codes) (set-font *current-font-view*))
                           (call-with-pen-state (lambda () (funcall function view))
-                                               (view-pen view)))
-                     (set-font *current-font-view*))) ; revert font
-               (unwind-protect
-                    (let ((*current-view* view)
-                          (*current-font-view* (or font-view *current-font-view*))
-                          (*current-font-codes* (copy-list *current-font-codes*)))
-                      (if (setf unlock [handle lockFocusIfCanDraw])
-                          (progn
-                            ;; (format-trace "did lockFocusIfCanDraw" view)
-                            (focus-view *current-view* *current-font-view*)
-                            (apply (function set-current-font-codes) (set-font *current-font-view*))
-                            (call-with-pen-state (lambda () (funcall function view))
-                                                 (view-pen view))
-                            [[NSGraphicsContext currentContext] flushGraphics])
-                          ;; (format-trace "could not lockFocusIfCanDraw" view)
-                          ))
-                 (when unlock
-                   (set-font *current-font-view*)
-                   [handle unlockFocus]
-                   ;;(format-trace "did unlockFocusIfCanDraw" view)
-                   )
-                 (focus-view *current-view* *current-font-view*))))))))
+                                               (view-pen view))
+                          [[NSGraphicsContext currentContext] flushGraphics])
+                        ;; (format-trace "could not lockFocusIfCanDraw" view)
+                        ))
+               (when unlock
+                 (set-font *current-font-view*)
+                 [handle unlockFocus]
+                 ;;(format-trace "did unlockFocusIfCanDraw" view)
+                 )
+               (focus-view *current-view* *current-font-view*)))))))
 
 
 
@@ -294,11 +278,8 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
     (setf *current-font-view* font-view
           *current-view* nil))
   (:method ((view simple-view) &optional font-view)
-    (if  (handle view)
-         (progn
-           (setf *current-font-view* font-view
-                 *current-view* view))
-         (focus-view nil font-view))))
+    (setf *current-font-view* font-view
+          *current-view* view)))
 
 
 
@@ -351,7 +332,6 @@ VIEW:           A view installed in a window, or NIL.  If NIL, the
 
 
 
-
 (defgeneric install-view-in-window (view window)
   (:documentation "
 DO:             Installs VIEW in the WINDOW window.
@@ -368,11 +348,17 @@ VIEW:           A view or subview, but not a window. Instances of
 
 WINDOW:         A window.
 ")
+  (:method :before ((view simple-view) window)
+    (assert (eq (view-window view) window)))
+  (:method :before ((view view) window)
+    (declare (ignore window))
+    (setf (view-clip-region-slot view) (new-region)
+          (view-valid view) (cons nil (view-valid (view-container view)))))
   (:method ((view simple-view) window)
+    (declare (ignore window)))
+  (:method ((view view) window)
     (dovector (subview (view-subviews view))
-              (install-view-in-window subview window))))
-
-
+      (install-view-in-window subview window))))
 
 
 (defgeneric remove-view-from-window (view)
@@ -388,56 +374,43 @@ DO:             Remove view from its container.  It should never be
 VIEW:           A view or subview, but not a window.  Instances of
                 window cannot have containers.
 ")
-  (:method ((view simple-view))
+  (:method ((view simple-view)))
+  (:method ((view view))
     (dovector (subview (view-subviews view))
-              (remove-view-from-window subview))))
+      (remove-view-from-window subview)))
+  (:method :after ((view view))
+    (let ((rgn (view-clip-region-slot view)))
+      (when rgn
+        (setf (view-clip-region-slot view) nil)
+        (dispose-region rgn)))
+    (setf (view-valid view) nil)))
 
 
 (defgeneric add-view-to-container (view container)
   (:documentation "
-DO:             Add the VIEW to container, and its NSView as subview
-                of the NSView of the CONTAINER.
+DO:             Add the VIEW to container.
 
 POST:           (eq (view-container view) container)
 
 RETURN:         VIEW.
 ")
   (:method ((view simple-view) (container view))
-    (let ((viewh         (handle view))
-          (superh        (handle container)))
-      (let ((siblings (view-subviews container)))
-        (vector-push-extend view siblings))
-      (setf (slot-value view 'view-container) container)
-      (when (and viewh superh)
-        (on-main-thread [superh addSubview:viewh]))
-      view))
-  (:method ((view simple-view) (container window))
-    (let ((viewh         (handle view))
-          (winh          (handle container)))
-      (let ((siblings (view-subviews container)))
-        (vector-push-extend view siblings))
-      (setf (slot-value view 'view-container) container)
-      (when (and viewh winh)
-        (on-main-thread [[winh contentView] addSubview:viewh]))
-      view)))
+    (let ((siblings (view-subviews container)))
+      (vector-push-extend view siblings))
+    (setf (slot-value view 'view-container) container)
+    view))
 
 
 (defgeneric remove-view-from-superview (view)
   (:documentation "
-DO:             Remove the VIEW and its NSView from its superview.
+DO:             Remove the VIEW from its superview.
 NOTE:           the view-container is not changed.
 RETURN:         VIEW.
 ")
-  ;; Note: when view-container is a window, it still works, since view
-  ;; is a subview of the contentView of its NSWindow, so  [viewh
-  ;; removeFromSuperview] works correctly.
   (:method ((view simple-view))
-    (with-handle (viewh view)
-      (let ((old-container (view-container view)))
-        (deletef (slot-value old-container 'view-subviews) view)
-        (when viewh
-          (on-main-thread [viewh removeFromSuperview])))
-      view)))
+    (let ((old-container (view-container view)))
+      (deletef (slot-value old-container 'view-subviews) view))
+    view))
 
 
 (defgeneric set-view-container (view new-container)
@@ -714,6 +687,21 @@ WINDOW:         A window.
 ;;   (min max (max min value)))
 ;; (declaim (inline box))
 
+(defgeneric view-frame (view)
+  (:documentation "
+RETURN:  The VIEW rectangle in the view container coordinates.
+")
+  (:method ((view simple-view))
+    (make-rect (view-position view)
+               (add-points (view-position view) (view-size view)))))
+
+
+(defgeneric view-bounds (view)
+  (:documentation "
+RETURN:  The VIEW rectangle in the view coordinates.
+")
+  (:method ((view simple-view))
+    (make-rect #@(0 0) (view-size view))))
 
 
 (defgeneric invalidate-region (view region &optional erase-p)
@@ -742,10 +730,17 @@ ERASE-P:        A value indicating whether or not to add the
                 the view. The default is NIL.
 ")
   (:method ((view simple-view) region &optional erase-p)
-    (declare (ignore region erase-p)) ; TODO: for now we invalidate everything.
-    ;; (format-trace "invalidate-region" view)
-    (with-handle (viewh view)
-      [viewh setNeedsDisplay:yes])
+    (declare (ignore erase-p))
+    ;; TODO: for now we invalidate the region bounds or the view-frame.
+    (let ((window (view-window view)))
+      (when window
+        (needs-to-draw-rect window
+                            (convert-rectangle
+                             (if region
+                                 (region-bounds region)
+                                 (view-bounds view))
+                             view window))))
+
     #-(and)
     (let* ((wptr (wptr view)))
       (when wptr
@@ -781,13 +776,17 @@ ERASE-P:        A value indicating whether or not to add the
                     (#_sectrgn rgn3 rgn rgn))
                                         ; view coordinates
                   (when offset (#_offsetrgn  rgn (point-h offset)(point-v offset))) ; to window coords
-                  (#_UnionRgn rgn invalid-rgn invalid-rgn)))))))))
+                  (#_UnionRgn rgn invalid-rgn invalid-rgn))))))))
+    (values))
   
   (:method ((window window) region &optional erase-p)
     (declare (ignore region erase-p))
     ;; (format-trace "invalidate-region" window)
-    (with-handle (winh window)
-      [winh setViewsNeedDisplay:yes])))
+    (needs-to-draw-rect window
+                        (if region
+                            (region-bounds region)
+                            (view-bounds view)))
+    (values)))
 
 
 (defgeneric invalidate-corners (view topleft bottomright &optional erase-p)
@@ -804,19 +803,16 @@ ERASE-P:        A value indicating whether or not to add the
                 invalidated rectangle to the erase region of the
                 window of the view.  The default is NIL.
 ")
+
   (:method ((view simple-view) topleft bottomright &optional erase-p)
-    (declare (ignore erase-p))
-    ;; (format-trace "invalidate-corners" view)
-    (with-handle (viewh view)
-      [viewh setNeedsDisplayInRect:(ns:make-ns-rect (point-h topleft) (point-v topleft)
-                                                    (- (point-h bottomright) (point-h topleft))
-                                                    (- (point-v bottomright) (point-v topleft)))])
-    nil)
+    (set-rect-region *temp-region* topleft bottomright)
+    (invalidate-region view *temp-region* erase-p)
+    (values))
+  
   (:method ((window window) topleft bottomright &optional erase-p)
-    (declare (ignore topleft bottomright erase-p))
-    ;; (format-trace "invalidate-corners" window)
-    (with-handle (winh window)
-      [winh setViewsNeedDisplay:yes])))
+    (set-rect-region *temp-region* topleft bottomright)
+    (invalidate-region window *temp-region* erase-p)
+    (values)))
 
 
 (defgeneric invalidate-view (view &optional erase-p)
@@ -831,34 +827,28 @@ ERASE-P:        A value indicating whether or not to add the
                 window.  The default is NIL.
 ")
   (:method ((view simple-view) &optional erase-p)
-    (declare (ignore erase-p))
-    ;; (format-trace "invalidate-view" view)
-    (with-handle (viewh view)
-      [viewh setNeedsDisplay:yes]))
-
+    (invalidate-corners view #@(0 0) (view-size view) erase-p))
   (:method ((window window) &optional erase-p)
-    (declare (ignore erase-p))
-    ;; (format-trace "invalidate-view" window)
-    (with-handle (winh window)
-      [winh setViewsNeedDisplay:yes])))
+    (invalidate-corners window #@(0 0) (view-size view) erase-p)))
 
     
 
 
 (defgeneric validate-region (view region)
   (:documentation "
-DO:             Focus on the view and calls #_ValidRgn, removing the
-                region from view’s window erase region and explicit
-                invalidation region.
+
+DO:             Focus on the view and removes the region from view’s
+                window erase region and explicit invalidation region.
 
 VIEW:           A simple view.
 
-REGION:         A region. The region must be a Macintosh region handle,
-                that is, the result of (#_NewRgn).
+REGION:         A region. The region must be a region handle, that is,
+                the result of (new-region).
+
 ")
   (:method ((view simple-view) region)
     (declare (ignore region))
-    #| Nothing to do. |#
+    ;; TODO
     (values)))
 
 
@@ -926,11 +916,6 @@ RETURN:         (make-point h v)
       (unless (eql pos (view-position view))
         (invalidate-view view t)         
         (setf (%view-position view) pos)
-        (format-trace 'set-view-position   (point-to-list (slot-value view 'view-position)) (point-to-list pos) view)
-        (with-handle (viewh view)
-          (format-trace 'set-view-position '|setFrameOrigin:| (nspoint pos))
-          [viewh setFrameOrigin: (nspoint pos)]
-          #-(and) (on-main-thread [viewh setFrameOrigin: (nspoint pos)]))
         (invalidate-view view t))
       (refocus-view view)
       pos)))
@@ -959,14 +944,7 @@ V:              The height of the new size, or NIL if the complete
       (unless (eql siz (view-size view))
         (invalidate-view view t)
         (setf (slot-value view 'view-size) siz)
-        (invalidate-view view t)
-        (with-handle (viewh view)
-          [viewh setFrameSize: (nssize siz)]
-          [viewh setBounds: (nsrect (view-origin view) siz)]
-          #-(and)
-          (progn
-            (on-main-thread [viewh setFrameSize: (nssize siz)])
-            (on-main-thread [viewh setBounds: (nsrect (view-origin view) siz)]))))
+        (invalidate-view view t))
       (refocus-view view)
       siz)))
 
@@ -1056,6 +1034,7 @@ RETURN:         (make-point h v)
            (delta      (subtract-points old-sc-pos pt)))
       (with-focused-view view
         (unless (eql delta #@(0 0))
+          #-(and)
           (with-handle (viewh (if (typep view 'window)
                                   view))
             (if scroll-visibly
@@ -1064,7 +1043,7 @@ RETURN:         (make-point h v)
                 [viewh setBoundsOrigin:(nspoint pt)])
               (progn
                 [viewh setBoundsOrigin:(nspoint pt)])))
-          (invalidate-view view t))) ; calls [viewh setNeedsDisplay:YES].
+          (invalidate-view view t)))
       (make-view-invalid view)
       (setf (view-scroll-position view) pt)
       (refocus-view view)
@@ -1138,6 +1117,14 @@ SOURCE-VIEW:    A view in whose coordinate system point is given.
                     :source source-view
                     :destination destination-view)
       result)))
+
+
+(defun convert-rectangle (rect source-view destination-view)
+  (make-rect (convert-coordinates (rect-topleft rect)
+                                  source-view destination-view)
+             (convert-coordinates (rect-bottomright rect)
+                                  source-view destination-view)))
+
 
 #+pjb-debug
 (defmethod find-view-containing-point :around (view h &optional v direct-subviews-only)

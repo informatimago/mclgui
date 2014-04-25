@@ -799,6 +799,13 @@ RETURN: A NSPoint containing the origin of the nswindow.
   resultType:(:void)
   body:(objc-key-down (nswindow-window self) event)]
 
+(defun needs-to-draw-rect (window rect)
+  (with-handle (winh window)
+    [[winh contentView] setNeedsDisplayInRect:(rect-to-nsrect rect)]))
+
+(defun needs-to-display (window)
+  (with-handle (winh window)
+    [winh setViewsNeedDisplay:yes]))
 
 ;;;------------------------------------------------------------
 ;;; MclguiView
