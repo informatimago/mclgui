@@ -31,7 +31,6 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
 (in-package "MCLGUI")
 (enable-sharp-at-reader-macro)
 (objcl:enable-objcl-reader-macros)
@@ -387,12 +386,8 @@ V:              The vertical coordinate of the new position, or NIL if
             (mswindow (handle window)))
         (setf (%view-position window) pos)
         (when (and (not *window-moving*) mswindow)
-          (format-trace "Before mswindow setFrameOrigin:")
-          ;; (break)
           (on-main-thread [mswindow setFrameOrigin:(window-to-nswindow-origin pos (view-size window))])
-          (format-trace "Before mswindow invalidateShadow")
-          (on-main-thread [mswindow invalidateShadow])
-          (format-trace "After"))
+          (on-main-thread [mswindow invalidateShadow]))
         pos)
       (set-view-position window (center-window (view-size window) h)))) 
 
@@ -410,11 +405,8 @@ V:              The vertical coordinate of the new position, or NIL if
     (when (and (not *window-growing*) mswindow)
       (if [mswindow isVisible]
           (progn
-            (format-trace "Before mswindow setFrame:")
             (on-main-thread [mswindow setFrame:(window-to-nswindow-frame pos siz)])
-            (format-trace "Before mswindow invalidateShadow")
-            (on-main-thread [mswindow invalidateShadow])
-            (format-trace "After"))
+            (on-main-thread [mswindow invalidateShadow]))
           [mswindow setFrame:(window-to-nswindow-frame pos siz) display:NO]))
     (refocus-view window)
     siz))
@@ -738,11 +730,12 @@ DO:             Bring WINDOW to the front, activate it, and show
   (:method ((window null))
     ;; Sometimes (front-window) is nil
     (let ((window (front-window)))
-      (if window
-          (window-select window)
-          (when *selected-window*
-            (view-deactivate-event-handler *selected-window*)
-            (setq *selected-window* nil)))))
+      (cond
+        (window
+         (window-select window))
+        (*selected-window*
+         (view-deactivate-event-handler *selected-window*)
+         (setq *selected-window* nil)))))
 
   (:method ((window window))
     (setf *last-mouse-click-window* window)
@@ -1097,20 +1090,10 @@ RETURN:         A BOOLEAN value indicating whether view can perform
   (values))
 
 ;; (initialize/window)
-;; 
 ;; (map nil 'print *window-list*)
-
-;; 
 ;; (mapcar 'nswindow-window (cddr *window-list*))
-;; (type-of (first *window-list*)) gui::hemlock-listener-frame
-;; <HemlockListenerFrame: 0x1984970> (#x1984970)> 
-;; #<hemlock-frame <HemlockFrame: 0x1984860> (#x1984860)> 
-;; #<mclgui-window <MclguiWindow: 0x7c3f010> (#x7C3F010)> 
-;; #<mclgui-window <MclguiWindow: 0x7d0e8a0> (#x7D0E8A0)> 
-;; #<mclgui-window <MclguiWindow: 0x7c8e5e0> (#x7C8E5E0)> 
-;; #<mclgui-window <MclguiWindow: 0x7c5b750> (#x7C5B750)> 
-;; #<mclgui-window <MclguiWindow: 0x5eade0> (#x5EADE0)> 
-;; #<mclgui-window <MclguiWindow: 0x7c21d80> (#x7C21D80)> 
-;; #<mclgui-window <MclguiWindow: 0x7c54a70> (#x7C54A70)> 
-;; #<mclgui-window <MclguiWindow: 0x7c50630> (#x7C50630)> 
-;; #<mclgui-window <MclguiWindow: 0x7c6e910> (#x7C6E910)> nil
+;; (type-of (first *window-list*)) 
+
+
+
+;;;; THE END ;;;;
