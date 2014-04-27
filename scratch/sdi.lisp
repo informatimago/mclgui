@@ -12,20 +12,23 @@
                   (point-v (view-size view))))
     (call-next-method)))
 
+(progn
+ (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
 
-(let ((red (make-instance
-            'color-box 
-            :color *red-color*
-            :view-position (make-point 20 10)
-            :view-size     (make-point 100 20)))
-      (blue (make-instance
+ (let ((red (make-instance
              'color-box 
-             :color *blue-color*
-             :view-position (make-point 2 2)
-             :view-size     (make-point 16 16))))
-  (add-subviews red blue)
-  (add-subviews *w* red))
+             :color *red-color*
+             :view-position (make-point 20 10)
+             :view-size     (make-point 100 20)))
+       (blue (make-instance
+              'color-box 
+              :color *blue-color*
+              :view-position (make-point 2 2)
+              :view-size     (make-point 12 12))))
+   (add-subviews red blue)
+   (add-subviews *w* red)))
 
+(set-view-position  (aref (view-subviews *w*) 0) 30 20)
 (view-draw-contents (aref (view-subviews *w*) 0))
 
 

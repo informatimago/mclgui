@@ -225,7 +225,7 @@
 ;;;;LEGAL
 ;;;;    LGPL3
 ;;;;
-;;;;    Copyright Pascal J. Bourguignon 2012 - 2012
+;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
 ;;;;    Copyright Digitool, Inc.        1995 - 1999
 ;;;;    Copyright Apple Computer, Inc.  1989 - 1994
 ;;;;    Copyright Coral Software Corp.  1986 - 1988

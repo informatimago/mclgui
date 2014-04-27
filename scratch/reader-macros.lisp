@@ -17,7 +17,7 @@
 ;;;;LEGAL
 ;;;;    GPL3
 ;;;;    
-;;;;    Copyright Pascal J. Bourguignon 2012 - 2012
+;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
 ;;;;    Copyright IRCAM 1986 - 2012
 ;;;;    
 ;;;;    This program is free software: you can redistribute it and/or modify
