@@ -36,61 +36,6 @@
 (declaim (declaration stepper))
 
 
-
-;;; --------------------------------------------------------------------
-;;;
-;;; MAILBOX: to send one message between two threads.
-;;;
-;;; The consummer may call MAILBOX-COLLECT before or after the
-;;; producer calls MAILBOX-POST.   If it calls before, then it waits
-;;; until the producer notifies the mailbox is full.
-;;;
-
-(defstruct (mailbox
-            (:conc-name %mailbox-)
-            (:constructor %make-mailbox (lock condition)))
-  lock condition message full)
-
-(defun make-mailbox (&optional (name "mailbox"))
-  (declare (stepper disable))
-  (%make-mailbox (bt:make-lock name) (bt:make-condition-variable :name name)))
-
-(defun mailbox-collect (mailbox)
-  (declare (stepper disable))
-  (let (result)
-    (bt:with-lock-held ((%mailbox-lock mailbox))
-      (unless (%mailbox-full mailbox)
-        (bt:condition-wait (%mailbox-condition mailbox) (%mailbox-lock mailbox)))
-      (setf result (%mailbox-message mailbox)))
-    result))
-
-(defun mailbox-post (mailbox message)
-  (declare (stepper disable))
-  (bt:with-lock-held ((%mailbox-lock mailbox))
-    (setf (%mailbox-message mailbox) message
-          (%mailbox-full mailbox) t)
-    (bt:condition-notify (%mailbox-condition mailbox))))
-
-(defun test/mailbox ()
-  (let ((start (get-universal-time)))
-    (assert (equal (let ((mb (make-mailbox)))
-                     (bt:make-thread (lambda () (sleep 4) (mailbox-post mb 42)))
-                     (mailbox-collect mb))
-                   42))
-    (let ((end (get-universal-time)))
-      (assert (<= 3 (- end start) 5))))
-  (let ((start (get-universal-time)))
-    (assert (equal (let ((mb (make-mailbox)))
-                     (bt:make-thread (lambda () (mailbox-post mb 42)))
-                     (mailbox-collect mb))
-                   42))
-    (let ((end (get-universal-time)))
-      (assert (<= 0 (- end start) 1))))
-  :success)
-
-;;; --------------------------------------------------------------------
-
-
 (defvar *initial-process* nil)
 
 (defun generate-on-main-thread-form (body wait)

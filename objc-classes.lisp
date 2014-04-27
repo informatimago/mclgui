@@ -175,17 +175,14 @@
 
 
 (defmethod unwrap ((nspoint nspoint))
-  (unwrapping nspoint
-    (ns:make-ns-point (nspoint-x nspoint) (nspoint-y nspoint))))
+  (ns:make-ns-point (nspoint-x nspoint) (nspoint-y nspoint)))
 
 (defmethod unwrap ((nssize nssize))
-  (unwrapping nssize
-    (ns:make-ns-size (nssize-width nssize) (nssize-height nssize))))
+  (ns:make-ns-size (nssize-width nssize) (nssize-height nssize)))
 
 (defmethod unwrap ((nsrect nsrect))
-  (unwrapping nsrect
-    (ns:make-ns-rect (nsrect-x nsrect) (nsrect-y nsrect)
-                     (nsrect-width nsrect) (nsrect-height nsrect))))
+  (ns:make-ns-rect (nsrect-x nsrect) (nsrect-y nsrect)
+                   (nsrect-width nsrect) (nsrect-height nsrect)))
 
 ;; Shortcuts:
 
@@ -216,47 +213,6 @@
 
 
 ;;;------------------------------------------------------------
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; event what:
-  (defconstant null-event    0)
-  (defconstant mouse-down    1)
-  (defconstant mouse-up      2)
-  (defconstant key-down      3)
-  (defconstant key-up        4)
-  (defconstant auto-key      5)
-  (defconstant update-evt    6)
-  (defconstant disk-evt      7)
-  (defconstant activate-evt  8)
-  (defconstant network-evt  10)
-  (defconstant driver-evt   11)
-  (defconstant app1-evt     12)
-  (defconstant app2-evt     13)
-  (defconstant app3-evt     14)
-  (defconstant app4-evt     15)
-
-  (defconstant every-event     #xffff)
-  (defconstant mouse-down-mask (ash 1  1))
-  (defconstant mouse-up-mask   (ash 1  2))
-  (defconstant key-down-mask   (ash 1  3))
-  (defconstant key-up-mask     (ash 1  4))
-  (defconstant auto-key-mask   (ash 1  5))
-  (defconstant update-mask     (ash 1  6))
-  (defconstant disk-mask       (ash 1  7))
-  (defconstant activate-mask   (ash 1  8))
-  (defconstant network-mask    (ash 1 10))
-  (defconstant driver-mask     (ash 1 11))
-  (defconstant app1-mask       (ash 1 12))
-  (defconstant app2-mask       (ash 1 13))
-  (defconstant app3-mask       (ash 1 14))
-  (defconstant app4-mask       (ash 1 15))
-
-  (defconstant active-flag   1)
-  (defconstant btn-state     128)
-  (defconstant cmd-key       256)
-  (defconstant shift-key     512)
-  (defconstant alpha-lock    1024)
-  (defconstant option-key    2048)
-  );;eval-when
 
 (defparameter *event-map*
   `((,#$NSLeftMouseDown          . ,mouse-down)
@@ -327,62 +283,9 @@
              0
              nsmod)))
 
-
-
-(defstruct event
-  (what      0 :type integer)
-  (message   0)
-  (when      0 :type integer)
-  (where     0 :type point)
-  (modifiers 0 :type integer))
-
-(defvar *event-what-labels* #(null-event mouse-down mouse-up key-down
-                              key-up auto-key update-evt disk-evt
-                              activate-evt network-evt driver-evt app1-evt
-                              app2-evt app3-evt app4-evt))
-
-(defun event-what-label (what)
-  (if (<= null-event what app4-evt)
-      (aref *event-what-labels* what)
-      what))
-
-(defvar *event-modifier-labels `((,active-flag :active)
-                                 (,btn-state   :mouse-down)
-                                 (,cmd-key     :command)
-                                 (,shift-key   :shift)
-                                 (,alpha-lock  :alpha-lock)
-                                 (,option-key  :option)))
-
-(defun event-modifiers-label (modifiers)
-  (loop :for i from 0 to 15
-        :when (logbitp i modifiers)
-          :collect (or (second (assoc (expt 2 i) *event-modifier-labels)) i)))
-
-
-(defmethod print-object ((event event) stream)
-  (format stream "#S(~S" 'event)
-  (format stream " :what ~A" (event-what-label (event-what event)))
-  (format stream " :message ~S" (event-message event))
-  (format stream " :when ~S" (event-when event))
-  (format stream " :where #@(~A ~A)" (point-h (event-where event)) (point-v (event-where event)))
-  (format stream " :modifiers ~S" (event-modifiers-label (event-modifiers event)))
-  (format stream ")")
-  event)
-
-
-(defun assign-event (dst src)
-  "
-DO:             Copies the fields of SRC event to DST event.
-RETURN:         DST.
-"
-  (setf (event-what      dst) (event-what      src)
-        (event-message   dst) (event-message   src)
-        (event-when      dst) (event-when      src)
-        (event-where     dst) (event-where     src)
-        (event-modifiers dst) (event-modifiers src))
-  dst)
-
-(defconstant +tick-per-second+ 60 "Number of ticks per second.")
+(defun modifiers ()
+  "The current mac modifier flags."
+  (nsmodifier-to-macmodifier (modifier-flags)))
 
 (defmethod wrap ((nsevent ns:ns-event))
   ;; (format-trace 'wrap nsevent)
@@ -445,26 +348,7 @@ RETURN:         DST.
      :modifiers (nsmodifier-to-macmodifier [nsevent modifierFlags]))))
 
 
-(defun timestamp ()
-  "RETURN: The time in second since startup."
-  (/ (get-internal-real-time) internal-time-units-per-second))
 
-(defun get-tick-count ()
-  (truncate (timestamp) (/ +tick-per-second+)))
-
-(defun get-null-event ()
-  "RETURN: A new null event."
-  (make-event :what null-event
-              :when (get-tick-count)
-              :where (nspoint-to-point
-                      (let ((win (front-window)))
-                        (if win
-                            (let ((winh (handle win)))
-                              (if winh
-                                  (get-nspoint [winh mouseLocationOutsideOfEventStream])
-                                  (get-nspoint [NSEvent mouseLocation])))
-                            (get-nspoint [NSEvent mouseLocation]))))
-              :modifiers  (nsmodifier-to-macmodifier (modifier-flags))))
 
 
 ;;;------------------------------------------------------------
@@ -485,7 +369,7 @@ RETURN:         DST.
 
 
 ;;;------------------------------------------------------------
-
+;;; coordinates 
 
 (defmacro frame (call)
   (let ((vframe (gensym)))
@@ -495,8 +379,6 @@ RETURN:         DST.
         (ns:ns-rect-y ,vframe)
         (ns:ns-rect-width  ,vframe)
         (ns:ns-rect-height ,vframe)))))
-
-
 
 
 ;; wx = sx + vh
@@ -574,6 +456,60 @@ RETURN: A NSPoint containing the origin of the nswindow.
     (ns:make-ns-point (+ sx (point-h position))
                       (- (+ sy sh) (point-v position) (point-v size)))))
 
+
+;;;------------------------------------------------------------
+;;; mouse coordinates
+
+(defmacro with-view-handle ((handle view-or-window) &body body)
+  "
+VIEW-OR-WINDOW: An instance of VIEW, that can be a WINDOW.
+
+HANDLE:         A variable.
+
+DO:             Evaluates the BODY in a lexical environment where
+                HANDLE is bound to the handle of the contentView of
+                the window of the view.
+"
+  (let ((vov (gensym))
+        (winh (gensym)))
+    `(let* ((,vov  ,view-or-window)
+            (,winh (handle (if (typep ,vov 'window)
+                               ,vov
+                               (view-window ,vov)))))
+       (when ,winh
+         (let ((,handle [,winh contentView]))
+           ,@body)))))
+
+(defun window-mouse (window)
+  "Current position of the mouse in the coordinates of the given window."
+  (or (with-handle (winh window)
+        (with-view-handle (viewh window)
+          (nspoint-to-point
+           ;; only for 10.6+
+           #-(and) (unwrap (nsrect-origin (get-nsrect [winh convertRectFromScreen:[NSEvent mouseLocation]])))
+           ;; deprecated, but 10.6+ doesn't work on ccl-1.8.
+           (get-nspoint [viewh convertPoint:[winh mouseLocationOutsideOfEventStream]
+                               fromView:*null*]))))
+      (screen-mouse)))
+
+(defun screen-mouse ()
+  "Current position of the mouse in screen coordinates."
+  (nsscreen-to-screen-point (get-nspoint [NSEvent mouseLocation])))
+
+
+;;;------------------------------------------------------------
+;;; mouse buttons
+
+(defun any-button-down ()
+  "Whether any mouse button is pressed."
+  #-cocoa-10.6 (loop
+                 :for button :below 2
+                 :thereis (not (zerop (#_CGEventSourceButtonState
+                                       #$kCGEventSourceStateCombinedSessionState
+                                       button))))
+  #+cocoa-10.6 (not (zerop [NSEvent pressedMouseButtons])))
+
+
 ;;;------------------------------------------------------------
 ;;; Types.
 
@@ -602,40 +538,43 @@ RETURN: A NSPoint containing the origin of the nswindow.
 
 ;;;------------------------------------------------------------
 
-(defun objc-key-down (view event)
+(defun objc-key-event (view event)
+  (declare (ignore view))
   (let ((key (let ((chars (objcl:lisp-string [event characters])))
                (if (zerop (length chars))
                    nil
                    (aref chars 0)))))
-    (format-trace "-keyDown:" view key)
-    (when (and view key)
-      (let ((*current-event* (wrap event)))
-        (format-trace '|keyDown:| *current-event*)
-        (view-key-event-handler view key)))))
+    (when key
+      ;; (view-key-event-handler view key)
+      (post-event (wrap event)))))
 
 
 (defun objc-mouse-down (self event)
-  (when (nsview-view self)
-    (let* ((*multi-click-count* [event clickCount])
-           (*current-event*     (wrap event))
-           (view                (nsview-view self))
-           (where               (convert-coordinates
-                                 (event-where *current-event*)
-                                 (view-window view)
-                                 view)))
-      (format-trace '|mouseDown:| *multi-click-count* *current-event*)
-      (view-click-event-handler view where)
-      (when (= 2 *multi-click-count*)
-        (view-double-click-event-handler view where)))))
+  (declare (ignore self))
+  (post-event (wrap event))
+  #-(and) (when (nsview-view self)
+            (let* ((*multi-click-count* [event clickCount])
+                   (evt                 (wrap event))
+                   (view                (nsview-view self))
+                   (where               (convert-coordinates
+                                         (event-where evt)
+                                         (view-window view)
+                                         view)))
+              (format-trace '|mouseDown:| *multi-click-count* *current-event*)
+              (view-click-event-handler view where)
+              (when (= 2 *multi-click-count*)
+                (view-double-click-event-handler view where)))))
 
 
 (defun objc-mouse-up (self event)
-  (when (nsview-view self)
-    (let ((*multi-click-count* [event clickCount])
-          (*current-event*     (wrap event))
-          (view                (nsview-view self)))
-      (format-trace '|mouseUp:| *current-event*)
-      (window-mouse-up-event-handler (view-window view)))))
+  (declare (ignore self))
+  (post-event (wrap event))
+  #-(and) (when (nsview-view self)
+            (let ((*multi-click-count* [event clickCount])
+                  (*current-event*     (wrap event))
+                  (view                (nsview-view self)))
+              (format-trace '|mouseUp:| *current-event*)
+              (window-mouse-up-event-handler (view-window view)))))
 
 
 
@@ -763,15 +702,16 @@ RETURN: A NSPoint containing the origin of the nswindow.
       (when window
         (delete-from-list *window-list* window)
         (insert-into-list *window-list* 0 window)
-        (let ((*current-event* (get-null-event))
+        (let ((event (get-null-event))
               (*multi-click-count* 0))
-          (setf (event-what *current-event*) activate-evt
-                (event-modifiers *current-event*)
-                (logior (event-modifiers *current-event*)
+          (setf (event-what event) activate-evt
+                (event-modifiers event)
+                (logior (event-modifiers event)
                         active-flag)
-                (event-message *current-event*) window)
-          ;; (format-trace '|becomeMainWindow| *current-event*)
-          (view-activate-event-handler window)))))]
+                (event-message event) window)
+          ;; (format-trace '|becomeMainWindow| event)
+          ;; (view-activate-event-handler window)
+          (post-event event)))))]
 
 
 @[MclguiWindow
@@ -783,29 +723,53 @@ RETURN: A NSPoint containing the origin of the nswindow.
     (let ((window (nswindow-window self)))
       ;; (format-trace "-[MclguiWindow resignMainWindow]" window)
       (when window
-        (let ((*current-event* (get-null-event))
+        (let ((event (get-null-event))
               (*multi-click-count* 0))
-          (setf (event-what *current-event*) activate-evt
-                (event-modifiers *current-event*)
-                (logandc2 (event-modifiers *current-event*)
+          (setf (event-what event) activate-evt
+                (event-modifiers event)
+                (logandc2 (event-modifiers event)
                           active-flag)
-                (event-message *current-event*) window)
-          ;; (format-trace '|resignMainWindow| *current-event*)
-          (view-deactivate-event-handler window)))))]
+                (event-message event) window)
+          ;; (format-trace '|resignMainWindow| event)
+          ;; (view-deactivate-event-handler window)
+          (post-event event)))))]
 
 
 @[MclguiWindow
   method:(keyDown:(:id)event)
   resultType:(:void)
-  body:(objc-key-down (nswindow-window self) event)]
+  body:
+  (format-trace '|-[MclguiWindow keyDown:]| self event)
+  (objc-key-event (nswindow-window self) event)]
+
+@[MclguiWindow
+  method:(keyUp:(:id)event)
+  resultType:(:void)
+  body:
+  (format-trace '|-[MclguiWindow keyUp:]| self event)
+  (objc-key-event (nswindow-window self) event)]
 
 (defun needs-to-draw-rect (window rect)
   (with-handle (winh window)
-    [[winh contentView] setNeedsDisplayInRect:(rect-to-nsrect rect)]))
+    [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]))
 
 (defun needs-to-display (window)
   (with-handle (winh window)
     [winh setViewsNeedDisplay:yes]))
+
+@[MclguiWindow
+  method:(mouseDown:(:id)event)
+  resultType:(:void)
+  body:
+  (format-trace '|-[MclguiWindow mouseDown:]| self event)
+  (objc-mouse-down self event)]
+
+@[MclguiWindow
+  method:(mouseUp:(:id)event)
+  resultType:(:void)
+  body:
+  (format-trace '|-[MclguiWindow mouseUp:]| self event)
+  (objc-mouse-up self event)]
 
 ;;;------------------------------------------------------------
 ;;; MclguiView
@@ -840,12 +804,16 @@ or to NIL outside of drawRect:.")
 @[MclguiView
   method:(mouseDown:(:id)event)
   resultType:(:void)
-  body:(objc-mouse-down self event)]
+  body:
+  (format-trace '|-[MclguiView mouseDown:]| self event)
+  (objc-mouse-down self event)]
 
 @[MclguiView
   method:(mouseUp:(:id)event)
   resultType:(:void)
-  body:(objc-mouse-up self event)]
+  body:
+  (format-trace '|-[MclguiView mouseUp:]| self event)
+  (objc-mouse-up self event)]
 
 
 @[MclguiView
@@ -924,7 +892,7 @@ or to NIL outside of drawRect:.")
   [super keyDown:event]
   (unless *calling-super*
     (setf (slot-value self 'event) event)
-    (objc-key-down (nsview-view self) event)
+    (objc-key-event (nsview-view self) event)
     (setf (slot-value self 'event) nil))]
 
 @[MclguiTextField

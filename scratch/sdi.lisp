@@ -1,6 +1,38 @@
 (in-package :ui)
 (initialize)
 
+(defclass color-box (view)
+  ((color :initarg :color :initform *black-color*  :accessor color)))
+
+(defmethod view-draw-contents ((view color-box))
+  (with-focused-view view
+    (with-fore-color (color view)
+      (fill-rect* 0 0
+                  (point-h (view-size view))
+                  (point-v (view-size view))))
+    (call-next-method)))
+
+
+(let ((red (make-instance
+            'color-box 
+            :color *red-color*
+            :view-position (make-point 20 10)
+            :view-size     (make-point 100 20)))
+      (blue (make-instance
+             'color-box 
+             :color *blue-color*
+             :view-position (make-point 2 2)
+             :view-size     (make-point 16 16))))
+  (add-subviews red blue)
+  (add-subviews *w* red))
+
+(view-draw-contents (aref (view-subviews *w*) 0))
+
+
+
+
+
+
 (defclass boxed-static-text-dialog-item (static-text-dialog-item)
   ())
 
@@ -16,6 +48,7 @@
     (draw-rect* 0 0
                 (point-h (view-size item))
                 (point-v (view-size item)))))
+
 
 
 (defparameter *w* (make-instance 'window :window-title "Test"))

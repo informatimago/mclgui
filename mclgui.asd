@@ -36,7 +36,7 @@
     :name "mclgui"
     :description "Macintosh Common Lisp Graphical User Interface for OpenStep"
     :author "Pascal J. Bourguignon"
-    :version "1.0.3"
+    :version "1.0.4"
     :license "GPL3"
     :depends-on ("closer-mop" ; window.lisp uses closer-mop:class-precedence-list, etc.
                  "bordeaux-threads"
@@ -53,8 +53,14 @@
                  (:file "macros"
                         :depends-on ("package"))
 
-                 (:file "process"
+                 (:file "mutex"
                         :depends-on ("package"))
+                 
+                 (:file "mailbox"
+                        :depends-on ("package"))
+
+                 (:file "process"
+                        :depends-on ("package" "mailbox"))
 
                  (:file "variables"
                         :depends-on ("package" 
@@ -72,9 +78,15 @@
                         :depends-on ("package"
                                      "wrapper"))
 
+                 (:file "mac-event"
+                        :depends-on ("package"
+                                     "macros" "variables" "point" "mutex"))
+
                  (:file "objc-classes"
                         :depends-on ("package"
-                                      "macros" "wrapper" "variables" "point" "rect"))
+                                      "macros" "wrapper" "variables" "point" "rect"
+                                      "mac-event"))
+                 
                  (:file "graphics"
                         :depends-on ("package"
                                      "macros" "variables" "point" "color" "font"))

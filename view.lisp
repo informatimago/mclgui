@@ -160,7 +160,7 @@ All views contained in a given window have the same wptr.
 
 
 (defgeneric compute-view-region (view rgn container)
-  (:method ((view window) rgn container)
+  (:method ((view simple-view) rgn container)
     (declare (ignore container))
     (when rgn
       (let* ((topleft (view-origin view))
@@ -195,64 +195,52 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 ;; [(font-from-codes 65536 0) set]
 
 
-(defmacro with-view-handle ((handle view-or-window) &body body)
-  "
-VIEW-OR-WINDOW: An instance of VIEW, that can be a WINDOW.
-
-HANDLE:         A variable.
-
-DO:             Evaluates the BODY in a lexical environment where
-                HANDLE is bound to the handle of the contentView of
-                the window of the view.
-"
-  (let ((vov (gensym))
-        (winh (gensym)))
-    `(let* ((,vov  ,view-or-window)
-            (,winh (handle (if (typep ,vov 'window)
-                               ,vov
-                               (view-window ,vov)))))
-       (when ,winh
-         (let ((,handle [,winh contentView]))
-           ,@body)))))
-
 
 (defgeneric call-with-focused-view (view function &optional font-view)
   (:method ((view simple-view) function &optional font-view)
     (with-view-handle (handle view)
       (let ((unlock   nil))
-        #-(and) (or (null font-view) (eq font-view old-font-view))
-        (if  (or (eq view *current-view*) *view-draw-contents-from-drawRect*)
-             (if (eq font-view *current-font-view*)
-                 (let ((*current-view* view))
-                   (call-with-pen-state (lambda () (funcall function view))
-                                        (view-pen view)))
-                 (unwind-protect
-                      (let* ((*current-view* view)
-                             (*current-font-view*  font-view)
-                             (*current-font-codes* (set-font *current-font-view*))) ; change font
+        (flet ((call-it ()
+                 (let ((trans  [[NSAffineTransform class] performSelector:(objc:@selector |transform|)])
+                               ;; A bug in ccl prevents this to work: [NSAffineTransform transform]
+                       (origin (view-position view)))
+                   [trans translateXBy: (cgfloat (point-h origin)) yBy: (cgfloat (point-v origin))]
+                   [trans concat]
+                   (unwind-protect
                         (call-with-pen-state (lambda () (funcall function view))
-                                             (view-pen view)))
-                   (set-font *current-font-view*))) ; revert font
-             (unwind-protect
-                  (let ((*current-view* view)
-                        (*current-font-view* (or font-view *current-font-view*))
-                        (*current-font-codes* (copy-list *current-font-codes*)))
-                    (if (setf unlock [handle lockFocusIfCanDraw])
-                        (progn
-                          ;; (format-trace "did lockFocusIfCanDraw" view)
-                          (focus-view *current-view* *current-font-view*)
-                          (apply (function set-current-font-codes) (set-font *current-font-view*))
-                          (call-with-pen-state (lambda () (funcall function view))
-                                               (view-pen view))
-                          [[NSGraphicsContext currentContext] flushGraphics])
-                        ;; (format-trace "could not lockFocusIfCanDraw" view)
-                        ))
-               (when unlock
-                 (set-font *current-font-view*)
-                 [handle unlockFocus]
-                 ;;(format-trace "did unlockFocusIfCanDraw" view)
-                 )
-               (focus-view *current-view* *current-font-view*)))))))
+                                             (view-pen view))
+                     [trans invert]
+                     [trans concat]))))
+          #-(and) (or (null font-view) (eq font-view old-font-view))
+          (if  (or (eq view *current-view*) *view-draw-contents-from-drawRect*)
+               (if (eq font-view *current-font-view*)
+                   (let ((*current-view* view))
+                     (call-it))
+                   (unwind-protect
+                        (let* ((*current-view* view)
+                               (*current-font-view*  font-view)
+                               (*current-font-codes* (set-font *current-font-view*))) ; change font
+                          (call-it))
+                     (set-font *current-font-view*))) ; revert font
+               (unwind-protect
+                    (let ((*current-view* view)
+                          (*current-font-view* (or font-view *current-font-view*))
+                          (*current-font-codes* (copy-list *current-font-codes*)))
+                      (if (setf unlock [handle lockFocusIfCanDraw])
+                          (progn
+                            ;; (format-trace "did lockFocusIfCanDraw" view)
+                            (focus-view *current-view* *current-font-view*)
+                            (apply (function set-current-font-codes) (set-font *current-font-view*))
+                            (call-it)
+                            [[NSGraphicsContext currentContext] flushGraphics])
+                          ;; (format-trace "could not lockFocusIfCanDraw" view)
+                          ))
+                 (when unlock
+                   (set-font *current-font-view*)
+                   [handle unlockFocus]
+                   ;;(format-trace "did unlockFocusIfCanDraw" view)
+                   )
+                 (focus-view *current-view* *current-font-view*))))))))
 
 
 
@@ -734,12 +722,16 @@ ERASE-P:        A value indicating whether or not to add the
     ;; TODO: for now we invalidate the region bounds or the view-frame.
     (let ((window (view-window view)))
       (when window
-        (needs-to-draw-rect window
-                            (convert-rectangle
-                             (if region
-                                 (region-bounds region)
-                                 (view-bounds view))
-                             view window))))
+        (let ((bounds (convert-rectangle
+                       (if region
+                           (region-bounds region)
+                           (view-bounds view))
+                       view window)))
+          (when erase-p
+            (with-focused-view window
+              (with-fore-color (or (slot-value window 'back-color) *white-color*)
+                (fill-rect* (rect-left bounds) (rect-top bounds) (rect-right bounds) (rect-bottom bounds)))))
+          (needs-to-draw-rect window bounds))))
 
     #-(and)
     (let* ((wptr (wptr view)))
@@ -780,12 +772,12 @@ ERASE-P:        A value indicating whether or not to add the
     (values))
   
   (:method ((window window) region &optional erase-p)
-    (declare (ignore region erase-p))
+    (declare (ignore erase-p))
     ;; (format-trace "invalidate-region" window)
     (needs-to-draw-rect window
                         (if region
                             (region-bounds region)
-                            (view-bounds view)))
+                            (view-bounds window)))
     (values)))
 
 
@@ -805,13 +797,13 @@ ERASE-P:        A value indicating whether or not to add the
 ")
 
   (:method ((view simple-view) topleft bottomright &optional erase-p)
-    (set-rect-region *temp-region* topleft bottomright)
-    (invalidate-region view *temp-region* erase-p)
+    (set-rect-region *temp-rgn* topleft bottomright)
+    (invalidate-region view *temp-rgn* erase-p)
     (values))
   
   (:method ((window window) topleft bottomright &optional erase-p)
-    (set-rect-region *temp-region* topleft bottomright)
-    (invalidate-region window *temp-region* erase-p)
+    (set-rect-region *temp-rgn* topleft bottomright)
+    (invalidate-region window *temp-rgn* erase-p)
     (values)))
 
 
@@ -829,7 +821,7 @@ ERASE-P:        A value indicating whether or not to add the
   (:method ((view simple-view) &optional erase-p)
     (invalidate-corners view #@(0 0) (view-size view) erase-p))
   (:method ((window window) &optional erase-p)
-    (invalidate-corners window #@(0 0) (view-size view) erase-p)))
+    (invalidate-corners window #@(0 0) (view-size window) erase-p)))
 
     
 
@@ -1028,6 +1020,7 @@ RETURN:         (make-point h v)
     (declare (ignore scroll-visibly))
     (make-point h v))
   (:method ((view view) h &optional v (scroll-visibly t))
+    (declare (ignore scroll-visibly))
     (let* ((pt         (make-point h v))
            ;; (container  (view-container view))
            (old-sc-pos (view-scroll-position view))
@@ -1088,6 +1081,14 @@ RETURN:         Whether VIEW contains POINT.  The method for
 
 
 
+(defun %convert-to-window (view pt)
+  (if (or (typep view 'window)
+          (null (view-container view)))
+      pt
+      (convert-to-window (view-container view)
+                         (add-points (view-position view) pt))))
+
+
 (defun convert-coordinates (point source-view destination-view)
   "
 The CONVERT-COORDINATES function converts point from the coordinate
@@ -1101,29 +1102,25 @@ POINT:          A point, encoded as an integer.
 SOURCE-VIEW:    A view in whose coordinate system point is given.
 "
   (declare (stepper disable))
-  (labels ((convert-to-window (view pt)
-             (if (or (typep view 'window)
-                     (null (view-container view)))
-               pt
-               (convert-to-window (view-container view)
-                                  (add-points (view-position view) pt)))))
-    (let* ((src-offset (convert-to-window source-view      (view-origin source-view)))
-           (dst-offset (convert-to-window destination-view (view-origin destination-view)))
-           (result (add-points point (subtract-points src-offset dst-offset))))
-      #-(and)
-      (format-trace "convert-coordinates"
-                    (point-to-list point) :+ (point-to-list src-offset) :- (point-to-list dst-offset)
-                    :--> (point-to-list result)
-                    :source source-view
-                    :destination destination-view)
-      result)))
+  (let* ((src-offset (%convert-to-window source-view      (view-origin source-view)))
+         (dst-offset (%convert-to-window destination-view (view-origin destination-view)))
+         (result (add-points point (subtract-points src-offset dst-offset))))
+    #-(and)
+    (format-trace "convert-coordinates"
+                  (point-to-list point) :+ (point-to-list src-offset) :- (point-to-list dst-offset)
+                                        :--> (point-to-list result)
+                                        :source source-view
+                                        :destination destination-view)
+    result))
 
 
 (defun convert-rectangle (rect source-view destination-view)
-  (make-rect (convert-coordinates (rect-topleft rect)
-                                  source-view destination-view)
-             (convert-coordinates (rect-bottomright rect)
-                                  source-view destination-view)))
+  (declare (stepper disable))
+  (let* ((src-offset (%convert-to-window source-view      (view-origin source-view)))
+         (dst-offset (%convert-to-window destination-view (view-origin destination-view)))
+         (delta  (subtract-points src-offset dst-offset)))
+    (make-rect (add-points delta (rect-topleft rect))
+               (add-points delta (rect-bottomright rect)))))
 
 
 #+pjb-debug

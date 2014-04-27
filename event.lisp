@@ -31,8 +31,9 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
 (in-package "MCLGUI")
+
+
 
 
 (defgeneric view-activate-event-handler (view)
@@ -569,9 +570,23 @@ RETURN:         If called during event processing, return true if
             (caps-lock-key-p))))
 
 
-(defun wait-mouse-up-or-moved ()
-  (niy wait-mouse-up-or-moved)
-  t)
+;; (defvar *in-wait-mouse-up-or-moved* nil)
+;; (defun wait-mouse-up-or-moved ()
+;;   (if  (and *the-timer* (%i> *timer-count* 0))
+;;        (progn 
+;;          (when *in-wait-mouse-up-or-moved*
+;;            (error "Recursive call to wait-mouse-up-or-moved"))
+;;          (let ((*in-wait-mouse-up-or-moved* t))
+;;            (with-periodic-task-mask ($ptask_event-dispatch-flag t)  ;; don't let another process eat the mouse up event?
+;;              (when (still-down)
+;;                (rlet ((outpt :point)
+;;                       (out-res :unsigned-integer))
+;;                  (errchk (#_trackmouselocation (%null-ptr) outpt out-res))
+;;                  (let ((what (%get-unsigned-word out-res)))
+;;                    ;; T if mouse moved, key modifiers changed or ... , NIL iff mouse up
+;;                    (not (eq what #$kmousetrackingmouseup))))))))
+;;        (new-mouse-down-p)))
+
 
 (defmacro with-timer (&body body)
   (niy with-timer)
@@ -661,32 +676,6 @@ IDLE:           An argument representing whether the main Lisp process
 
 
 
-(defvar *out-of-band-event-queue* (cons nil nil))
-
-(defmacro with-mutex (object &body body)
-  (declare (ignore object))
-  `(progn ,@body))
-
-(defun post-event (event)
-  (print (list 'post-event event))
-  (let ((entry (list event)))
-    (with-mutex *out-of-band-event-queue*
-      (if (cdr *out-of-band-event-queue*)
-          (setf (cddr *out-of-band-event-queue*) entry
-                (cdr *out-of-band-event-queue*) entry)
-          (setf (car *out-of-band-event-queue*) entry
-                (cdr *out-of-band-event-queue*) entry))))
-  (values))
-
-(defun dequeue-event ()
-  (with-mutex *out-of-band-event-queue*  
-    (let ((entry (car *out-of-band-event-queue*)))
-      (when entry
-        (if (eq entry (cdr *out-of-band-event-queue*))
-            (setf (car *out-of-band-event-queue*) nil
-                  (cdr *out-of-band-event-queue*) nil)
-            (setf (car *out-of-band-event-queue*) (cdar *out-of-band-event-queue*)))
-        (car entry)))))
 
 
 

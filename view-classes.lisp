@@ -36,7 +36,7 @@
 
 ;;;---------------------------------------------------------------------
 
-(defclass simple-view (colored wrapper fundamental-character-output-stream)
+(defclass simple-view (colored fundamental-character-output-stream)
   ((help-spec            :initform nil         :initarg  :help-spec            :accessor help-spec)
    (view-container       :initform nil                                         :reader view-container
                          :documentation "The view that contains this view.")
@@ -159,7 +159,7 @@ DO:             Remove the property KEY from the VIEW.
 
 (defvar *next-window-ptr* 0)
 
-(defclass window (view)
+(defclass window (view  wrapper)
   ((window-cursor                    :reader    window-cursor
                                      :initform  *arrow-cursor*)
    (view-pen                         :reader    view-pen

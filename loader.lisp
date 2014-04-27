@@ -1,0 +1,5 @@
+(setf (logical-pathname-translations "MCLGUI")
+      '((#P"**;*.*.*" #P"/Users/pjb/works/patchwork/src/mclgui/**/*.*")
+        (#P"**;*.*" #P"/Users/pjb/works/patchwork/src/mclgui/**/*.*")
+        (#P"**;*" #P"/Users/pjb/works/patchwork/src/mclgui/**/*")
+        (#P"**;" #P"/Users/pjb/works/patchwork/src/mclgui/**/")))
