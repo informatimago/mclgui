@@ -239,7 +239,48 @@ FORM:           A symbol, function or lisp form.
     ;; TODO: see how to integrate with ccl::lisp-development-system
     (call-next-method)))
 
+;;;---------------------------------------------------------------------
+;;;
+;;; Run Loop task.
+;;;
+;;; We install a timer on the main run loop to process the events.
+;;;
 
+(defvar *run-loop-modes*     nil)
+(defvar *run-loop-timer*     nil)
+(defvar *run-loop-evaluator* nil)
+
+(defun run-loop-task ()
+  (reporting-errors
+   (let ((*idle* nil))
+    (event-dispatch))))
+
+;; (setf (evaluator-thunk *run-loop-evaluator*) (function run-loop-task))
+
+(defun initialize-run-loop-evaluator ()
+  (let* ((evaluator [[MclguiEvaluator alloc] init])
+         (timer [NSTimer timerWithTimeInterval: (cgfloat 1/60)
+                         target:evaluator
+                         selector:(objc:@selector |evaluate|)
+                         userInfo:*null*
+                         repeats:t]))
+    (setf (evaluator-thunk evaluator) (function run-loop-task))
+    (setf *run-loop-modes*    (list #$NSDefaultRunLoopMode
+                                    #$NSRunLoopCommonModes
+                                    ;; #$NSConnectionReplyMode
+                                    #$NSModalPanelRunLoopMode
+                                    #$NSEventTrackingRunLoopMode)
+          *run-loop-timer*     timer
+          *run-loop-evaluator* evaluator)
+    (dolist (mode *run-loop-modes*)
+      [[NSRunLoop mainRunLoop] addTimer:timer forMode:mode])
+    (values)))
+
+
+;;;---------------------------------------------------------------------
+;;;
+;;; Initialization
+;;;
 
 (defun initialize/application ()
   (setf *application*
@@ -251,6 +292,7 @@ FORM:           A symbol, function or lisp form.
                                           'application))
                         (make-instance 'application)))
         #-ccl (make-instance 'application))
+  (initialize-run-loop-evaluator)
   (values))
 
 ;;;; THE END ;;;;

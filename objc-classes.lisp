@@ -197,6 +197,9 @@
 
 (declaim (inline nsrect-to-list nsrect nspoint nssize))
 
+(defmacro sret (call)
+  (let ((vresult (gensym)))
+    `(oclo:slet ((,vresult ,call)) ,vresult)))
 
 (defmacro get-nspoint (call)
   (let ((vpoint (gensym)))
@@ -287,6 +290,31 @@
   "The current mac modifier flags."
   (nsmodifier-to-macmodifier (modifier-flags)))
 
+
+(defun encode-key-message (kcode characters)
+  (let ((kcode  (ldb (byte 8 0) kcode)))
+   (case (length characters)
+     ((0) (dpb kcode (byte 8 22) (byte 8 8) 0))
+     ((1) (let ((ccode (char-code (aref characters 0))))
+            (if (<= 0 ccode 255)
+                (dpb kcode (byte 8 8) ccode)
+                (dpb 1 (byte 1 31)
+                     (dpb kcode (byte 8 22)
+                          ccode)))))
+     (otherwise
+      (list kcode characters)))))
+
+(defun decode-key-message (message)
+  (if (listp message)
+      (values-list message)
+      (let ((extended (ldb (byte 1 31) message)))
+        (if (zerop extended)
+            (values (ldb (byte 8 8) message)
+                    (code-char (ldb (byte 8 0) message)))
+            (values (ldb (byte 8 22) message)
+                    (code-char (ldb (byte 21 0) message)))))))
+
+
 (defmethod wrap ((nsevent ns:ns-event))
   ;; (format-trace 'wrap nsevent)
   (let ((what (case [nsevent type]
@@ -326,40 +354,32 @@
      :what      what
      :message   (case what
                   ((#.key-down #.key-up #.auto-key)
-                   (dpb (ldb [nsevent keyCode] (byte 8 0))
-                        (byte 8 8)
-                        (let ((characters (objcl:lisp-string [nsevent characters])))
-                          (if (zerop (length characters))
-                              0
-                              (char-code (aref characters 0))))))
+                   (encode-key-message [nsevent keyCode] (objcl:lisp-string [nsevent characters])))
+                  ((#.mouse-down #.mouse-up)
+                   (nswindow-window [nsevent window]))
                   (otherwise 0))
      :when      (truncate [nsevent timestamp] (/ +tick-per-second+))
-     :where     (let ((winh [nsevent window]))
-                  (if (nullp winh)
-                      ;; If the event has no window, let's leave it in
-                      ;; screen coordinates (not quite useful yet,
-                      ;; since screen coordinates are not flipped). TODO
-                      (nspoint-to-point (get-nspoint [nsevent locationInWindow]))
-                      ;; If the event has a window, convert the
-                      ;; coordinates to contentView coordinate system.
-                      (let ((viewh [winh contentView]))
-                        (nspoint-to-point (get-nspoint [viewh convertPoint:[nsevent locationInWindow]
-                                                              fromView:*null*])))))
+     :where     (nsscreen-to-screen-point
+                 (if (or (= what mouse-down) (= what mouse-up))
+                     (let ((winh [nsevent window]))
+                       (if (nullp winh)
+                           (get-nspoint [nsevent locationInWindow])
+                           (nswindow-to-nsscreen-point winh (get-nspoint [nsevent locationInWindow]))))
+                     (get-nspoint [NSEvent mouseLocation])))
      :modifiers (nsmodifier-to-macmodifier [nsevent modifierFlags]))))
-
-
 
 
 
 ;;;------------------------------------------------------------
 
 
-(defmacro report-errors (&body body)
+(defmacro reporting-errors (&body body)
   (let ((vhandler (gensym)))
     `(block ,vhandler
        (handler-bind ((error (lambda (err)
                                (declare (stepper disable))
-                               #+ccl (format *error-output* "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~&" (ccl::backtrace-as-list))
+                               #+ccl (format *error-output* "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~&"
+                                             (ccl::backtrace-as-list))
                                (format *error-output* "~%ERROR while ~S:~%~A~2%"
                                        ',(if (= 1 (length body)) body `(progn ,@body))
                                        err)
@@ -423,6 +443,15 @@ RETURN:         x y w h of the main screen (in Cocoa rounded coordinates).
     (make-nspoint (point-h point)
                   (- (+ sy sh) (point-v point)))))
 
+
+(defun nswindow-to-nsscreen-point (nswindow nspoint)
+  #-cocoa-10.7 (get-nspoint [nswindow convertBaseToScreen:nspoint])
+  #+cocoa-10.7  (let* ((r (ns:make-ns-rect (ns:ns-point-x nspoint) (ns:ns-point-x nspoint) 1 1))
+                       (c (ns:ns-rect-width (get-nsrect [nswindow convertRectToScreen:r]))))
+                  (ns:make-ns-point (ns:ns-rect-x c) (ns:ns-rect-y c))))
+
+
+;; (nswindow-to-nsscreen-point (handle (first (windows))) (ns:make-ns-point 10.0 20.0))
 
 (defun nswindow-to-window-rect (frame)
   "
@@ -497,6 +526,9 @@ DO:             Evaluates the BODY in a lexical environment where
   (nsscreen-to-screen-point (get-nspoint [NSEvent mouseLocation])))
 
 
+
+
+
 ;;;------------------------------------------------------------
 ;;; mouse buttons
 
@@ -537,48 +569,6 @@ DO:             Evaluates the BODY in a lexical environment where
 
 
 ;;;------------------------------------------------------------
-
-(defun objc-key-event (view event)
-  (declare (ignore view))
-  (let ((key (let ((chars (objcl:lisp-string [event characters])))
-               (if (zerop (length chars))
-                   nil
-                   (aref chars 0)))))
-    (when key
-      ;; (view-key-event-handler view key)
-      (post-event (wrap event)))))
-
-
-(defun objc-mouse-down (self event)
-  (declare (ignore self))
-  (post-event (wrap event))
-  #-(and) (when (nsview-view self)
-            (let* ((*multi-click-count* [event clickCount])
-                   (evt                 (wrap event))
-                   (view                (nsview-view self))
-                   (where               (convert-coordinates
-                                         (event-where evt)
-                                         (view-window view)
-                                         view)))
-              (format-trace '|mouseDown:| *multi-click-count* *current-event*)
-              (view-click-event-handler view where)
-              (when (= 2 *multi-click-count*)
-                (view-double-click-event-handler view where)))))
-
-
-(defun objc-mouse-up (self event)
-  (declare (ignore self))
-  (post-event (wrap event))
-  #-(and) (when (nsview-view self)
-            (let ((*multi-click-count* [event clickCount])
-                  (*current-event*     (wrap event))
-                  (view                (nsview-view self)))
-              (format-trace '|mouseUp:| *current-event*)
-              (window-mouse-up-event-handler (view-window view)))))
-
-
-
-;;;------------------------------------------------------------
 ;;; MclguiWindow
 
 @[NSWindow subClass:MclguiWindow
@@ -599,7 +589,7 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (declare (ignore nsnotification))
-  (report-errors
+  (reporting-errors
     (let* ((window (nswindow-window self)))
       ;; (format-trace "-[MclguiWindow windowDidMove:]" window)
       (with-handle (handle  window)
@@ -611,7 +601,7 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (declare (ignore nsnotification))
-  (report-errors
+  (reporting-errors
     (let ((window (nswindow-window self)))
       ;; (unfrequently 1/3 (format-trace "-[MclguiWindow windowDidResize:]" window))
       (window-grow-event-handler window (add-points (view-position window) (view-size window)))))]
@@ -623,7 +613,7 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:<bool>)
   body:
   (declare (ignore nsnotification))
-  (report-errors
+  (reporting-errors
     (let* ((window (nswindow-window self)))
       ;; (format-trace "-[MclguiWindow windowShouldClose:]" window)
       (window-close-event-handler window)))]
@@ -642,7 +632,7 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(close)
   resultType:(:void)
   body:
-  (report-errors
+  (reporting-errors
     (let ((window  (nswindow-window self)))
       ;; (format-trace "-[MclguiWindow close]" window)
       (catch :cancel (window-close window))))]
@@ -687,7 +677,7 @@ DO:             Evaluates the BODY in a lexical environment where
   (let ((window (nswindow-window self)))
     (format-trace "-[MclguiWindow zoom:]" window)
     (when window
-      (report-errors (window-do-zoom window))))]
+      (reporting-errors (window-do-zoom window))))]
 
 
 @[MclguiWindow
@@ -695,7 +685,7 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   [super becomeMainWindow]
-  (report-errors
+  (reporting-errors
     (let* ((window (nswindow-window self)))
       ;; (format-trace "-[MclguiWindow becomeMainWindow]" window)
       ;; TODO: move after windoids.
@@ -711,7 +701,7 @@ DO:             Evaluates the BODY in a lexical environment where
                 (event-message event) window)
           ;; (format-trace '|becomeMainWindow| event)
           ;; (view-activate-event-handler window)
-          (post-event event)))))]
+          (post-event (wrap event))))))]
 
 
 @[MclguiWindow
@@ -719,7 +709,7 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   [super resignMainWindow]
-  (report-errors
+  (reporting-errors
     (let ((window (nswindow-window self)))
       ;; (format-trace "-[MclguiWindow resignMainWindow]" window)
       (when window
@@ -732,7 +722,7 @@ DO:             Evaluates the BODY in a lexical environment where
                 (event-message event) window)
           ;; (format-trace '|resignMainWindow| event)
           ;; (view-deactivate-event-handler window)
-          (post-event event)))))]
+          (post-event (wrap event))))))]
 
 
 @[MclguiWindow
@@ -740,14 +730,14 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (format-trace '|-[MclguiWindow keyDown:]| self event)
-  (objc-key-event (nswindow-window self) event)]
+  (post-event (wrap event))]
 
 @[MclguiWindow
   method:(keyUp:(:id)event)
   resultType:(:void)
   body:
   (format-trace '|-[MclguiWindow keyUp:]| self event)
-  (objc-key-event (nswindow-window self) event)]
+  (post-event (wrap event))]
 
 (defun needs-to-draw-rect (window rect)
   (with-handle (winh window)
@@ -762,14 +752,14 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (format-trace '|-[MclguiWindow mouseDown:]| self event)
-  (objc-mouse-down self event)]
+  (post-event (wrap event))]
 
 @[MclguiWindow
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
   (format-trace '|-[MclguiWindow mouseUp:]| self event)
-  (objc-mouse-up self event)]
+  (post-event (wrap event))]
 
 ;;;------------------------------------------------------------
 ;;; MclguiView
@@ -806,14 +796,14 @@ or to NIL outside of drawRect:.")
   resultType:(:void)
   body:
   (format-trace '|-[MclguiView mouseDown:]| self event)
-  (objc-mouse-down self event)]
+  (post-event (wrap event))]
 
 @[MclguiView
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
   (format-trace '|-[MclguiView mouseUp:]| self event)
-  (objc-mouse-up self event)]
+  (post-event (wrap event))]
 
 
 @[MclguiView
@@ -861,77 +851,6 @@ or to NIL outside of drawRect:.")
   (when (nscontroller-dialog-item self)
     (dialog-item-action (nscontroller-dialog-item self)))]
 
-(defvar *calling-super* nil)
-
-@[MclguiTextField
-  method:(mouseDown:(:id)event)
-  resultType:(:void)
-  body:
-  [super mouseDown:event]
-  (format t "~&mouseDown: 1 *calling-super* ~S event ~S~%" *calling-super* event)
-  (unless *calling-super*
-    (format t "~&mouseDown: 2 *calling-super* ~S event ~S~%" *calling-super* event)
-    (setf (slot-value self 'event) event)
-    (objc-mouse-down self event)
-    (setf (slot-value self 'event) nil))]
-
-@[MclguiTextField
-  method:(mouseUp:(:id)event)
-  resultType:(:void)
-  body:
-  [super mouseUp:event]
-  (unless *calling-super*
-    (setf (slot-value self 'event) event)
-    (objc-mouse-up self event)
-    (setf (slot-value self 'event) nil))]
-
-@[MclguiTextField
-  method:(keyDown:(:id)event)
-  resultType:(:void)
-  body:
-  [super keyDown:event]
-  (unless *calling-super*
-    (setf (slot-value self 'event) event)
-    (objc-key-event (nsview-view self) event)
-    (setf (slot-value self 'event) nil))]
-
-@[MclguiTextField
-  method:(superMouseDown)
-  resultType:(:void)
-  body:
-  (format t "~&superMouseDown: 1 *calling-super* ~S~%" *calling-super* )
-  (if *calling-super*
-      (progn
-        #+ccl (format *error-output* "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~%" (ccl::backtrace-as-list)))
-      (let ((event (slot-value self 'event))
-            (*calling-super* t))
-        (format t "~&superMouseDown: 2 *calling-super* ~S event ~S~%" *calling-super* event)
-        (when event
-          [super mouseDown:event])))]
-
-@[MclguiTextField
-  method:(superMouseUp)
-  resultType:(:void)
-  body:
-  (if *calling-super*
-      (progn
-        #+ccl (format *error-output* "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~%" (ccl::backtrace-as-list)))
-      (let ((event (slot-value self 'event))
-            (*calling-super* t))
-        (when event
-          [super mouseUp:event])))]
-
-@[MclguiTextField
-  method:(superKeyDown)
-  resultType:(:void)
-  body:
-  (if *calling-super*
-      (progn
-        #+ccl (format *error-output* "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~%" (ccl::backtrace-as-list)))
-      (let ((event (slot-value self 'event))
-            (*calling-super* t))
-        (when event
-          [super keyDown:event])))]
 
 ;;;------------------------------------------------------------
 ;;; MclguiTextField -- static-text-dialog-item
@@ -978,7 +897,7 @@ or to NIL outside of drawRect:.")
   method:(evaluate)
   resultType:(:void)
   body:(if (evaluator-thunk self)
-           (report-errors (funcall (evaluator-thunk self)))
+           (reporting-errors (funcall (evaluator-thunk self)))
            (warn "Evaluator got a NIL thunk"))]
 
 

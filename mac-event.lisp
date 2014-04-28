@@ -109,6 +109,17 @@
   (where     0 :type point)
   (modifiers 0 :type integer))
 
+#|
+Event type         event-message
+keyboard           four bytes: not-used, not-used, key-code, character-code
+activate, update   window
+disk inserted      two half-words: file manager ersult code, drive number
+mouse              undefined -- for the event forwared from a -[NSResponder mouseDown:], the window.
+null               undefined 
+network            parameter block
+driver             cf. driver chapter
+application        used defined.
+|#
 
 (defmethod print-object ((event event) stream)
   (format stream "#S(~S" 'event)
@@ -138,6 +149,7 @@ RETURN:         DST.
 (defvar *event-queue* (make-queue :mutex (make-mutex "event-queue")))
 
 (defun post-event (event)
+  (check-type event event)
   (let ((entry (list event)))
     (with-mutex (queue-mutex *event-queue*)
       (if (queue-tail *event-queue*)
@@ -221,12 +233,48 @@ NOTE: should be called insinde (with-mutex (queue-mutex *event-queue*) …)"
               :where (get-mouse)
               :modifiers (modifiers)))
 
-(defun get-next-event (event-mask)
+(defun get-next-event (&optional (idle *idle*) (mask every-event) sleep-ticks)
+  "
+DESCRIPTION:    The GET-NEXT-EVENT function calls #_WaitNextEvent to
+                get an event.  It disables and reenables the clock
+                sampled by GET-INTERNAL-RUNTIME.  (MultiFinder may do
+                a context switch.)  After #_WaitNextEvent returns, the
+                function reschedules the EVENT-DISPATCH task, which is
+                the usual caller of GET-NEXT-EVENT.
+
+EVENT:          An event record allocated on the stack or the heap.
+
+IDLE:           Used to determine the default value of SLEEP-TICKS.
+                The default value is *IDLE*, which is true if
+                GET-NEXT-EVENT is called via EVENT-DISPATCH from the
+                top-level loop when the Listener is waiting for input.
+
+MASK:           This is the EventMask argument for #_WaitNextEvent, a
+                fixnum.  The default is EVERY-EVENT.
+
+SLEEP-TICKS:    This is the Sleep argument to #_WaitNextEvent.  It
+                determines how many ticks are given to other
+                applications under MultiFinder if no event is pending.
+                The default is determined by the values of the idle
+                argument and the global variables *IDLE-SLEEP-TICKS*,
+                *FOREGROUND-SLEEP-TICKS*, and
+                *BACKGROUND-SLEEP-TICKS*.  If Macintosh Common Lisp is
+                running in the foreground, then the default is
+                *IDLE-SLEEP-TICKS* if the value of idle is true;
+                otherwise, the default is *FOREGROUND-SLEEP-TICKS*.  If
+                Macintosh Common Lisp is running in the background,
+                then the default is *BACKGROUND-SLEEP-TICKS* unless
+                that value is NIL, in which case the default is the
+                same as when Macintosh Common Lisp is running in the
+                foreground.
+"
+  (declare (ignore idle sleep-ticks))
   (with-mutex (queue-mutex *event-queue*)
-    (let ((event (%find-event event-mask)))
+    (let ((event (%find-event mask)))
       (if event
-        (%extract-event event)
-        (get-null-event))))) 
+          (%extract-event event)
+          (get-null-event)))))
+
 
 (defun event-avail (event-mask)
   "Same as GET-NEXT-EVENT, but doesn't dequeue the event.

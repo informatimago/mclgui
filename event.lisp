@@ -34,7 +34,24 @@
 (in-package "MCLGUI")
 
 
+;;;---------------------------------------------------------------------
+;;; application event handlers
+;;;---------------------------------------------------------------------
 
+(defgeneric application-event-handler (application event)
+  (:documentation "
+MCLGUI extension.
+This generic function is called when an app?-evt is received.
+APPLICATION: *APPLICATION*
+EVENT:       The EVENT received.")
+  (:method (application event)
+    (declare (ignore (application event)))
+    nil))
+
+
+;;;---------------------------------------------------------------------
+;;; view event handlers
+;;;---------------------------------------------------------------------
 
 (defgeneric view-activate-event-handler (view)
   (:documentation "
@@ -128,6 +145,44 @@ KEY:            The current keystroke character.
 
 
 
+(defgeneric view-mouse-enter-event-handler (view)
+  (:documentation "
+The methods of these generic functions for SIMPLE-VIEW do nothing.
+You specialize them to create mouse-sensitive items.
+
+VIEW:           A simple view.
+")
+  (:method ((view simple-view))
+    view))
+
+
+(defgeneric view-mouse-leave-event-handler (view)
+  (:documentation "
+The methods of these generic functions for SIMPLE-VIEW do nothing.
+You specialize them to create mouse-sensitive items.
+
+VIEW:           A simple view.
+")
+  (:method ((view simple-view))
+    view))
+
+
+;;;---------------------------------------------------------------------
+;;; window event handlers
+;;;---------------------------------------------------------------------
+
+(defgeneric window-event (window)
+  (:documentation "
+The WINDOW-EVENT generic function is called by EVENT-DISPATCH to get a
+window to handle an event.  This function is called only when the
+event system determines the appropriate window.  The method of
+WINDOW-EVENT for WINDOW checks the type of the event and calls the
+appropriate event handler.  The WINDOW-EVENT function should be
+specialized in windows that need to do something in addition to or
+different from the default behavior for many types of events.
+
+WINDOW:         A window.
+"))
 
 
 (defgeneric window-null-event-handler (window)
@@ -314,6 +369,55 @@ WINDOW:         A window.
     nil))
 
 
+(defgeneric window-update-cursor (window point)
+  (:documentation "
+DESCRIPTION:    The generic function WINDOW-UPDATE-CURSOR is called by UPDATE-CURSOR
+                whenever the cursor is over the window.
+
+                When the mouse is over the front window or any floating window, the
+                WINDOW-UPDATE-CURSOR method for the window class sets the variable
+                *MOUSE-VIEW* to the view containing the mouse, using FIND-CLICKED-SUBVIEW.
+                The WINDOW-NULL-EVENT-HANDLER method for the window class
+                calls UPDATE-CURSOR, which calls *CURSORHOOK*. The function that is the
+                initial value of *CURSORHOOK* calls WINDOW-UPDATE-CURSOR, which sets
+                the cursor using the value returned by view-cursor.
+                The method for window simply sets the cursor to the result of calling the
+                generic function view-cursor on the clicked subview of window if there is
+                one; otherwise it sets the cursor to the result of calling window-cursor on the
+                window.
+
+                The null method sets the cursor to the value of *ARROW-CURSOR*.
+
+                The WINDOW-UPDATE-CURSOR function should be shadowed if the cursor
+                must change according to what part of the window it is over.
+
+WINDOW:         A window or Fred window.
+
+POINT:          The position of the cursor, given in the window’s
+                local coordinates.
+"))
+
+
+(defgeneric window-draw-grow-icon (window)
+  (:documentation "
+The generic function WINDOW-DRAW-GROW-ICON is called when the size box
+in the lower-right corner of a window must be redrawn. You may need to
+call this function explicitly if you draw over the size box.
+
+When a window is inactive (that is, not the frontmost window),
+WINDOW-DRAW-GROW-ICON erases the inside of the size box.
+
+WINDOW:         A window.
+")
+  (:method (window)
+    (declare (ignore window))
+    nil))
+
+
+;;;---------------------------------------------------------------------
+;;; event functions
+;;;---------------------------------------------------------------------
+
 (defgeneric view-draw-contents (view)
   (:documentation "
 The generic function VIEW-DRAW-CONTENTS is called whenever a view
@@ -333,22 +437,6 @@ VIEW:           A simple view.
 ")
   (:method (view)
     (declare (ignore view))
-    nil))
-
-
-(defgeneric window-draw-grow-icon (window)
-  (:documentation "
-The generic function WINDOW-DRAW-GROW-ICON is called when the size box
-in the lower-right corner of a window must be redrawn. You may need to
-call this function explicitly if you draw over the size box.
-
-When a window is inactive (that is, not the frontmost window),
-WINDOW-DRAW-GROW-ICON erases the inside of the size box.
-
-WINDOW:         A window.
-")
-  (:method (window)
-    (declare (ignore window))
     nil))
 
 
@@ -414,14 +502,14 @@ RETURN:         T if the mouse button is pressed and NIL
 
 
 (defun multi-click-count ()
-  (format-trace 'multi-click-count
-   (let ((nsevent [[NSApplication sharedApplication] currentEvent]))
-     (if (and nsevent
-              (find [nsevent type] '#.(list #$NSLeftMouseDown #$NSRightMouseDown #$NSOtherMouseDown)))
-         [nsevent clickCount]
-         (if (mouse-down-p)
-             1
-             0)))))
+  #-(and) (let ((nsevent [[NSApplication sharedApplication] currentEvent]))
+            (if (and nsevent
+                     (find [nsevent type] '#.(list #$NSLeftMouseDown #$NSRightMouseDown #$NSOtherMouseDown)))
+                [nsevent clickCount]
+                (if (mouse-down-p)
+                    1
+                    0)))
+  *multi-click-count*)
 
 
 (defun double-click-p ()
@@ -444,6 +532,16 @@ RETURN:         T if the click currently being processed was the
          (= 2 [nsevent clickCount])
          t)))
 
+;; TODO: perhaps it would be preferable to use *current-event* to
+;; track double-click-p etc, to keep them synchronized with the
+;; mac-event state.
+;;
+;; (defun double-click-p ()  
+;;   (and (and (boundp '*current-event*) *current-event*)
+;;        (eq $MButDwnEvt (rref *current-event* eventrecord.what))
+;;        (> *multi-click-count* 1)))
+
+
 
 (defun double-click-spacing-p (point1 point2)
   "
@@ -464,11 +562,8 @@ POINT1:         The cursor position during the first click.
 
 POINT2:         The cursor position during the second click.
 "
-  (or (and (point<= point1 point2)
-           (point<= point2 (add-points point1 (make-point 4 4))))
-      (and (point<= point2 point1)
-           (point<= point1 (add-points point2 (make-point 4 4))))))
-
+  (and (< (abs (- (point-h point1) (point-h point2))) 4)
+       (< (abs (- (point-v point1) (point-v point2))) 4)))
 
 
 (defun command-key-p ()
@@ -599,45 +694,88 @@ RETURN:         If called during event processing, return true if
 
 
 
-
-'(
-  window-close-event-handler
-  window-grow-event-handler
-  window-select-event-handler
-  window-zoom-event-handler)
+(defparameter *last-mouse-down-time*     0)
+(defparameter *last-mouse-down-position* 0)
+(defparameter *last-null-event-time*     0)
 
 
-#-(and)
-(defun dispatch-event (event)
-  (case (event-what event)
-    ((#.null-event)    (window-null-event-handler )
-     (view-mouse-moved-event-handler))
-    ((#.mouse-down)    (view-click-event-handler)
-     (view-double-click-event-handler))
-    ((#.mouse-up)      (view-mouse-up-event-handler )
-     (window-mouse-up-event-handler))
-    ((#.key-down
-      #.auto-key)      (view-key-event-handler ))
-    ((#.key-up))
-    ((#.update-evt)    (let ((window (event-message event)))
-                         (window-update-event-handler window)))
-    ((#.disk-evt))
-    ((#.activate-evt)  (let ((window (event-message event)))
-                         (if (logbitp active-flag (event-modifier event))
-                             (view-activate-event-handler window)
-                             (view-deactivate-event-handler window))))
-    ((#.network-evt))
-    ((#.driver-evt))
-    ((#.app1-evt))
-    ((#.app2-evt))
-    ((#.app3-evt))
-    ((#.app4-evt))
-    (otherwise)))
+(defun process-multi-clicks (event)
+  (let ((when  (event-when  event))
+        (where (event-where event)))
+    (if (and (< (- when *last-mouse-down-time*) (get-dbl-time))
+             (double-click-spacing-p where *last-mouse-down-position*))
+        (incf *multi-click-count*)
+        (setf *last-mouse-down-position* where
+              *multi-click-count* 1)))
+  (setq *last-mouse-down-time* when))
 
 
+(defun process-event (event)
+  ;; Note: we don't dispatch on menu events (meny key or menu select),
+  ;; since those events are handled by Cocoa. 
+  (let ((window  (front-window))
+        (what    (event-what    event))
+        (message (event-message event))
+        (where   (event-where   event)))
+    (when (= what mouse-down) 
+      (process-multi-clicks event))
+    (case what
+      ((#.null-event)
+       (let ((time *last-null-event-time*))
+         (unless (= time (setq *last-null-event-time* (tick-count)))
+           ;; (view-mouse-moved-event-handler window)
+           (window-null-event-handler window))))
+      ((#.mouse-down)
+       (view-click-event-handler message where)
+       (view-double-click-event-handler message where))
+      ((#.mouse-up)
+       (window-mouse-up-event-handler message))
+      ((#.key-down #.auto-key #.key-up)
+       (if window
+           (window-event window)
+           (view-key-event-handler *application* (nth-value 1 (decode-key-message message)))))
+      ((#.activate-evt #.update-evt)
+       (window-event message))
+      ((#.disk-evt)     #|nop|#)
+      ((#.network-evt)  #|nop|#)
+      ((#.driver-evt)   #|nop|#)
+      ((#.app1-evt #.app2-evt #.app3-evt #.app4-evt)
+       (application-event-handler *application* event))
+      #-(and)
+      ((#.os-evt)
+       (when (= 1 (ldb (byte 8 24) (event-message event))) ; suspend or resume event
+         (if (setq *foreground* (logbitp 0 (event-message event)))
+             (application-resume-event-handler  *application*)
+             (application-suspend-event-handler *application*))))
+      (otherwise
+       ;; TODO: handle AppleEvents
+       #|nop|#))
+    what))
+
+(defun receive-appleevent ()
+  (values))
 
 
-(defun event-dispatch (&optional (idle *idle*))
+(defvar *eventhooks-in-progress* nil)
+
+(defun dispatch-eventhook ()
+  (let ((eventhook (or (and *modal-dialog-on-top*
+                            (caar *modal-dialog-on-top*)
+                            (modal-dialog-eventhook (car *modal-dialog-on-top*)))
+                       *eventhook*)))
+    (flet ((process-eventhook (hook)
+             (unless (member hook *eventhooks-in-progress*)
+               (let ((*eventhooks-in-progress* (cons hook *eventhooks-in-progress*)))
+                 (funcall hook)))))
+      (if (listp eventhook)
+          (dolist (item eventhook)
+            (when (process-eventhook item)
+              (return t)))
+          (process-eventhook eventhook)))))
+
+
+(defvar *event-mask* every-event)
+(defun event-dispatch (&optional (idle *idle*) (event-mask *event-mask*))
   "
 The EVENT-DISPATCH function is called periodically as a background
 process.  The EVENT-DISPATCH function calls #_WaitNextEvent and binds
@@ -658,14 +796,14 @@ IDLE:           An argument representing whether the main Lisp process
                 otherwise.  The function EVENT-DISPATCH calls
                 GET-NEXT-EVENT with an event and the value of IDLE.
 "
-  (let ((*current-event* (make-event)))
-    (when (get-next-event *current-event* idle)
-      (when (and *eventhook*  (funcall *eventhook*))
-        (return-from event-dispatch))
-      ;; (when (and (= app1-evt (event-what *current-event*))
-      ;;            (process-ae-event *current-event*))
-      ;;   (return-from event-dispatch))
-      (process-event *current-event*))))
+  (let ((*current-event* (get-next-event idle event-mask)))
+    (when *current-event*
+      (unless (= null-event (event-what *current-event*))
+       (format-trace 'event-dispatch *current-event*))
+      (unless (dispatch-eventhook)
+        (when (= null-event (process-event *current-event*))
+          (receive-appleevent))))))
+
 
 
 (defun application-is-active ()
@@ -674,81 +812,7 @@ IDLE:           An argument representing whether the main Lisp process
 (define-symbol-macro *foreground*
     (application-is-active))
 
-
-
-
-
-
-(defun get-next-event (event &optional (idle *idle*) (mask every-event) sleep-ticks)
-  "
-DESCRIPTION:    The GET-NEXT-EVENT function calls #_WaitNextEvent to
-                get an event.  It disables and reenables the clock
-                sampled by GET-INTERNAL-RUNTIME.  (MultiFinder may do
-                a context switch.)  After #_WaitNextEvent returns, the
-                function reschedules the EVENT-DISPATCH task, which is
-                the usual caller of GET-NEXT-EVENT.
-
-EVENT:          An event record allocated on the stack or the heap.
-
-IDLE:           Used to determine the default value of
-                SLEEP-TICKS. The default value is *IDLE*, which is
-                true if GET-NEXT-EVENT is called via EVENT-DISPATCH
-                from the top-level loop when the Listener is waiting
-                for input.
-
-MASK:           This is the EventMask argument for #_WaitNextEvent, a
-                fixnum.  The default is #$everyEvent.
-
-SLEEP-TICKS:    This is the Sleep argument to #_WaitNextEvent.  It
-                determines how many ticks are given to other
-                applications under MultiFinder if no event is pending.
-                The default is determined by the values of the idle
-                argument and the global variables *IDLE-SLEEP-TICKS*,
-                *FOREGROUND-SLEEP-TICKS*, and
-                *BACKGROUND-SLEEP-TICKS*.  If Macintosh Common Lisp is
-                running in the foreground, then the default is
-                *IDLE-SLEEP-TICKS* if the value of idle is true;
-                otherwise, the default is *FOREGROUND-SLEEP-TICKS*.  If
-                Macintosh Common Lisp is running in the background,
-                then the default is *BACKGROUND-SLEEP-TICKS* unless
-                that value is NIL, in which case the default is the
-                same as when Macintosh Common Lisp is running in the
-                foreground.
-"
-  (let ((queued-event (dequeue-event))) 
-   (when queued-event
-      (format-trace "get-next-event"
-                    (event-what queued-event)
-                    (point-h (event-where queued-event))
-                    (point-v (event-where queued-event)))
-      (return-from get-next-event (assign-event event queued-event))))
-  (let ((nsevent [[NSApplication sharedApplication]
-                  nextEventMatchingMask: (mac-event-mask-to-ns-event-mask mask)
-                  untilDate: [NSDate dateWithTimeIntervalSinceNow:
-                                     (nstimeinterval (* 60
-                                                        (or sleep-ticks
-                                                            (if *foreground* 
-                                                                (if idle
-                                                                    *idle-sleep-ticks*
-                                                                    *foreground-sleep-ticks*)
-                                                                *background-sleep-ticks*))))]
-                  inMode:#$NSDefaultRunLoopMode
-                  dequeue:YES]))
-    (assign-event event
-                  (if (and nsevent (not (nullp nsevent)))
-                    (wrap nsevent)
-                    (get-null-event)))
-    (unless (zerop (event-what event))
-      (format-trace "get-next-event"
-                    (event-what event)
-                    (point-h (event-where event))
-                    (point-v (event-where event))))
-    event)) 
-
-
-
 (defvar *event-ticks* *foreground-event-ticks*)
-
 
 (defun event-ticks ()
   "
@@ -786,71 +850,6 @@ N:              An integer determining the number of ticks.
   (setf *event-ticks* n))
 
 
-(defgeneric window-event (window)
-  (:documentation "
-The WINDOW-EVENT generic function is called by EVENT-DISPATCH to get a
-window to handle an event.  This function is called only when the
-event system determines the appropriate window.  The method of
-WINDOW-EVENT for WINDOW checks the type of the event and calls the
-appropriate event handler.  The WINDOW-EVENT function should be
-specialized in windows that need to do something in addition to or
-different from the default behavior for many types of events.
-
-WINDOW:         A window.
-"))
-
-
-
-(defgeneric window-update-cursor (window point)
-  (:documentation "
-DESCRIPTION:    The generic function WINDOW-UPDATE-CURSOR is called by UPDATE-CURSOR
-                whenever the cursor is over the window.
-
-                When the mouse is over the front window or any floating window, the
-                WINDOW-UPDATE-CURSOR method for the window class sets the variable
-                *MOUSE-VIEW* to the view containing the mouse, using FIND-CLICKED-SUBVIEW.
-                The WINDOW-NULL-EVENT-HANDLER method for the window class
-                calls UPDATE-CURSOR, which calls *CURSORHOOK*. The function that is the
-                initial value of *CURSORHOOK* calls WINDOW-UPDATE-CURSOR, which sets
-                the cursor using the value returned by view-cursor.
-                The method for window simply sets the cursor to the result of calling the
-                generic function view-cursor on the clicked subview of window if there is
-                one; otherwise it sets the cursor to the result of calling window-cursor on the
-                window.
-
-                The null method sets the cursor to the value of *ARROW-CURSOR*.
-
-                The WINDOW-UPDATE-CURSOR function should be shadowed if the cursor
-                must change according to what part of the window it is over.
-
-WINDOW:         A window or Fred window.
-
-POINT:          The position of the cursor, given in the window’s
-                local coordinates.
-"))
-
-
-
-(defgeneric view-mouse-enter-event-handler (view)
-  (:documentation "
-The methods of these generic functions for SIMPLE-VIEW do nothing.
-You specialize them to create mouse-sensitive items.
-
-VIEW:           A simple view.
-")
-  (:method ((view simple-view))
-    view))
-
-
-(defgeneric view-mouse-leave-event-handler (view)
-  (:documentation "
-The methods of these generic functions for SIMPLE-VIEW do nothing.
-You specialize them to create mouse-sensitive items.
-
-VIEW:           A simple view.
-")
-  (:method ((view simple-view))
-    view))
 
 
 

@@ -12,28 +12,33 @@
                   (point-v (view-size view))))
     (call-next-method)))
 
-(progn
- (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
+(defun test-color-box ()
+  (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
 
- (let ((red (make-instance
-             'color-box 
-             :color *red-color*
-             :view-position (make-point 20 10)
-             :view-size     (make-point 100 20)))
-       (blue (make-instance
+  (let ((red (make-instance
               'color-box 
-              :color *blue-color*
-              :view-position (make-point 2 2)
-              :view-size     (make-point 12 12))))
-   (add-subviews red blue)
-   (add-subviews *w* red)))
+              :color *red-color*
+              :view-position (make-point 20 10)
+              :view-size     (make-point 100 20)))
+        (blue (make-instance
+               'color-box 
+               :color *blue-color*
+               :view-position (make-point 2 2)
+               :view-size     (make-point 12 12)))
+        (green (make-instance
+                'color-box 
+                :color *green-color*
+                :view-position (make-point 2 2)
+                :view-size     (make-point 12 12))))
+    (add-subviews red blue)
+    (add-subviews *w* red)
+    (add-subviews *w* green)))
 
-(set-view-position  (aref (view-subviews *w*) 0) 30 20)
-(view-draw-contents (aref (view-subviews *w*) 0))
-
-
-
-
+#-(and) (progn
+          (test-color-box)
+          (set-view-position  (aref (view-subviews *w*) 0) 30 20)
+          (view-draw-contents *w*)
+          )
 
 
 (defclass boxed-static-text-dialog-item (static-text-dialog-item)
@@ -56,7 +61,7 @@
 
 (defparameter *w* (make-instance 'window :window-title "Test"))
 
-(progn
+(defun test-text-box ()
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
   (add-subviews *w*
                 
@@ -90,6 +95,8 @@
     [winh firstResponder]))
 
 #-(and)(progn
+
+         (test-text-box)
          
          (values (first-responder  (first (windows)))
                  (handle (aref (view-subviews (first (windows))) 2)))
@@ -112,3 +119,5 @@
 
          (window-close *w*)
          )
+
+

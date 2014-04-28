@@ -1085,8 +1085,8 @@ RETURN:         Whether VIEW contains POINT.  The method for
   (if (or (typep view 'window)
           (null (view-container view)))
       pt
-      (convert-to-window (view-container view)
-                         (add-points (view-position view) pt))))
+      (%convert-to-window (view-container view)
+                          (add-points (view-position view) pt))))
 
 
 (defun convert-coordinates (point source-view destination-view)

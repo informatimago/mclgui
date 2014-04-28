@@ -1035,7 +1035,37 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 
 
 
+;;;---------------------------------------------------------------------
+;;; Events
 
+(defmethod window-event ((window window))
+  (when *current-event*
+    (with-accessors ((what      event-what)
+                     (where     event-where)
+                     (modifiers event-modifiers)
+                     (message   event-message)) *current-event*
+      (case what
+        ((#.null-event)
+         ;; (view-mouse-moved-event-handler window)
+         (window-null-event-handler window))
+        ((#.mouse-down)
+         (view-click-event-handler window where)
+         (when (double-click-p)
+           (view-double-click-event-handler window where)))
+        ((#.mouse-up)
+         (window-mouse-up-event-handler window))
+        ((#.key-down #.auto-key)
+         (view-key-event-handler window (nth-value 1 (decode-key-message message))))
+        ((#.activate-evt)
+         (if (logbitp active-flag modifiers)
+             (view-activate-event-handler window)
+             (view-deactivate-event-handler window)))
+        ((#.update-evt)
+         (window-update-event-handler window))))))
+
+
+;;;---------------------------------------------------------------------
+;;; Colors
 
 ;; TODO: use get-fore-color when drawing in the window…
 (defmethod set-fore-color ((window window) color)
@@ -1059,6 +1089,14 @@ RETURN:         A BOOLEAN value indicating whether view can perform
   (slot-value window 'back-color))
 
 
+(defmethod view-draw-contents ((window window))
+  (with-focused-view window
+    (let ((size (view-size window)))
+      (erase-rect* 0 0 (point-h size) (point-v size))
+      (call-next-method))))
+
+
+;;;---------------------------------------------------------------------
 
 (defclass unknown-window (window)
   ())

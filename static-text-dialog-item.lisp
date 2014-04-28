@@ -106,8 +106,9 @@
 (defmethod view-click-event-handler ((item static-text-dialog-item) where)
   (declare (ignore where))
   (format-trace 'view-click-event-handler item (point-to-list where))
-  (with-handle (texth item)
-    [texth superMouseDown])
+  ;; (with-handle (texth item)
+  ;;   [texth superMouseDown])
+  (call-next-method)
   item)
 
 (defmethod view-double-click-event-handler ((item static-text-dialog-item) where)
@@ -118,8 +119,9 @@
 (defmethod view-key-event-handler ((item static-text-dialog-item) key)
   (declare (ignore where))
   (format-trace 'view-key-event-handler item key)
-  (with-handle (texth item)
-    [texth superKeyDown])
+  (call-next-method)
+  ;; (with-handle (texth item)
+  ;;   [texth superKeyDown])
   item)
 
 (defmethod view-draw-contents ((item static-text-dialog-item))

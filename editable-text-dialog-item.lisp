@@ -66,15 +66,17 @@
 (defmethod view-click-event-handler ((item basic-editable-text-dialog-item) where)
   (declare (ignorable where))
   (format-trace 'view-click-event-handler item (point-to-list where))
-  (with-handle (texth item)
-    [texth superMouseDown])
+  ;; (with-handle (texth item)
+  ;;   [texth superMouseDown])
+  (call-next-method)
   item)
 
 (defmethod view-key-event-handler ((item basic-editable-text-dialog-item) key)
   (declare (ignorable key))
   (format-trace 'view-key-event-handler item key)
-  (with-handle (texth item)
-    [texth superKeyDown])
+  (call-next-method)
+  ;; (with-handle (texth item)
+  ;;   [texth superKeyDown])
   item)
 
 ;;;---------------------------------------------------------------------

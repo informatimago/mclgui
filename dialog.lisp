@@ -83,46 +83,6 @@
 
 
 
-(defun process-multi-clicks (event)
-  (niy process-multi-clicks event))
-
-
-(defvar *eventhooks-in-progress* nil)
-(defun process-event (event)
-  (let ((e-code (event-what event)))
-    (when (= e-code mouse-down) 
-      (process-multi-clicks event) 
-      ;; attempt to workaround OSX bug re leaking double-clicks - doesn't help.
-      ;; (when (and #|(osx-p)|# (< 1 *multi-click-count*))
-      ;;     (#_FlushEvents #$mUpMask 0))
-      )
-    (let* ((*current-event* event))
-      (declare (special *current-event* *processing-events*))
-      (block foo
-        (progn ; with-restart *event-abort-restart*
-          (let ((eventhook (or (and *modal-dialog-on-top*
-                                    (caar *modal-dialog-on-top*)
-                                    (modal-dialog-eventhook (car *modal-dialog-on-top*)))
-                               *eventhook*)))
-            (unless (and eventhook
-                         (flet ((process-eventhook (hook)
-                                  (unless (member hook *eventhooks-in-progress*)
-                                    (let ((*eventhooks-in-progress* (cons hook *eventhooks-in-progress*)))
-                                      (declare (dynamic-extent *eventhooks-in-progress*))
-                                      (funcall hook)))))
-                           (declare (inline process-eventhook))
-                           (if (listp eventhook)
-                               (dolist (item eventhook)
-                                 (when (process-eventhook item)
-                                   (return t)))
-                               (process-eventhook eventhook))))
-              (unfrequently 1/10 (niy process-event))
-              ;; (return-from foo (catch-cancel (do-event)))
-              ))))
-      e-code)))
-
-
-
 
 
 (defvar *first-menustate* nil)
@@ -382,7 +342,7 @@ STRING:         A string against which to compare the text of the
 
 (defmethod key-handler-idle ((item simple-view) &optional dialog)
   (declare (ignore dialog))
-  )
+  nil)
 
 (defgeneric find-subview-of-type (view subview-type)
   (:method ((view view) subview-type)
