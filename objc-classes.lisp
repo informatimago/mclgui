@@ -364,7 +364,7 @@
                      (let ((winh [nsevent window]))
                        (if (nullp winh)
                            (get-nspoint [nsevent locationInWindow])
-                           (nswindow-to-nsscreen-point winh (get-nspoint [nsevent locationInWindow]))))
+                           (nswindow-to-nsscreen-point winh (sret [nsevent locationInWindow]))))
                      (get-nspoint [NSEvent mouseLocation])))
      :modifiers (nsmodifier-to-macmodifier [nsevent modifierFlags]))))
 
@@ -740,8 +740,10 @@ DO:             Evaluates the BODY in a lexical environment where
   (post-event (wrap event))]
 
 (defun needs-to-draw-rect (window rect)
+  (format-trace 'needs-to-draw-rect (point-to-list (rect-topleft rect))  (point-to-list (rect-bottomright rect)))
   (with-handle (winh window)
-    [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]))
+    [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]
+    [winh setViewsNeedDisplay:yes]))
 
 (defun needs-to-display (window)
   (with-handle (winh window)
@@ -783,8 +785,10 @@ or to NIL outside of drawRect:.")
   method:(drawRect:(:<nsr>ect)rect)
   resultType:(:void)
   body:
-  (declare (ignore rect))
-  ;; (format-trace "-[MclguiView drawRect:]" self (nsview-view self))
+  (let ((r (nsrect-to-rect (make-nsrect (ns:ns-rect-x rect) (ns:ns-rect-y rect)
+                                        (ns:ns-rect-width rect) (ns:ns-rect-height rect)))))
+    (format-trace "-[MclguiView drawRect:]" self (nsview-view self))
+    (format-trace "-[MclguiView drawRect:]" (point-to-list (rect-topleft r))  (point-to-list (rect-bottomright r))))
   (let ((view (nsview-view self)))
     (when view
       (let ((*view-draw-contents-from-drawRect* view))

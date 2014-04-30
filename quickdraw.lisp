@@ -593,6 +593,8 @@ body is evaluated with VAR bound to that rectangle."
   ;;     #+carbon-compat
   ;;     (inval-window-rgn (wptr view) reg)
   ;;     (#_disposergn reg)))
+  ;; TODO: invalidate only the uncovered rectangles.
+  (invalidate-view view t)
   (values))
 
 

@@ -202,8 +202,11 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
       (let ((unlock   nil))
         (flet ((call-it ()
                  (let ((trans  [[NSAffineTransform class] performSelector:(objc:@selector |transform|)])
-                               ;; A bug in ccl prevents this to work: [NSAffineTransform transform]
-                       (origin (view-position view)))
+                       ;; A bug in ccl prevents this to work: [NSAffineTransform transform]
+                       (origin (if (view-container view)
+                                           (subtract-points (view-position view)
+                                                            (view-scroll-position (view-container view)))
+                                           (view-scroll-position view))))
                    [trans translateXBy: (cgfloat (point-h origin)) yBy: (cgfloat (point-v origin))]
                    [trans concat]
                    (unwind-protect
@@ -718,7 +721,6 @@ ERASE-P:        A value indicating whether or not to add the
                 the view. The default is NIL.
 ")
   (:method ((view simple-view) region &optional erase-p)
-    (declare (ignore erase-p))
     ;; TODO: for now we invalidate the region bounds or the view-frame.
     (let ((window (view-window view)))
       (when window
@@ -772,7 +774,7 @@ ERASE-P:        A value indicating whether or not to add the
     (values))
   
   (:method ((window window) region &optional erase-p)
-    (declare (ignore erase-p))
+    (declare (ignore erase-p)) ;; TODO
     ;; (format-trace "invalidate-region" window)
     (needs-to-draw-rect window
                         (if region
@@ -1027,16 +1029,9 @@ RETURN:         (make-point h v)
            (delta      (subtract-points old-sc-pos pt)))
       (with-focused-view view
         (unless (eql delta #@(0 0))
-          #-(and)
-          (with-handle (viewh (if (typep view 'window)
-                                  view))
-            (if scroll-visibly
-              (let ((old-bounds (get-nsrect [viewh bounds])))
-                [viewh scrollRect:old-bounds by: (nspoint delta)]
-                [viewh setBoundsOrigin:(nspoint pt)])
-              (progn
-                [viewh setBoundsOrigin:(nspoint pt)])))
-          (invalidate-view view t)))
+          (if scroll-visibly
+            (scroll-rect view (view-bounds view) delta)
+            (invalidate-view view t))))
       (make-view-invalid view)
       (setf (view-scroll-position view) pt)
       (refocus-view view)

@@ -1,6 +1,8 @@
 (in-package :ui)
 (initialize)
 
+(defvar *w* (make-instance 'window :window-title "Test"))
+
 (defclass color-box (view)
   ((color :initarg :color :initform *black-color*  :accessor color)))
 
@@ -37,6 +39,8 @@
 #-(and) (progn
           (test-color-box)
           (set-view-position  (aref (view-subviews *w*) 0) 30 20)
+          (aref (view-subviews *w*) 0)
+          (set-view-scroll-position *w* 10 0)
           (view-draw-contents *w*)
           )
 
@@ -59,7 +63,7 @@
 
 
 
-(defparameter *w* (make-instance 'window :window-title "Test"))
+
 
 (defun test-text-box ()
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
