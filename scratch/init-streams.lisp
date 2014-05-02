@@ -1,5 +1,23 @@
 (in-package :ui)
 
+(load #P"~/works/patchwork/src/patchwork/src/pw-kernel/environment/lelisp-macros")
+(load #P"~/works/patchwork/src/patchwork/src/packages.lisp")
+(load #P"~/works/patchwork/src/patchwork/src/stream/redirecting-stream.lisp")
+
+(defun identify-streams (&optional label)
+  (dolist (stream-var '(*terminal-io*
+                        *query-io*
+                        *debug-io*
+                        ;; *standard-input*
+                        *standard-output*
+                        *error-output*
+                        *trace-output*))
+    (let ((stream (symbol-value stream-var)))
+      (format stream "~&~20S~@[(~A)~]~%" stream-var label)
+      (finish-output stream))))
+
+
+
 (defun make-patchwork-io ()
   #-cocoa
   *terminal-io*
