@@ -217,7 +217,7 @@ RETURN:         The point P as a list of coordinates (H V).
       (values)
       (values (cond
                 ((stringp object)
-                 (objcl:objcl-string object))
+                 (objcl:objc-string object))
                 ((and (listp object) (= 2 (length object)))
                  (apply (function make-point) object))
                 (t

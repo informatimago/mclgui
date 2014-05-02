@@ -557,11 +557,11 @@ DO:             Keys that are NSString are converted to keywords,
 
 (defmethod unwrap ((item symbol))
   (unwrapping item
-    (objcl:objcl-string (symbol-name item))))
+    (objcl:objc-string (symbol-name item))))
 
 (defmethod unwrap ((item string))
   (unwrapping item
-    (objcl:objcl-string item)))
+    (objcl:objc-string item)))
 
 (defmethod unwrap ((item real))
   (unwrapping item

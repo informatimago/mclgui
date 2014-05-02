@@ -4,4 +4,4 @@
 *.cdb-BAK
 *.cdb
 .DS_Store
-._.DS_Store
+._*

@@ -85,10 +85,10 @@ PROMPT:         A string, displayed as title of the choose file dialog.
     [panel setResolvesAliases:t]
     [panel setAllowsMultipleSelection:nil]
     ;; ---
-    ;; [panel setTitle:(objcl:objcl-string title)]
-    ;; [panel setMessage:(objcl:objcl-string message)]
-    ;; [panel setNameFieldLabel:(objcl:objcl-string label)]
-    [panel setPrompt:(objcl:objcl-string prompt)]
+    ;; [panel setTitle:(objcl:objc-string title)]
+    ;; [panel setMessage:(objcl:objc-string message)]
+    ;; [panel setNameFieldLabel:(objcl:objc-string label)]
+    [panel setPrompt:(objcl:objc-string prompt)]
     [panel setCanCreateDirectories:nil]
     [panel setCanSelectHiddenExtension:t]
     [panel setExtensionHidden:nil]
@@ -100,11 +100,11 @@ PROMPT:         A string, displayed as title of the choose file dialog.
         [panel setAllowedFileTypes:nil])
     ;; --
     #-cocoa-10.6
-    [panel setDirectory:(objcl:objcl-string (namestring directory))]
+    [panel setDirectory:(objcl:objc-string (namestring directory))]
     #+cocoa-10.6 
     (progn
-      [panel setDirectoryURL:[NSURL fileURLWithPath:(objcl:objcl-string (namestring directory)) isDirectory:t]]
-      [panel setNameFieldStringValue:(objcl:objcl-string "")])
+      [panel setDirectoryURL:[NSURL fileURLWithPath:(objcl:objc-string (namestring directory)) isDirectory:t]]
+      [panel setNameFieldStringValue:(objcl:objc-string "")])
     (when (= [panel runModal] #$NSFileHandlingPanelOKButton)
       (setf *default-directory* (panel-directory panel))
       (let* ((urls  (objc:send panel "URLs"))
@@ -140,10 +140,10 @@ PROMPT:         A string, displayed as title of the choose new file dialog.
 "
   (declare (ignore button-string))
   (let ((panel [NSSavePanel savePanel]))
-    ;; [panel setTitle:(objcl:objcl-string title)]
-    ;; [panel setMessage:(objcl:objcl-string message)]
-    ;; [panel setNameFieldLabel:(objcl:objcl-string label)]
-    [panel setPrompt:(objcl:objcl-string prompt)]
+    ;; [panel setTitle:(objcl:objc-string title)]
+    ;; [panel setMessage:(objcl:objc-string message)]
+    ;; [panel setNameFieldLabel:(objcl:objc-string label)]
+    [panel setPrompt:(objcl:objc-string prompt)]
     [panel setCanCreateDirectories:t]
     [panel setCanSelectHiddenExtension:t]
     [panel setExtensionHidden:nil]
@@ -153,11 +153,11 @@ PROMPT:         A string, displayed as title of the choose new file dialog.
     [panel setAllowedFileTypes:nil]
     ;; --
     #-cocoa-10.6
-    [panel setDirectory:(objcl:objcl-string (namestring directory))]
+    [panel setDirectory:(objcl:objc-string (namestring directory))]
     #+cocoa-10.6
     (progn
-      [panel setDirectoryURL:[NSURL fileURLWithPath:(objcl:objcl-string (namestring directory)) isDirectory:t]]
-      [panel setNameFieldStringValue:(objcl:objcl-string "")])
+      [panel setDirectoryURL:[NSURL fileURLWithPath:(objcl:objc-string (namestring directory)) isDirectory:t]]
+      [panel setNameFieldStringValue:(objcl:objc-string "")])
     (when (= [panel runModal] #$NSFileHandlingPanelOKButton)
       (setf *default-directory* (panel-directory panel))
       (panel-path panel))))
@@ -185,10 +185,10 @@ PROMPT:         A string, displayed as title of the choose directory dialog.
     [panel setResolvesAliases:t]
     [panel setAllowsMultipleSelection:nil]
     ;; ---
-    ;; [panel setTitle:(objcl:objcl-string title)]
-    ;; [panel setMessage:(objcl:objcl-string message)]
-    ;; [panel setNameFieldLabel:(objcl:objcl-string label)]
-    [panel setPrompt:(objcl:objcl-string prompt)]
+    ;; [panel setTitle:(objcl:objc-string title)]
+    ;; [panel setMessage:(objcl:objc-string message)]
+    ;; [panel setNameFieldLabel:(objcl:objc-string label)]
+    [panel setPrompt:(objcl:objc-string prompt)]
     [panel setCanCreateDirectories:t]
     [panel setCanSelectHiddenExtension:t]
     [panel setExtensionHidden:nil]
@@ -198,11 +198,11 @@ PROMPT:         A string, displayed as title of the choose directory dialog.
     [panel setAllowedFileTypes:nil]
     ;; --
     #-cocoa-10.6
-    [panel setDirectory:(objcl:objcl-string (namestring directory))]
+    [panel setDirectory:(objcl:objc-string (namestring directory))]
     #+cocoa-10.6
     (progn
-      [panel setDirectoryURL:[NSURL fileURLWithPath:(objcl:objcl-string (namestring directory)) isDirectory:t]]
-      [panel setNameFieldStringValue:(objcl:objcl-string "")])
+      [panel setDirectoryURL:[NSURL fileURLWithPath:(objcl:objc-string (namestring directory)) isDirectory:t]]
+      [panel setNameFieldStringValue:(objcl:objc-string "")])
     (when (= [panel runModal] #$NSFileHandlingPanelOKButton)
       (setf *default-directory* (panel-directory panel))
       (let* ((urls  (objc:send panel "URLs"))
@@ -284,26 +284,26 @@ CHOOSE-DIRECTORY-DIALOG dialog box to pathname.  It returns pathname.
 
 (defun mac-file-type (path)
   (mactype-to-string [[[[NSFileManager defaultManager]
-                        attributesOfItemAtPath:(objcl:objcl-string (namestring (truename path)))
+                        attributesOfItemAtPath:(objcl:objc-string (namestring (truename path)))
                         error:oclo:*null*] objectForKey:#$NSFileHFSTypeCode] unsignedLongValue]))
 
 (defun mac-file-creator (path)
   (mactype-to-string [[[[NSFileManager defaultManager]
-                        attributesOfItemAtPath:(objcl:objcl-string (namestring (truename path)))
+                        attributesOfItemAtPath:(objcl:objc-string (namestring (truename path)))
                         error:oclo:*null*] objectForKey:#$NSFileHFSCreatorCode] unsignedLongValue]))
 
 (defun set-mac-file-type (path type)
   [[NSFileManager defaultManager]
    setAttributes: [NSDictionary dictionaryWithObjects:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:(mactype-from-string type)]]
                                 forKeys:[NSArray arrayWithObject:#$NSFileHFSTypeCode]]
-   ofItemAtPath:(objcl:objcl-string (namestring (truename path)))
+   ofItemAtPath:(objcl:objc-string (namestring (truename path)))
    error:oclo:*null*])
 
 (defun set-mac-file-creator (path creator)
   [[NSFileManager defaultManager]
    setAttributes: [NSDictionary dictionaryWithObjects:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:(mactype-from-string  creator)]]
                                 forKeys:[NSArray arrayWithObject:#$NSFileHFSCreatorCode]]
-   ofItemAtPath:(objcl:objcl-string (namestring (truename path)))
+   ofItemAtPath:(objcl:objc-string (namestring (truename path)))
    error:oclo:*null*])
 
 

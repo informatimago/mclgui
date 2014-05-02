@@ -40,10 +40,19 @@
           (test-color-box)
           (set-view-position  (aref (view-subviews *w*) 0) 30 20)
           (aref (view-subviews *w*) 0)
-          (set-view-scroll-position *w* 10 0)
+          (set-view-scroll-position *w* -10 -10)
           (view-draw-contents *w*)
-          )
+          
 
+          (import '(com.informatimago.common-lisp.cesarum.utility:/apply
+                    com.informatimago.common-lisp.cesarum.utility:compose))
+
+          (map 'list (/apply (compose point-to-list view-origin)
+                             (compose point-to-list view-position)
+                             (compose point-to-list view-scroll-position))
+            (view-subviews *w*))
+
+          )
 
 (defclass boxed-static-text-dialog-item (static-text-dialog-item)
   ())

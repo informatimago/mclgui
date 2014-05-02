@@ -83,7 +83,7 @@
 (defmethod set-dialog-item-text ((item static-text-dialog-item) text)
   (setf (slot-value item 'dialog-item-text) text)
   (with-handle (texth item)
-    [texth setStringValue:(objcl:objcl-string (dialog-item-text item))])
+    [texth setStringValue:(objcl:objc-string (dialog-item-text item))])
   (invalidate-view item t)  
   text)
 
@@ -126,7 +126,7 @@
 
 (defmethod view-draw-contents ((item static-text-dialog-item))
   (with-handle (texth item)
-    [texth drawRect: (unwrap (make-nsrect :origin (view-origin item) :size (view-size item)))])
+    [texth drawRect: (unwrap (make-nsrect :origin (view-position item) :size (view-size item)))])
   ;; We shouldn't have to do anything really
   #-(and)
   (when (installed-item-p item)

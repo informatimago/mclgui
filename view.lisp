@@ -683,8 +683,8 @@ WINDOW:         A window.
 RETURN:  The VIEW rectangle in the view container coordinates.
 ")
   (:method ((view simple-view))
-    (make-rect (view-position view)
-               (add-points (view-position view) (view-size view)))))
+    (let ((topleft (view-position view)))
+     (make-rect topleft (add-points topleft (view-size view))))))
 
 
 (defgeneric view-bounds (view)
@@ -692,7 +692,8 @@ RETURN:  The VIEW rectangle in the view container coordinates.
 RETURN:  The VIEW rectangle in the view coordinates.
 ")
   (:method ((view simple-view))
-    (make-rect #@(0 0) (view-size view))))
+    (let ((topleft (subtract-points #@(0 0) (view-origin view))))
+     (make-rect topleft (add-points topleft (view-size view))))))
 
 
 (defgeneric invalidate-region (view region &optional erase-p)
@@ -724,11 +725,20 @@ ERASE-P:        A value indicating whether or not to add the
     ;; TODO: for now we invalidate the region bounds or the view-frame.
     (let ((window (view-window view)))
       (when window
+        
         (let ((bounds (convert-rectangle
                        (if region
                            (region-bounds region)
                            (view-bounds view))
                        view window)))
+          (format-trace "invalidate-region"
+                        (not (not region))
+                        :view (list (point-to-list (view-position view))
+                                    (point-to-list (view-size view)))
+                        :bounds (rect-to-list (if region
+                                                  (region-bounds region)
+                                                  (view-bounds view)))
+                        :converted (rect-to-list bounds))
           (when erase-p
             (with-focused-view window
               (with-fore-color (or (slot-value window 'back-color) *white-color*)
@@ -779,7 +789,7 @@ ERASE-P:        A value indicating whether or not to add the
     (needs-to-draw-rect window
                         (if region
                             (region-bounds region)
-                            (view-bounds window)))
+                            (view-bounds window)) )
     (values)))
 
 
@@ -1097,9 +1107,12 @@ POINT:          A point, encoded as an integer.
 SOURCE-VIEW:    A view in whose coordinate system point is given.
 "
   (declare (stepper disable))
-  (let* ((src-offset (%convert-to-window source-view      (view-origin source-view)))
-         (dst-offset (%convert-to-window destination-view (view-origin destination-view)))
-         (result (add-points point (subtract-points src-offset dst-offset))))
+  (let* ((src-offset (view-origin source-view))
+         (dst-offset (view-origin destination-view))
+         ;; (src-offset (%convert-to-window source-view      (view-origin source-view)))
+         ;; (dst-offset (%convert-to-window destination-view (view-origin destination-view)))
+         (delta  (subtract-points dst-offset src-offset))
+         (result (add-points point delta)))
     #-(and)
     (format-trace "convert-coordinates"
                   (point-to-list point) :+ (point-to-list src-offset) :- (point-to-list dst-offset)
@@ -1111,9 +1124,11 @@ SOURCE-VIEW:    A view in whose coordinate system point is given.
 
 (defun convert-rectangle (rect source-view destination-view)
   (declare (stepper disable))
-  (let* ((src-offset (%convert-to-window source-view      (view-origin source-view)))
-         (dst-offset (%convert-to-window destination-view (view-origin destination-view)))
-         (delta  (subtract-points src-offset dst-offset)))
+  (let* ((src-offset (view-origin source-view))
+         (dst-offset (view-origin destination-view))
+         ;; (src-offset (%convert-to-window source-view      (view-origin source-view)))
+         ;; (dst-offset (%convert-to-window destination-view (view-origin destination-view)))
+         (delta  (subtract-points dst-offset src-offset)))
     (make-rect (add-points delta (rect-topleft rect))
                (add-points delta (rect-bottomright rect)))))
 
