@@ -294,7 +294,7 @@
 (defun encode-key-message (kcode characters)
   (let ((kcode  (ldb (byte 8 0) kcode)))
    (case (length characters)
-     ((0) (dpb kcode (byte 8 22) (byte 8 8) 0))
+     ((0) (dpb kcode (byte 8 8) 0))
      ((1) (let ((ccode (char-code (aref characters 0))))
             (if (<= 0 ccode 255)
                 (dpb kcode (byte 8 8) ccode)
@@ -701,7 +701,7 @@ DO:             Evaluates the BODY in a lexical environment where
                 (event-message event) window)
           ;; (format-trace '|becomeMainWindow| event)
           ;; (view-activate-event-handler window)
-          (post-event (wrap event))))))]
+          (post-event event)))))]
 
 
 @[MclguiWindow
@@ -722,7 +722,7 @@ DO:             Evaluates the BODY in a lexical environment where
                 (event-message event) window)
           ;; (format-trace '|resignMainWindow| event)
           ;; (view-deactivate-event-handler window)
-          (post-event (wrap event))))))]
+          (post-event event)))))]
 
 
 @[MclguiWindow
@@ -777,22 +777,21 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:<bool>)
   body:YES]
 
-(defvar *view-draw-contents-from-drawRect* nil
-  "Bound to the mclgui:view being drawn (mclgui:view-draw-contents called from [MclguiView drawRect:])
-or to NIL outside of drawRect:.")
+
+(defun *nsrect-to-nsrect (prect)
+  (make-nsrect 
+   :x (ccl:pref prect :<nsr>ect.origin.x)
+   :y (ccl:pref prect :<nsr>ect.origin.y) 
+   :width (ccl:pref prect :<nsr>ect.size.width) 
+   :height (ccl:pref prect :<nsr>ect.size.height)))
 
 @[MclguiView
-  method:(drawRect:(:<nsr>ect)rect)
+  method:(drawRect:(:<NSR>ect)rect)
   resultType:(:void)
   body:
-  (let ((r (nsrect-to-rect (make-nsrect (ns:ns-rect-x rect) (ns:ns-rect-y rect)
-                                        (ns:ns-rect-width rect) (ns:ns-rect-height rect)))))
-    (format-trace "-[MclguiView drawRect:]" self (nsview-view self))
-    (format-trace "-[MclguiView drawRect:]" (point-to-list (rect-topleft r))  (point-to-list (rect-bottomright r))))
   (let ((view (nsview-view self)))
     (when view
-      (let ((*view-draw-contents-from-drawRect* view))
-        (view-draw-contents view))))]
+      (view-draw-contents view)))]
 
 
 @[MclguiView

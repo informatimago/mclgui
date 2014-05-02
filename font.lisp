@@ -64,7 +64,7 @@ RETURN:         A list of FONT-DESCRIPTION lists for members of the font FAMILY:
 "
   (mapcar (lambda (element) (coerce element 'list))
           (nsarray-to-list [[NSFontManager sharedFontManager]
-                            availableMembersOfFontFamily:(objcl:objcl-string family)])))
+                            availableMembersOfFontFamily:(objcl:objc-string family)])))
 
 
 (defstruct (font-description
@@ -551,7 +551,7 @@ FONT-SPEC:      A font specification.  The default is the current
     (multiple-value-bind (traits others) (style-to-font-traits face)
       (values
        [[NSFontManager sharedFontManager]
-        convertFont:[NSFont fontWithName:(objcl:objcl-string name)
+        convertFont:[NSFont fontWithName:(objcl:objc-string name)
                             size: (cgfloat size)]
         toHaveTrait:(font-traits-to-mask traits)]
        mode color others))))
@@ -762,7 +762,7 @@ MS:             Mode/Size code.
   (check-type end   fixnum "an end position in the string")
   (let ((string (nsubseq string start end)))
     (round (nssize-width
-            (get-nssize [(objcl:objcl-string string)
+            (get-nssize [(objcl:objc-string string)
                          sizeWithAttributes:[(font-descriptor-from-codes ff ms) fontAttributes]])))))
 
 

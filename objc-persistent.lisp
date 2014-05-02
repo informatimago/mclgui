@@ -330,7 +330,7 @@ to generate the current object do
               [nsobjects addObject:(handle wrapper)]
               (setf (handle wrapper) nil)))
       (break "nsobjects filled up, will encode it")
-      [archiver encodeObject:nsobjects forKey:(objcl:objcl-string *root-key*)]
+      [archiver encodeObject:nsobjects forKey:(objcl:objc-string *root-key*)]
       (break "archiver encoded, will finish it")
       [archiver finishEncoding]
       (break "wrapping the archive")
@@ -346,7 +346,7 @@ to generate the current object do
 ;; (defmethod unarchive-objects (archive)
 ;;   (let* ((wrappers  (archive-wrappers archive))
 ;;          (data      (nsdata-from-vector (archive-data archive)))
-;;          (nsobjects [(#_NSClassFromString (objcl:objcl-string (archive-unarchiver-class-name archive)))
+;;          (nsobjects [(#_NSClassFromString (objcl:objc-string (archive-unarchiver-class-name archive)))
 ;;                      unarchiveObjectWithData:data]))
 ;;     (loop
 ;;       :for i :from 0
@@ -358,10 +358,10 @@ to generate the current object do
   (let* ((wrappers   (archive-wrappers archive))
          (data       (nsdata-from-vector (archive-data archive))))
     (with-temporary-retained-nsobjects
-        ((unarchiver [[(#_NSClassFromString (objcl:objcl-string (archive-unarchiver-class-name archive))) alloc] initForReadingWithData:data])
+        ((unarchiver [[(#_NSClassFromString (objcl:objc-string (archive-unarchiver-class-name archive))) alloc] initForReadingWithData:data])
          (delegate   [MclguiKeyedUnarchiverDelegate new]))
       [unarchiver setDelegate:delegate]
-      (let ((nsobjects [unarchiver decodeObjectForKey:(objcl:objcl-string (archive-root-key archive))]))
+      (let ((nsobjects [unarchiver decodeObjectForKey:(objcl:objc-string (archive-root-key archive))]))
         (loop
           :for i :from 0
           :for wrapper :in wrappers
@@ -387,12 +387,12 @@ to generate the current object do
 (defparameter *a* (archive-objects
                    (let ((d1 [NSMutableDictionary dictionary])
                          (d2 [NSMutableDictionary dictionary]))
-                     [d1 setObject:(objcl:objcl-string "Hello") forKey:(objcl:objcl-string "one")]
-                     [d1 setObject:(objcl:objcl-string "World") forKey:(objcl:objcl-string "two")]
-                     [d1 setObject:d2                           forKey:(objcl:objcl-string "d2")]
-                     [d2 setObject:(objcl:objcl-string "un")    forKey:(objcl:objcl-string "one")]
-                     [d2 setObject:(objcl:objcl-string "deux")  forKey:(objcl:objcl-string "two")]
-                     [d2 setObject:d1                           forKey:(objcl:objcl-string "d1")]
+                     [d1 setObject:(objcl:objc-string "Hello") forKey:(objcl:objc-string "one")]
+                     [d1 setObject:(objcl:objc-string "World") forKey:(objcl:objc-string "two")]
+                     [d1 setObject:d2                           forKey:(objcl:objc-string "d2")]
+                     [d2 setObject:(objcl:objc-string "un")    forKey:(objcl:objc-string "one")]
+                     [d2 setObject:(objcl:objc-string "deux")  forKey:(objcl:objc-string "two")]
+                     [d2 setObject:d1                           forKey:(objcl:objc-string "d1")]
                      (setf (handle (elt *wi* 0)) d1
                            (handle (elt *wi* 1)) d2)
                      (make-weak-list *wi*))))
@@ -400,12 +400,12 @@ to generate the current object do
 (defparameter *test-object*
   (let ((d1 [NSMutableDictionary dictionary])
         (d2 [NSMutableDictionary dictionary]))
-    [d1 setObject:(objcl:objcl-string "Hello") forKey:(objcl:objcl-string "one")]
-    [d1 setObject:(objcl:objcl-string "World") forKey:(objcl:objcl-string "two")]
-    [d1 setObject:d2                           forKey:(objcl:objcl-string "d2")]
-    [d2 setObject:(objcl:objcl-string "un")    forKey:(objcl:objcl-string "one")]
-    [d2 setObject:(objcl:objcl-string "deux")  forKey:(objcl:objcl-string "two")]
-    [d2 setObject:d1                           forKey:(objcl:objcl-string "d1")]
+    [d1 setObject:(objcl:objc-string "Hello") forKey:(objcl:objc-string "one")]
+    [d1 setObject:(objcl:objc-string "World") forKey:(objcl:objc-string "two")]
+    [d1 setObject:d2                           forKey:(objcl:objc-string "d2")]
+    [d2 setObject:(objcl:objc-string "un")    forKey:(objcl:objc-string "one")]
+    [d2 setObject:(objcl:objc-string "deux")  forKey:(objcl:objc-string "two")]
+    [d2 setObject:d1                           forKey:(objcl:objc-string "d1")]
     ;; (wrap d1)
     d1))
 
@@ -422,12 +422,12 @@ to generate the current object do
 ;; (defparameter *a* (archive-objects
 ;;                    (let ((d1 [NSMutableDictionary dictionary])
 ;;                          (d2 [NSMutableDictionary dictionary]))
-;;                      [d1 setObject:(objcl:objcl-string "Hello") forKey:(objcl:objcl-string "one")]
-;;                      [d1 setObject:(objcl:objcl-string "World") forKey:(objcl:objcl-string "two")]
-;;                      [d1 setObject:d2                           forKey:(objcl:objcl-string "d2")]
-;;                      [d2 setObject:(objcl:objcl-string "un")    forKey:(objcl:objcl-string "one")]
-;;                      [d2 setObject:(objcl:objcl-string "deux")  forKey:(objcl:objcl-string "two")]
-;;                      [d2 setObject:d1                           forKey:(objcl:objcl-string "d1")]
+;;                      [d1 setObject:(objcl:objc-string "Hello") forKey:(objcl:objc-string "one")]
+;;                      [d1 setObject:(objcl:objc-string "World") forKey:(objcl:objc-string "two")]
+;;                      [d1 setObject:d2                           forKey:(objcl:objc-string "d2")]
+;;                      [d2 setObject:(objcl:objc-string "un")    forKey:(objcl:objc-string "one")]
+;;                      [d2 setObject:(objcl:objc-string "deux")  forKey:(objcl:objc-string "two")]
+;;                      [d2 setObject:d1                           forKey:(objcl:objc-string "d1")]
 ;;                      (setf (handle (elt *wi* 0)) d1
 ;;                            (handle (elt *wi* 1)) d2)
 ;;                      (make-weak-list *wi*))))
@@ -479,9 +479,9 @@ to generate the current object do
           (do-nsarray (str [(handle (elt *wo* 1)) allKeys])
             (print str))
 
-          [(handle (elt *wo* 0)) objectForKey:(objcl:objcl-string "d2")]
-          [(handle (elt *wo* 0)) objectForKey: (objcl:objcl-string "d2")]
-          [(handle (elt *wo* 1)) objectForKey: (objcl:objcl-string "d1")]
+          [(handle (elt *wo* 0)) objectForKey:(objcl:objc-string "d2")]
+          [(handle (elt *wo* 0)) objectForKey: (objcl:objc-string "d2")]
+          [(handle (elt *wo* 1)) objectForKey: (objcl:objc-string "d1")]
 
 
 
@@ -527,7 +527,7 @@ to generate the current object do
           ;;    Nicknames:     COM.INFORMATIMAGO.OBJCL OBJCL 
           ;;    Uses:          COM.INFORMATIMAGO.SIMPLE-TEST COMMON-LISP 
           ;;    Exported:      *OBJECTIVE-CL-READTABLE* @ DISABLE-OBJCL-READER-MACROS ENABLE-OBJCL-READER-MACROS 
-          ;;                   LISP-STRING NO OBJC-DEFINITION-READER-MACRO OBJC-EXPRESSION-READER-MACRO OBJCL-STRING 
+          ;;                   LISP-STRING NO OBJC-DEFINITION-READER-MACRO OBJC-EXPRESSION-READER-MACRO OBJC-STRING 
           ;;                   READ-ERROR READ-ERROR-ARGUMENTS READ-ERROR-CONTROL-STRING SET-OBJECTIVE-CL-SYNTAX YES
           ;; nil
 

@@ -48,7 +48,7 @@
          ;; (#_NSEraseRect (unwrap (get-nsrect [viewh bounds])))
          ;; [[NSColor colorWithCalibratedRed:1d0 green:0d0 blue:0d0 alpha:1.0d0] set]
          ;; (#_NSRectFill (ns:make-ns-rect 10 100 200 100))
-         [(objcl:objcl-string "Hello")
+         [(objcl:objc-string "Hello")
           drawAtPoint: (ns:make-ns-point 20 20)
           withAttributes: (print (destructuring-bind (ff ms)
                                      ; (font-codes '("Monaco" 9))

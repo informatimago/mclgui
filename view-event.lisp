@@ -140,9 +140,8 @@
 
 (defmethod view-draw-contents ((view view))
   (call-next-method)
-  (unless *view-draw-contents-from-drawRect*
-    (dovector (subview (view-subviews view))
-      (view-focus-and-draw-contents subview))))
+  (dovector (subview (view-subviews view))
+    (view-focus-and-draw-contents subview)))
 
 
 ;;;; THE END ;;;;

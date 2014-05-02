@@ -58,18 +58,18 @@
 (defun test-object ()
   (let ((d1 [NSMutableDictionary dictionary])
         (d2 [NSMutableDictionary dictionary]))
-    [d1 setObject:(objcl:objcl-string "Hello") forKey:(objcl:objcl-string "one")]
-    [d1 setObject:(objcl:objcl-string "World") forKey:(objcl:objcl-string "two")]
-    [d1 setObject:d2                           forKey:(objcl:objcl-string "d2")]
-    [d2 setObject:(objcl:objcl-string "un")    forKey:(objcl:objcl-string "one")]
-    [d2 setObject:(objcl:objcl-string "deux")  forKey:(objcl:objcl-string "two")]
-    [d2 setObject:d1                           forKey:(objcl:objcl-string "d1")]
+    [d1 setObject:(objcl:objc-string "Hello") forKey:(objcl:objc-string "one")]
+    [d1 setObject:(objcl:objc-string "World") forKey:(objcl:objc-string "two")]
+    [d1 setObject:d2                          forKey:(objcl:objc-string "d2")]
+    [d2 setObject:(objcl:objc-string "un")    forKey:(objcl:objc-string "one")]
+    [d2 setObject:(objcl:objc-string "deux")  forKey:(objcl:objc-string "two")]
+    [d2 setObject:d1                          forKey:(objcl:objc-string "d1")]
     d1))
 
 (defun test-encode ()
   (let* ((data      [NSMutableData data])
          (archiver  [[TestKeyedArchiver alloc] initForWritingWithMutableData:data]))
-    [archiver encodeObject:(test-object) forKey:(objcl:objcl-string "ROOT")]
+    [archiver encodeObject:(test-object) forKey:(objcl:objc-string "ROOT")]
     [archiver finishEncoding]
     (vector-from-nsdata data)))
 

@@ -36,7 +36,7 @@
     :name "mclgui"
     :description "Macintosh Common Lisp Graphical User Interface for OpenStep"
     :author "Pascal J. Bourguignon"
-    :version "1.0.4"
+    :version "1.1.0"
     :license "GPL3"
     :depends-on ("closer-mop" ; window.lisp uses closer-mop:class-precedence-list, etc.
                  "bordeaux-threads"
@@ -48,7 +48,11 @@
                  "com.informatimago.clext"   ; closer-weak: wrapper.lisp uses weak lists
                  ;; While developping:
                  "com.informatimago.common-lisp.cesarum")
-    :components ((:file "package")
+    :components ((:file "cocoa"
+                        :depends-on ())
+
+                 (:file "package"
+                        :depends-on ("cocoa"))
 
                  (:file "macros"
                         :depends-on ("package"))

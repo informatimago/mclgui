@@ -105,13 +105,13 @@ button.
 
 "
   (declare (ignore size position help-spec back-color theme-background window-type))
-  (case (#_NSRunInformationalAlertPanel (objcl:objcl-string window-title)
-                                        (objcl:objcl-string message)
-                                        (objcl:objcl-string (or yes-text "OK"))
+  (case (#_NSRunInformationalAlertPanel (objcl:objc-string window-title)
+                                        (objcl:objc-string message)
+                                        (objcl:objc-string (or yes-text "OK"))
                                         (when cancel-text
-                                          (objcl:objcl-string cancel-text))
+                                          (objcl:objc-string cancel-text))
                                         (when no-text
-                                          (objcl:objcl-string no-text)))
+                                          (objcl:objc-string no-text)))
     ((-1) nil)
     ((0)  (throw-cancel))
     ((+1) t))

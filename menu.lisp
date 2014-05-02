@@ -73,9 +73,9 @@ DO:             Add to the NSMenu of MENU a NSItem with the NSMenu of
           (ns-add-item nsmenu nsitem)
           [nsmenu setSubmenu:(unwrap submenu) forItem:nsitem])
         (let ((nsitem [[NSMenuItem alloc]
-                            initWithTitle:(objcl:objcl-string (menu-title submenu))
+                            initWithTitle:(objcl:objc-string (menu-title submenu))
                             action:*null*
-                            keyEquivalent:(objcl:objcl-string "")]))
+                            keyEquivalent:(objcl:objc-string "")]))
           (ns-add-item nsmenu nsitem)
           [nsmenu setSubmenu:(unwrap submenu) forItem:nsitem]))))
 
@@ -564,7 +564,7 @@ RETURN:         NEW-TITLE
     (when (string= new-title "-")
       (menu-item-disable item))
     (with-handle (nsitem item)
-      [nsitem setTitle:(objcl:objcl-string new-title)])
+      [nsitem setTitle:(objcl:objc-string new-title)])
     new-title))
 
 
@@ -616,9 +616,9 @@ RETURN:         two values: the key equivalent NSString and the key
                 returned by default.
 "
   (values (cond
-            ((null  command-key) (objcl:objcl-string ""))
-            ((consp command-key) (objcl:objcl-string (string-downcase (second command-key))))
-            (t                   (objcl:objcl-string (string-downcase command-key))))
+            ((null  command-key) (objcl:objc-string ""))
+            ((consp command-key) (objcl:objc-string (string-downcase (second command-key))))
+            (t                   (objcl:objc-string (string-downcase command-key))))
           (encode-key-mask (if (atom command-key)
                                :command
                                (first command-key)))))
@@ -715,7 +715,7 @@ NEW-STYLES:     A keyword or list of keywords. Allowable keywords are
     (let ((nsitem (handle item)))
       (when nsitem
         [nsitem setAttributedTitle:[[NSAttributedString alloc] 
-                                    initWithString:(objcl:objcl-string (slot-value item 'title))
+                                    initWithString:(objcl:objc-string (slot-value item 'title))
                                     attributes:(style-to-attributes newstyle)]]))))
 
 
@@ -1016,7 +1016,7 @@ This is the menu-item-update-function for the items in the Edit menu.
     (multiple-value-bind (ke km) (decode-command-key (command-key item))
       (let ((nsitem (or (handle item)
                         [[NSMenuItem alloc]
-                         initWithTitle:(objcl:objcl-string (menu-item-title item))
+                         initWithTitle:(objcl:objc-string (menu-item-title item))
                          action:(oclo:@selector "menuItemSelected:")
                          keyEquivalent:ke])))
         [nsitem setKeyEquivalentModifierMask:km]
@@ -1029,7 +1029,7 @@ This is the menu-item-update-function for the items in the Edit menu.
 
 (defmethod unwrap ((item menu-item))
   (unwrapping item
-    ;; (format t "~&unwrap menu ~S~%" (objcl:objcl-string (menu-title item))) (finish-output)
+    ;; (format t "~&unwrap menu ~S~%" (objcl:objc-string (menu-title item))) (finish-output)
     (or (handle item) (update-handle item))))
 
 
@@ -1058,7 +1058,7 @@ RETURN: The handle of the menu-item that has (handle menu) as submenu.
 
 (defmethod update-handle ((menu menu))
   (let ((nsmenu (or (handle menu)
-                    [[NSMenu alloc] initWithTitle:(objcl:objcl-string (menu-title menu))])))
+                    [[NSMenu alloc] initWithTitle:(objcl:objc-string (menu-title menu))])))
     (setf (handle menu) nsmenu)
     ;; (format t "~&unwrap menu ~S~%" (menu-title menu)) (finish-output)
     (when (slot-value menu 'menu-font)

@@ -94,7 +94,7 @@
     [winh setAcceptsMouseMovedEvents:YES]
     ;; [winh setDelegate:(make-instance 'mclgui-window-delegate :window window)]
     [winh setDelegate:winh]
-    [winh setTitle:(objcl:objcl-string (window-title window))]
+    [winh setTitle:(objcl:objc-string (window-title window))]
     ;; (format-trace "created window" (window-title window) (point-to-list (view-position window)) (point-to-list (view-size window)) (window-to-nswindow-frame (view-position window) (view-size window)))
     winh))
 
@@ -462,7 +462,7 @@ NEW-TITLE:      A string to be used as the new title.
       (setf (slot-value window 'window-title) new-title)
       (let ((nswindow (handle window)))
         (when nswindow
-          (on-main-thread [nswindow setTitle:(objcl:objcl-string new-title)])))
+          (on-main-thread [nswindow setTitle:(objcl:objc-string new-title)])))
       new-title)))
 
 
@@ -1091,8 +1091,9 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 
 (defmethod view-draw-contents ((window window))
   (with-focused-view window
-    (let ((size (view-size window)))
-      (erase-rect* 0 0 (point-h size) (point-v size))
+    (let ((bounds (view-bounds window)))
+      (erase-rect* (rect-left bounds) (rect-top bounds)
+                   (rect-width bounds) (rect-height bounds))
       (call-next-method))))
 
 

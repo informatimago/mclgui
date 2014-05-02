@@ -60,7 +60,7 @@
         (declare (ignore w l))
         ;; (format-trace "draw-string" a d w l)
         ;; the origin of the bounding box.  topleft in flipped coordinates.
-        [(objcl:objcl-string str)
+        [(objcl:objc-string str)
          drawAtPoint: (ns:make-ns-point x (- y a d))
          withAttributes:  [descriptor fontAttributes]])))
   str)
