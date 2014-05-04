@@ -179,17 +179,12 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                                  (view-font-codes font-view))
     (let ((ff (or ff 65536)) ; application-font
           (ms (or ms 0)))
-        ;; (format-trace "set-font" :ff ff :ms ms)
-        (finish-output *trace-output*)
+      ;; (format-trace "set-font" :ff ff :ms ms)
       (multiple-value-bind (font mode) (font-from-codes ff ms)
         (declare (ignore mode))
         ;; TODO: manage mode (:srcOr …)
-        ;; (format-trace "set-font" font mode)
-        ;; (finish-output *trace-output*)
-        [font set]
-        ;; (format-trace "[font set]" 'done)
-        ;; (finish-output *trace-output*)
-        )
+        (format-trace "set-font" font mode)
+        [font set])
       (list ff ms))))
 
 ;; [(font-from-codes 65536 0) set]
@@ -198,52 +193,67 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 
 (defgeneric call-with-focused-view (view function &optional font-view)
   (:method ((view simple-view) function &optional font-view)
-    (with-view-handle (handle view)
-      (let ((unlock   nil))
-        (flet ((call-it ()
-                 (let ((trans  [[NSAffineTransform class] performSelector:(objc:@selector |transform|)])
-                       ;; A bug in ccl prevents this to work: [NSAffineTransform transform]
-                       (origin (if (view-container view)
-                                           (subtract-points (view-position view)
-                                                            (view-scroll-position (view-container view)))
-                                           (view-scroll-position view))))
-                   [trans translateXBy: (cgfloat (point-h origin)) yBy: (cgfloat (point-v origin))]
-                   [trans concat]
-                   (unwind-protect
-                        (call-with-pen-state (lambda () (funcall function view))
-                                             (view-pen view))
-                     [trans invert]
-                     [trans concat]))))
-          #-(and) (or (null font-view) (eq font-view old-font-view))
-          (if  (or (eq view *current-view*) *view-draw-contents-from-drawRect*)
-               (if (eq font-view *current-font-view*)
-                   (let ((*current-view* view))
-                     (call-it))
-                   (unwind-protect
-                        (let* ((*current-view* view)
-                               (*current-font-view*  font-view)
-                               (*current-font-codes* (set-font *current-font-view*))) ; change font
-                          (call-it))
-                     (set-font *current-font-view*))) ; revert font
+    (flet ((call-it ()
+             (let ((transtack (transform-stack (view-window view)))
+                   (inverse   nil))
                (unwind-protect
-                    (let ((*current-view* view)
-                          (*current-font-view* (or font-view *current-font-view*))
-                          (*current-font-codes* (copy-list *current-font-codes*)))
-                      (if (setf unlock [handle lockFocusIfCanDraw])
-                          (progn
-                            ;; (format-trace "did lockFocusIfCanDraw" view)
-                            (focus-view *current-view* *current-font-view*)
-                            (apply (function set-current-font-codes) (set-font *current-font-view*))
-                            (call-it)
-                            [[NSGraphicsContext currentContext] flushGraphics])
-                          ;; (format-trace "could not lockFocusIfCanDraw" view)
-                          ))
-                 (when unlock
-                   (set-font *current-font-view*)
-                   [handle unlockFocus]
-                   ;;(format-trace "did unlockFocusIfCanDraw" view)
-                   )
-                 (focus-view *current-view* *current-font-view*))))))))
+                    (progn
+                      (when transtack ; remove the top transform
+                        (setf inverse [[NSAffineTransform alloc] initWithTransform:(car transtack)])
+                        [inverse invert]
+                        [inverse concat])
+                      (let ((trans  [[[NSAffineTransform class] performSelector:(objc:@selector |transform|)] retain])
+                            ;; A bug in ccl prevents this to work: [NSAffineTransform transform]
+                            (origin (convert-coordinates #@(0 0) view (view-window view))
+                                    #-(and)
+                                    (if (view-container view)
+                                        (view-origin view)
+                                        (subtract-points (view-position view)
+                                                         (view-scroll-position (view-container view)))
+                                        (view-scroll-position view))))
+                        (unwind-protect
+                             (progn
+                               [trans translateXBy: (cgfloat (point-h origin)) yBy: (cgfloat (point-v origin))]
+                               [trans concat]
+                               (push trans (transform-stack (view-window view)))
+                               (call-with-pen-state (lambda () (funcall function view))
+                                                    (view-pen view)))
+                          (setf (transform-stack (view-window view)) transtack)
+                          [trans invert]
+                          [trans concat]
+                          [trans release])))
+                 (when inverse ; put back the top transform.
+                   [inverse invert]
+                   [inverse concat]
+                   [inverse release])))))
+      #-(and) (or (null font-view) (eq font-view old-font-view))
+      (if (eq *current-view* view)
+          (if (eq *current-font-view* font-view)
+              (let ((*current-view* view)
+                    (*current-font-view* font-view)
+                    (*current-font-codes* (copy-list *current-font-codes*)))
+                (call-it))
+              (unwind-protect
+                   (let* ((*current-view* view)
+                          (*current-font-view*  font-view)
+                          (*current-font-codes* (set-font *current-font-view*))) ; change font
+                     (call-it))
+                (set-font *current-font-view*))) ; revert font
+          (with-view-handle (handle view)
+            (let ((unlock   nil))
+              (unwind-protect
+                   (let ((*current-view* view)
+                         (*current-font-view* (or font-view *current-font-view*))
+                         (*current-font-codes* (copy-list *current-font-codes*)))
+                     (when (setf unlock [handle lockFocusIfCanDraw])
+                       (focus-view *current-view* *current-font-view*)
+                       (apply (function set-current-font-codes) (set-font *current-font-view*))
+                       (call-it)
+                       [[NSGraphicsContext currentContext] flushGraphics]))
+                (when unlock
+                  (set-font *current-font-view*)
+                  [handle unlockFocus])
+                (focus-view *current-view* *current-font-view*))))))))
 
 
 
@@ -429,8 +439,8 @@ NEW-CONTAINER:  The new container of the view.
           (when (or (eq new-container view)
                     (view-contains-p view new-container))
             (error 'view-error :view view
-                   :format-control "Attempt to make ~S contain itself."
-                   :format-arguments (list view))))
+                               :format-control "Attempt to make ~S contain itself."
+                               :format-arguments (list view))))
         (let* ((new-window (and new-container (view-window new-container)))
                (old-window (and old-container (view-window old-container)))
                (current-view *current-view*)
@@ -497,8 +507,8 @@ SUBVIEWS:       A list of view or simple view, but not a window;
 ")
   (:method ((view view) &rest subviews)
     (unless (find view subviews :test (complement (function view-contains-p)))
-     (dolist (subview subviews)
-       (set-view-container subview nil)))))
+      (dolist (subview subviews)
+        (set-view-container subview nil)))))
 
 
 
@@ -507,9 +517,9 @@ SUBVIEWS:       A list of view or simple view, but not a window;
   (:method ((view simple-view) contained-view)
     (loop
       :for container = (view-container contained-view)
-      :then (view-container container)
+        :then (view-container container)
       :while container 
-      :thereis (eq container view)))
+        :thereis (eq container view)))
   (:method ((view null) contained-view)
     (declare (ignore contained-view))
     nil))
@@ -535,8 +545,8 @@ SUBVIEW-TYPE:   A Common Lisp type specifier.
             (,vsubview-type ,subview-type)
             (,vsubviews     (copy-seq (view-subviews ,vview))))
        (dovector (,subview-var ,vsubviews (values))
-                 (when (typep ,subview-var ,vsubview-type)
-                   ,@body)))))
+         (when (typep ,subview-var ,vsubview-type)
+           ,@body)))))
 
 
 (defgeneric map-subviews (view function &optional subview-type)
@@ -573,8 +583,8 @@ SUBVIEW-TYPE:   A Common Lisp type specifier.
   (:method ((view view) &optional (subview-type t))
     (let ((result nil))
       (dovector (subview (view-subviews view) (nreverse result))
-                (when (typep subview subview-type)
-                  (push subview result))))))
+        (when (typep subview subview-type)
+          (push subview result))))))
 
 (defgeneric view-named (name view)
   (:documentation "
@@ -589,8 +599,8 @@ VIEW:           A view.
 ")
   (:method (name (view simple-view))
     (dovector (subview (view-subviews view))
-              (if (eq name (view-nick-name subview))
-                  (return subview)))))
+      (if (eq name (view-nick-name subview))
+          (return subview)))))
 
 
 (defgeneric find-named-sibling (view name)
@@ -640,7 +650,7 @@ WHERE:          A point in the local coordinate system of the view’s container
     (loop
       :for subview :across (view-subviews view)
       :when (point-in-click-region-p subview where)
-      :do (return (find-clicked-subview subview (convert-coordinates where view subview)))
+        :do (return (find-clicked-subview subview (convert-coordinates where view subview)))
       :finally (return nil)))
   (:method ((view null) where)
     (map-windows (lambda (w)
@@ -684,7 +694,7 @@ RETURN:  The VIEW rectangle in the view container coordinates.
 ")
   (:method ((view simple-view))
     (let ((topleft (view-position view)))
-     (make-rect topleft (add-points topleft (view-size view))))))
+      (make-rect topleft (add-points topleft (view-size view))))))
 
 
 (defgeneric view-bounds (view)
@@ -692,9 +702,14 @@ RETURN:  The VIEW rectangle in the view container coordinates.
 RETURN:  The VIEW rectangle in the view coordinates.
 ")
   (:method ((view simple-view))
-    (let ((topleft (subtract-points #@(0 0) (view-origin view))))
-     (make-rect topleft (add-points topleft (view-size view))))))
+    (let ((topleft (view-scroll-position view) ;; (subtract-points #@(0 0) (view-origin view))
+                   ))
+      (make-rect topleft (add-points topleft (view-size view))))))
 
+(defun erase (window bounds)
+  (with-focused-view window
+    (with-back-color (or (slot-value window 'back-color) *white-color*)
+      (erase-rect* (rect-left bounds) (rect-top bounds) (rect-right bounds) (rect-bottom bounds)))))
 
 (defgeneric invalidate-region (view region &optional erase-p)
   (:documentation "
@@ -722,7 +737,7 @@ ERASE-P:        A value indicating whether or not to add the
                 the view. The default is NIL.
 ")
   (:method ((view simple-view) region &optional erase-p)
-    ;; TODO: for now we invalidate the region bounds or the view-frame.
+    ;; TODO: for now we invalidate the region bounds or the view-bounds.
     (let ((window (view-window view)))
       (when window
         
@@ -733,16 +748,12 @@ ERASE-P:        A value indicating whether or not to add the
                        view window)))
           (format-trace "invalidate-region"
                         (not (not region))
-                        :view (list (point-to-list (view-position view))
-                                    (point-to-list (view-size view)))
+                        :position (point-to-list (view-position view)) :size (point-to-list (view-size view))
                         :bounds (rect-to-list (if region
                                                   (region-bounds region)
                                                   (view-bounds view)))
                         :converted (rect-to-list bounds))
-          (when erase-p
-            (with-focused-view window
-              (with-fore-color (or (slot-value window 'back-color) *white-color*)
-                (fill-rect* (rect-left bounds) (rect-top bounds) (rect-right bounds) (rect-bottom bounds)))))
+          (when erase-p (erase window bounds))
           (needs-to-draw-rect window bounds))))
 
     #-(and)
@@ -784,12 +795,11 @@ ERASE-P:        A value indicating whether or not to add the
     (values))
   
   (:method ((window window) region &optional erase-p)
-    (declare (ignore erase-p)) ;; TODO
-    ;; (format-trace "invalidate-region" window)
-    (needs-to-draw-rect window
-                        (if region
-                            (region-bounds region)
-                            (view-bounds window)) )
+    (let ((bounds (if region
+                      (region-bounds region)
+                      (view-bounds window))))
+      (when erase-p (erase window bounds))
+      (needs-to-draw-rect window bounds))
     (values)))
 
 
@@ -809,13 +819,13 @@ ERASE-P:        A value indicating whether or not to add the
 ")
 
   (:method ((view simple-view) topleft bottomright &optional erase-p)
-    (set-rect-region *temp-rgn* topleft bottomright)
-    (invalidate-region view *temp-rgn* erase-p)
-    (values))
-  
-  (:method ((window window) topleft bottomright &optional erase-p)
-    (set-rect-region *temp-rgn* topleft bottomright)
-    (invalidate-region window *temp-rgn* erase-p)
+    (let ((rgn *temp-rgn*)
+          (left   (min 32767 (max -32768 (point-h topleft))))
+          (top    (min 32767 (max -32768 (point-v topleft))))
+          (right  (min 32767 (max -32768 (point-h bottomright))))
+          (bottom (min 32767 (max -32768 (point-v bottomright)))))
+      (set-rect-region rgn left top right bottom)
+      (invalidate-region view rgn erase-p))
     (values)))
 
 
@@ -835,7 +845,7 @@ ERASE-P:        A value indicating whether or not to add the
   (:method ((window window) &optional erase-p)
     (invalidate-corners window #@(0 0) (view-size window) erase-p)))
 
-    
+
 
 
 (defgeneric validate-region (view region)
@@ -897,6 +907,14 @@ VIEW:           A view or simple view.
 
 
 
+(defgeneric maybe-erase (view)
+  (:method ((view simple-view))
+    nil)
+  (:method ((view view))
+    (window-invalid-region (view-window view)))
+  (:method ((view window))
+    nil))
+
 
 (defgeneric set-view-position (view h &optional v)
   (:documentation "
@@ -920,7 +938,8 @@ RETURN:         (make-point h v)
       (unless (eql pos (view-position view))
         (invalidate-view view t)         
         (setf (%view-position view) pos)
-        (invalidate-view view t))
+        (make-view-invalid view)
+        (invalidate-view view (maybe-erase view)))
       (refocus-view view)
       pos)))
 
@@ -1007,7 +1026,7 @@ VIEW:  A simple view or subclass of simple-view.
   (:documentation "
 DO:             Set the position of the view’s scroll position. It is
                 usually called in response to a mouse click in a
-                scroll bar. The function returns NIL.
+                scroll bar.
 
 VIEW:           A simple view or subclass of simple-view.
 
@@ -1032,7 +1051,6 @@ RETURN:         (make-point h v)
     (declare (ignore scroll-visibly))
     (make-point h v))
   (:method ((view view) h &optional v (scroll-visibly t))
-    (declare (ignore scroll-visibly))
     (let* ((pt         (make-point h v))
            ;; (container  (view-container view))
            (old-sc-pos (view-scroll-position view))
@@ -1040,15 +1058,15 @@ RETURN:         (make-point h v)
       (with-focused-view view
         (unless (eql delta #@(0 0))
           (if scroll-visibly
-            (scroll-rect view (view-bounds view) delta)
-            (invalidate-view view t))))
+              (scroll-rect view (view-bounds view) delta)
+              (invalidate-view view t))))
+      (setf (%view-scroll-position view) pt)
       (make-view-invalid view)
-      (setf (view-scroll-position view) pt)
       (refocus-view view)
       pt)))
 
 
- 
+
 (defgeneric set-view-nick-name (view new-name)
   (:documentation "
 DO:             Set the nickname of VIEW to NEW-NAME.
@@ -1089,9 +1107,8 @@ RETURN:         Whether VIEW contains POINT.  The method for
 (defun %convert-to-window (view pt)
   (if (or (typep view 'window)
           (null (view-container view)))
-      pt
-      (%convert-to-window (view-container view)
-                          (add-points (view-position view) pt))))
+      (add-points (view-scroll-position view) pt)
+      (%convert-to-window (view-container view) (add-points (view-scroll-position view) pt))))
 
 
 (defun convert-coordinates (point source-view destination-view)
@@ -1107,28 +1124,14 @@ POINT:          A point, encoded as an integer.
 SOURCE-VIEW:    A view in whose coordinate system point is given.
 "
   (declare (stepper disable))
-  (let* ((src-offset (view-origin source-view))
-         (dst-offset (view-origin destination-view))
-         ;; (src-offset (%convert-to-window source-view      (view-origin source-view)))
-         ;; (dst-offset (%convert-to-window destination-view (view-origin destination-view)))
-         (delta  (subtract-points dst-offset src-offset))
-         (result (add-points point delta)))
-    #-(and)
-    (format-trace "convert-coordinates"
-                  (point-to-list point) :+ (point-to-list src-offset) :- (point-to-list dst-offset)
-                                        :--> (point-to-list result)
-                                        :source source-view
-                                        :destination destination-view)
-    result))
+  (add-points point (subtract-points (view-origin destination-view)
+                                     (view-origin source-view))))
 
 
 (defun convert-rectangle (rect source-view destination-view)
   (declare (stepper disable))
-  (let* ((src-offset (view-origin source-view))
-         (dst-offset (view-origin destination-view))
-         ;; (src-offset (%convert-to-window source-view      (view-origin source-view)))
-         ;; (dst-offset (%convert-to-window destination-view (view-origin destination-view)))
-         (delta  (subtract-points dst-offset src-offset)))
+  (let ((delta   (subtract-points (view-origin destination-view)
+                                  (view-origin source-view))))
     (make-rect (add-points delta (rect-topleft rect))
                (add-points delta (rect-bottomright rect)))))
 
@@ -1140,7 +1143,7 @@ SOURCE-VIEW:    A view in whose coordinate system point is given.
     (format-trace 'find-view-containing-point result)
     (with-focused-view result
       (with-pen-state (:pattern *black-pattern* :mode :srcCopy)
-       (fill-rect* 0 0 (point-h (view-size result)) (point-v (view-size result)))))
+        (fill-rect* 0 0 (point-h (view-size result)) (point-v (view-size result)))))
     result))
 
 (defmethod find-view-containing-point :around (view h &optional v direct-subviews-only)
@@ -1173,7 +1176,7 @@ DIRECT-SUBVIEWS-ONLY:
 ")
 
   (:method ((view simple-view) h &optional v
-            (direct-subviews-only nil))
+                                   (direct-subviews-only nil))
     (declare (ignore h v))
     (unless direct-subviews-only
       view))
@@ -1184,14 +1187,14 @@ DIRECT-SUBVIEWS-ONLY:
       (loop
         :for subview :across subviews
         :when (view-contains-point-p subview point)
-        :do (return-from find-view-containing-point
-              (if direct-subviews-only
-                  subview
-                  (find-view-containing-point
-                   subview
-                   (convert-coordinates point view subview)
-                   nil
-                   nil)))))
+          :do (return-from find-view-containing-point
+                (if direct-subviews-only
+                    subview
+                    (find-view-containing-point
+                     subview
+                     (convert-coordinates point view subview)
+                     nil
+                     nil)))))
     (unless direct-subviews-only
       view))
 
@@ -1279,7 +1282,7 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
 ")
   (:method ((view simple-view) &optional visrgn cliprgn)
     (declare (ignore visrgn cliprgn)) ; for now ; we could compute a clip rect.
-    (with-focused-view (view-container view)
+    (with-focused-view view
       (view-draw-contents view)))
 
   (:method ((view view) &optional visrgn cliprgn)
@@ -1292,9 +1295,6 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
         (get-window-cliprgn wptr cliprgn)
         (when (regions-overlap-p visrgn cliprgn)
           (view-draw-contents view))))))
-
-
-
 
 
 
@@ -1351,7 +1351,7 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
                                (logandc2 old-ms ms-mask))
                        ms)))
           (rplacd (rplaca codes ff) ms))
-      (view-put view 'view-font-codes (cons ff ms)))
+        (view-put view 'view-font-codes (cons ff ms)))
     (values ff ms)))
 
 
@@ -1480,30 +1480,30 @@ RETURN:         The cursor shape to display when the mouse is at
         (unless (and (eql ul bul) (eql lr blr))
           (with-focused-view container
             (without-interrupts
-             (let* ((rgn *temp-rgn*)
-                    (rgn2 *temp-rgn-2*)
-                    (bul-h (point-h bul))
-                    (bul-v (point-v bul))
-                    (blr-h (point-h blr))
-                    (blr-v (point-v blr))
-                    rgn-ul-h rgn-ul-v)
-               (if right-and-bottom-only
-                 (setq rgn-ul-h ul-h rgn-ul-v ul-v)
-                 (setq rgn-ul-h bul-h rgn-ul-v bul-v))
-               (#_SetRectRgn rgn rgn-ul-h rgn-ul-v blr-h blr-v)
-               (#_SetRectRgn rgn2 ul-h ul-v lr-h lr-v)
-               (#_DiffRgn rgn rgn2 rgn)
-               #-carbon-compat
-               (#_InvalRgn rgn)
-               #+carbon-compat
-               (inval-window-rgn (wptr view) rgn)
-               (when erase-p
-                 (let ((org (view-origin container))
-                       (erase-rgn (window-erase-region (view-window container))))
-                   (when erase-rgn
-                     (unless (eql #@(0 0) org)
-                       (#_OffsetRgn rgn (- (point-h org)) (- (point-v org))))
-                     (#_UnionRgn rgn erase-rgn erase-rgn))))))))))))
+              (let* ((rgn *temp-rgn*)
+                     (rgn2 *temp-rgn-2*)
+                     (bul-h (point-h bul))
+                     (bul-v (point-v bul))
+                     (blr-h (point-h blr))
+                     (blr-v (point-v blr))
+                     rgn-ul-h rgn-ul-v)
+                (if right-and-bottom-only
+                    (setq rgn-ul-h ul-h rgn-ul-v ul-v)
+                    (setq rgn-ul-h bul-h rgn-ul-v bul-v))
+                (#_SetRectRgn rgn rgn-ul-h rgn-ul-v blr-h blr-v)
+                (#_SetRectRgn rgn2 ul-h ul-v lr-h lr-v)
+                (#_DiffRgn rgn rgn2 rgn)
+                #-carbon-compat
+                (#_InvalRgn rgn)
+                #+carbon-compat
+                (inval-window-rgn (wptr view) rgn)
+                (when erase-p
+                  (let ((org (view-origin container))
+                        (erase-rgn (window-erase-region (view-window container))))
+                    (when erase-rgn
+                      (unless (eql #@(0 0) org)
+                        (#_OffsetRgn rgn (- (point-h org)) (- (point-v org))))
+                      (#_UnionRgn rgn erase-rgn erase-rgn))))))))))))
 
 
 

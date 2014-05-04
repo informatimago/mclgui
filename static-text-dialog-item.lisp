@@ -47,17 +47,8 @@
   (:default-initargs :dialog-item-text "Untitled"))
 
 
-(defmethod update-handle ((item static-text-dialog-item))
-  (setf (handle item) (make-text-item item :selectable nil :editable nil :bordered nil)))
-
-(defmethod unwrap ((item static-text-dialog-item))
-  (unwrapping item
-              (or (handle item) (update-handle item))))
-
-
 (defmethod view-default-font ((view static-text-dialog-item))
   (sys-font-spec))
-
 
 
 (defmethod view-default-size ((dialog-item static-text-dialog-item))
@@ -68,65 +59,20 @@
                     (* nlines (font-codes-line-height ff ms)))))))
 
 
-(defmethod set-view-font-codes ((item static-text-dialog-item) ff ms &optional ff-mask ms-mask)
-  (declare (ignore ff ms ff-mask ms-mask))
-  (multiple-value-prog1 (call-next-method)
-    (with-handle (texth item)
-      (multiple-value-bind (ff ms) (view-font-codes item)
-        (multiple-value-bind (font mode color other) (nsfont-from-codes ff ms)
-          (declare (ignore mode other))
-          (declare (ignore color))
-          ;;[texth setTextColor:color]
-          (format-trace "set-view-font-codes" font)
-          [texth setFont:font])))))
+(defmethod set-dialog-item-text :after ((item static-text-dialog-item) text)
+  (invalidate-view item t))
 
-(defmethod set-dialog-item-text ((item static-text-dialog-item) text)
-  (setf (slot-value item 'dialog-item-text) text)
-  (with-handle (texth item)
-    [texth setStringValue:(objcl:objc-string (dialog-item-text item))])
-  (invalidate-view item t)  
-  text)
-
-
-(defmethod dialog-item-text ((item static-text-dialog-item))
-  (let ((text (slot-value item 'dialog-item-text)))    
-    text))
-
-
-(defmethod view-activate-event-handler ((item static-text-dialog-item))
-  (setf (dialog-item-enabled-p item) t)
-  (invalidate-view item))
-
-
-(defmethod view-deactivate-event-handler ((item static-text-dialog-item))
-  (setf (dialog-item-enabled-p item) nil)
-  (invalidate-view item))
-
-
-(defmethod view-click-event-handler ((item static-text-dialog-item) where)
-  (declare (ignore where))
-  (format-trace 'view-click-event-handler item (point-to-list where))
-  ;; (with-handle (texth item)
-  ;;   [texth superMouseDown])
-  (call-next-method)
-  item)
-
-(defmethod view-double-click-event-handler ((item static-text-dialog-item) where)
-  (declare (ignore where))
-  (format-trace 'view-double-click-event-handler item (point-to-list where))
-  item)
-
-(defmethod view-key-event-handler ((item static-text-dialog-item) key)
-  (declare (ignore where))
-  (format-trace 'view-key-event-handler item key)
-  (call-next-method)
-  ;; (with-handle (texth item)
-  ;;   [texth superKeyDown])
-  item)
 
 (defmethod view-draw-contents ((item static-text-dialog-item))
-  (with-handle (texth item)
-    [texth drawRect: (unwrap (make-nsrect :origin (view-position item) :size (view-size item)))])
+  (with-focused-view item
+   (let* ((bounds (view-bounds item))
+          (x (rect-left   bounds))
+          (y (rect-top    bounds))
+          (w (rect-width  bounds))
+          (h (rect-height bounds)))
+     (erase-rect* x y w h)
+     (draw-text x y w h (dialog-item-text item))))
+  
   ;; We shouldn't have to do anything really
   #-(and)
   (when (installed-item-p item)

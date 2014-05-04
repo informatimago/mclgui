@@ -37,24 +37,31 @@
 ;;;---------------------------------------------------------------------
 
 (defclass simple-view (colored fundamental-character-output-stream)
-  ((help-spec            :initform nil         :initarg  :help-spec            :accessor help-spec)
-   (view-container       :initform nil                                         :reader view-container
+  ((help-spec            :initform nil
+                         :initarg  :help-spec
+                         :accessor help-spec)
+   (view-container       :initform nil
+                         :reader view-container
                          :documentation "The view that contains this view.")
-   (view-position        :initform #@(0 0)     :initarg  :view-position        :reader view-position
+   (view-position        :initform #@(0 0)
+                         :initarg  :view-position
+                         :reader view-position
                          :accessor %view-position
                          :documentation "
 The position of the view in its container, in the coordinate system of
 the container.
 ")
-   (view-size            :initform #@(100 100) :initarg  :view-size            :reader view-size
+   (view-size            :initform #@(100 100) :initarg  :view-size
+                         :reader view-size
                          :accessor %view-size
                          :documentation "The size of the view.")
    (view-scroll-position :initform #@(0 0)
                          :initarg :view-scroll-position
-                         :accessor view-scroll-position
+                         :reader view-scroll-position
+                         :accessor %view-scroll-position
                          :documentation "
 The current scroll position of the view, which is the coordinate of
-the origin of the view, in the coordinate system of the container.
+the upper-left corner of the view.
 ")
    (view-origin          :initform #@(0 0)
                          :accessor view-origin-slot
@@ -64,10 +71,14 @@ system, relative to the top-left corner of the view.  (The coordinate
 of the top-left corner of the view, in the view coordinate system, is
 the opposite of view-origin.)
 ")
-   (view-nick-name       :initform nil         :initarg  :view-nick-name       :reader view-nick-name
+   (view-nick-name       :initform nil
+                         :initarg  :view-nick-name
+                         :reader view-nick-name
                          :documentation "The nickname of the view.")
-   (view-alist           :initform nil                                         :accessor view-alist)
-   (view-instance        :initform nil :accessor view-instance
+   (view-alist           :initform nil
+                         :accessor view-alist)
+   (view-instance        :initform nil
+                         :accessor view-instance
                          :documentation "
 Stack of instance screen shots. Cf. new-instance and with-instance-drawing.
 ")))
@@ -246,6 +257,14 @@ DO:             Remove the property KEY from the VIEW.
                                                          :tool))
    (erase-anonymous-invalidations    :initform   t
                                      :initarg   :erase-anonymous-invalidations)
+   (transform-stack                  :initform nil
+                                     :accessor transform-stack
+                                     :documentation "A stack of NSAffineTransform currently applied to
+the graphic context of the window content view.
+Since there's apparently no way to get back the current transform of a graphic context,
+and since we may just from context to context with embedded with-focused-view
+we need to keep track of the transform currently applied to a window, so that we may temporarily
+cancel it.  cf. CALL-WITH-FOCUSED-VIEW")
    ;; WINDOW-PTR is a simulated handle (a mere integer identifying the window).
    ;; It's reset to NIL when the real window handle is released.
    (window-ptr                       :reader window-ptr

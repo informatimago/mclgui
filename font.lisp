@@ -341,7 +341,6 @@ EXAMPLE:        (style-to-font-traits '(:italic :bold :underline :outline :exten
 ;; +------------------------------+-------------------------------+
 ;;  31                          16 15                            0
 
-
 (defun font-values (ff-code ms-code)
   "
 RETURN: the five font values: font, size, mode, face and color.
@@ -684,11 +683,11 @@ The valid value range is from -1.0 to 1.0. The value of 0.0 corresponds to the r
   "The relative slant angle value as an NSNumber object.
 The valid value range is from -1.0 to 1.0. The value of 0.0 corresponds to 0 degree clockwise rotation from the vertical and 1.0 corresponds to 30 degrees clockwise rotation.")
 
-;; ?
+;; NSAttributedString
 (defvar NSUnderlineStyleAttributeName  "") ; 0/1
 (defvar NSShadowAttributeName          "") ; nil or NSShadow
 (defvar NSStrokeWidthAttributeName     "") ; 0.0d0 or 3.0d0
-
+(defvar NSFontAttributeName            "") ; a NSFont
 
 
 (defstruct shadow
@@ -721,19 +720,23 @@ The valid value range is from -1.0 to 1.0. The value of 0.0 corresponds to 0 deg
              (multiple-value-bind (traits others) (style-to-font-traits face)
                (declare (ignore others)) ; for now…
                ;; (print (list name size mode traits others color))
-               (list (awrap [NSFontDescriptor fontDescriptorWithFontAttributes:
-                                              (unwrap-plist (list
-                                                             NSFontNameAttribute            name
-                                                             NSFontSizeAttribute            (coerce size 'ns:cgfloat)
-                                                             NSForegroundColorAttributeName (if (zerop color)
-                                                                                              (make-color 0 0 0)
-                                                                                              (error "Color for font not implemented yet."))
-                                                             NSFontTraitsAttribute          (unwrap-plist
-                                                                                             (list NSFontSymbolicTrait  (font-traits-to-mask traits)))
-                                                             ;; NSUnderlineStyleAttributeName  (if (member :underline others) 1 0)
-                                                             ;; NSShadowAttributeName          (if (member :shadow    others) *default-shadow* nil)
-                                                             ;; NSStrokeWidthAttributeName     (if (member :outline   others) 3.0f0 0.0f0)
-                                                             ))])
+               (list (awrap [NSFontDescriptor
+                             fontDescriptorWithFontAttributes:
+                             (unwrap-plist
+                              (list
+                               NSFontAttributeName            [NSFont fontWithName: (objcl:objc-string name)
+                                                                      size:(cgfloat size)]
+                               NSFontNameAttribute            name
+                               NSFontSizeAttribute            (cgfloat size)
+                               NSForegroundColorAttributeName (if (zerop color)
+                                                                  (make-color 0 0 0)
+                                                                  (error "Color for font not implemented yet."))
+                               NSFontTraitsAttribute          (unwrap-plist
+                                                               (list NSFontSymbolicTrait  (font-traits-to-mask traits)))
+                               ;; NSUnderlineStyleAttributeName  (if (member :underline others) 1 0)
+                               ;; NSShadowAttributeName          (if (member :shadow    others) *default-shadow* nil)
+                               ;; NSStrokeWidthAttributeName     (if (member :outline   others) 3.0f0 0.0f0)
+                               ))])
                      mode
                      size)))))
   (values-list (list* (handle (first (descriptor-cache-descriptor *descriptor-cache*)))
@@ -1031,7 +1034,8 @@ DO:             Change the view font codes of view.  The font/face
   ;; NSAttributedString Attributes:
   (setf NSUnderlineStyleAttributeName  (objcl:lisp-string #$NSUnderlineStyleAttributeName)
         NSShadowAttributeName          (objcl:lisp-string #$NSShadowAttributeName)
-        NSStrokeWidthAttributeName     (objcl:lisp-string #$NSStrokeWidthAttributeName))
+        NSStrokeWidthAttributeName     (objcl:lisp-string #$NSStrokeWidthAttributeName)
+        NSFontAttributeName            (objcl:lisp-string #$NSFontAttributeName))
   ;; -- 
   (setf *default-shadow* (make-shadow :blur-radius 2.0d0 :offset (make-nssize :width 2.0f0 :height 2.0f0)))
   (setf *font-traits*

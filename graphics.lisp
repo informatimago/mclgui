@@ -65,6 +65,38 @@
          withAttributes:  [descriptor fontAttributes]])))
   str)
 
+(defun font-attributes (descriptor)
+  [descriptor fontAttributes] #-(and)
+  (let* ((attributes [[descriptor fontAttributes] mutableCopy])
+         (name [attributes objectForKey:#$NSFontNameAttribute])
+         (size [attributes objectForKey:#$NSFontSizeAttribute]))
+    [attributes setObject:[NSFont fontWithName:name size:[size doubleValue]]
+                forKey:#$NSFontNameAttribute]
+    attributes))
+
+(defun draw-text (x y width height text)
+  (print-backtrace)
+  ;; (format-trace "draw-string" x y str *current-view* (when *current-view* (view-window *current-view*)))
+  ;; (with-fore-color *yellow-color*
+  ;;   (let* ((o (view-origin *current-view*))
+  ;;          (x (point-h o))
+  ;;          (y (point-v o))
+  ;;          (s (view-size *current-view*))
+  ;;          (w (point-h s))
+  ;;          (h (point-v s)))
+  ;;     (draw-rect* x y w h)))
+  (destructuring-bind (ff ms) *current-font-codes*
+    (multiple-value-bind (descriptor mode) (font-descriptor-from-codes ff ms)
+      (declare (ignore mode)) ; TODO: manage mode (:srcOr …)
+      (let ((attributes (font-attributes descriptor)))
+        ;; [context setCompositingOperation:(mode-to-compositing-operation (pen-mode pen))]
+        (format-trace "draw-text" descriptor)
+        (format-trace "draw-text" x y width height (subseq text 0 10) attributes)
+        [(objcl:objc-string text)
+         drawInRect: (nsrect x y width height)
+         withAttributes:attributes])))
+  text)
+
 
 (defun draw-point (x y)
   ;; (format-trace "draw-point" x y *current-view* (when *current-view* (view-window *current-view*)))

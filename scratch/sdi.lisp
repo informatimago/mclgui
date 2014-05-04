@@ -3,16 +3,33 @@
 
 (defvar *w* (make-instance 'window :window-title "Test"))
 
+
+(defgeneric draw-view-bounds (view)
+  (:method   ((view simple-view))
+    (let* ((bounds (view-bounds view))
+           (x (rect-left   bounds))
+           (y (rect-top    bounds))
+           (w (rect-width  bounds))
+           (h (rect-height bounds)))
+      (draw-rect* x y w h))))
+
+
 (defclass color-box (view)
   ((color :initarg :color :initform *black-color*  :accessor color)))
 
 (defmethod view-draw-contents ((view color-box))
   (with-focused-view view
     (with-fore-color (color view)
-      (fill-rect* 0 0
-                  (point-h (view-size view))
-                  (point-v (view-size view))))
+      (let* ((bounds (view-bounds view))
+             (x (rect-left   bounds))
+             (y (rect-top    bounds))
+             (w (rect-width  bounds))
+             (h (rect-height bounds)))
+        (fill-rect* x y w h)))
     (call-next-method)))
+
+(defmethod view-draw-contents :after ((view color-box))
+  (draw-view-bounds view))
 
 (defun test-color-box ()
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
@@ -37,11 +54,58 @@
     (add-subviews *w* green)))
 
 #-(and) (progn
+
           (test-color-box)
-          (set-view-position  (aref (view-subviews *w*) 0) 30 20)
-          (aref (view-subviews *w*) 0)
-          (set-view-scroll-position *w* -10 -10)
+
+          (with-focused-view (front-window)
+            (draw-rect* 2 2 12 12)
+            (draw-rect* 20 10 100 20))
+
+          (let ((view (aref (view-subviews (front-window)) 0)))
+           (view-draw-contents view))
+
+          (let ((view (aref (view-subviews (front-window)) 0)))
+            (with-focused-view view
+              (view-draw-contents view)))
+
+          (let ((v1 (aref (view-subviews (front-window)) 0))
+                (v2 (aref (view-subviews (front-window)) 1)))
+            (with-focused-view v1
+              (view-draw-contents v1)
+              (draw-rect* 0 0 100 20)
+              (with-focused-view v2
+                (view-draw-contents v2)
+                (draw-rect* 0 0 12 12))))
+
+          (let ((v (aref (view-subviews *w*) 0)))
+            (list
+             (rect-to-list (convert-rectangle (view-bounds v) v *w*))
+             (point-to-list (set-view-position v 50 10))
+             (rect-to-list (convert-rectangle (view-bounds v) v *w*))))
+
+
+          (let* ((v1 (aref (view-subviews *w*) 0))
+                 (v2 (aref (view-subviews v1) 0)))
+            (loop for i from 10 to 50
+                  do (set-view-position v1 (- 60 i) (+ 10 i))
+                     (set-view-position v2 (+ 2 i) 2)))
+
+          (let* ((v1 (aref (view-subviews *w*) 0))
+                 (v2 (aref (view-subviews v1) 0)))
+            (set-view-position v2 50 4))
+
+          (point-to-list (view-scroll-position *w*))
+          (set-view-scroll-position *w* -10 0)
           (view-draw-contents *w*)
+          (mapcar (function point-to-list)
+                  (list
+                   (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 0) *w*)
+                   (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 1) *w*)
+                   (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 0) (aref (view-subviews *w*) 1))))
+          ((20 40) (2 2) (18 38))
+          
+          (pprint (dump *w*))
+
           
 
           (import '(com.informatimago.common-lisp.cesarum.utility:/apply
@@ -54,24 +118,24 @@
 
           )
 
+
+;;;--------------------------------------------------------------------
+
 (defclass boxed-static-text-dialog-item (static-text-dialog-item)
   ())
+
+
+(defmethod view-draw-contents :after ((item boxed-static-text-dialog-item))
+  (with-focused-view item
+    (draw-view-bounds item)))
+
 
 (defclass boxed-editable-text-dialog-item (editable-text-dialog-item)
   ())
 
-(defmethod view-draw-contents ((item boxed-editable-text-dialog-item))
-  (call-next-method)
+(defmethod view-draw-contents :after ((item boxed-editable-text-dialog-item))
   (with-focused-view item
-    (format t  "~&~S~% "(list 'draw-rect* 0 0
-                (point-h (view-size item))
-                (point-v (view-size item))))
-    (draw-rect* 0 0
-                (point-h (view-size item))
-                (point-v (view-size item)))))
-
-
-
+    (draw-view-bounds item)))
 
 
 (defun test-text-box ()
@@ -103,16 +167,25 @@
                  :view-size     (make-point 100 20))))
 
 
-(defmethod first-responder ((w window))
-  (with-handle (winh w)
-    [winh firstResponder]))
+(defgeneric first-responder (w)
+  (:method   ((w window))
+    (with-handle (winh w)
+      [winh firstResponder])))
 
 #-(and)(progn
 
          (test-text-box)
+
+         (pprint (dump (front-window)))
+
          
+         (set-view-position (aref (view-subviews (front-window)) 0) 20 40)
+         
+         (point-to-list (view-position (aref (view-subviews (front-window)) 0)))
+          (view-focus-and-draw-contents (front-window))
+
          (values (first-responder  (first (windows)))
-                 (handle (aref (view-subviews (first (windows))) 2)))
+                 (handle))
 
 
          (values (map 'list 'dialog-item-text
@@ -129,7 +202,45 @@
          (invalidate-view (aref (view-subviews *w*) 0))
          (remove-subviews *w* (aref (view-subviews *w*) 0))
 
+         (view-font (front-window))
 
+         (setf *descriptor-cache* (make-descriptor-cache))
+         (set-view-font (front-window) '("Monaco"  9  :srcor))
+         (with-font-focused-view (front-window)
+           (erase-rect* 10 100 200 200)
+           (draw-text 10 100 200 200 "Hao Wang, logicien americain.")
+           (erase-rect* 10 100 200 200)
+           (draw-text 10 100 200 200 "Hao Wang, logicien americain.
+
+L'algorithme en  question  a  été  publié  en  1960  dans l'IBM Journal,
+article intitule \"Toward  Mechanical Mathematics\", avec des variantes et
+une  extension au calcul  des  prédicats.  Il  s'agit  ici  du  \"premier
+programme\" de Wang, systeme \"P\".
+
+L'article a été écrit en 1958, et les expériences effectuées sur IBM 704
+­ machine à lampes, 32 k  mots  de 36 bits, celle­là même qui vit naître
+LISP à la même époque. Le programme  a  été écrit en assembleur (Fortran
+existait, mais il ne s'était pas encore imposé)  et  l'auteur estime que
+\"there is very little in the program that is not straightforward\".
+
+Il observe que les preuves engendrées sont \"essentiellement des arbres\",
+et  annonce  que  la  machine  a  démontre 220 théorèmes du  calcul  des
+propositions  (tautologies)  en  3  minutes. Il en tire argument pour la
+supériorité  d'une  approche  algorithmique  par  rapport à une approche
+heuristique comme celle du \"Logic Theorist\" de Newell, Shaw et  Simon (à
+partir de 1956 sur la machine JOHNNIAC de la Rand Corporation): un débat
+qui dure encore...
+
+Cet  algorithme  a  été popularisé par J. McCarthy, comme exemple­fanion
+d'application  de LISP. Il figure dans le manuel de la première  version
+de  LISP  (LISP  1,  sur IBM 704 justement, le manuel est daté  de  Mars
+1960), et il a été repris dans le celebre \"LISP 1.5 Programmer's Manual\"
+publié en 1962 par MIT Press, un des maîtres­livres de l'Informatique.
+
+
+
+"))
+         
          (window-close *w*)
          )
 

@@ -319,7 +319,7 @@ the event queue."
   "Same as STILL-DOWN, but if the button is not still down from the
 original press, WAIT-MOUSE-UP removes the preceding mouse-up event
 before returning NIL."
-    (with-mutex (queue-mutex *event-queue*)
+  (with-mutex (queue-mutex *event-queue*)
     (and (button)
          (let ((event (%find-event mouse-up-mask)))
            (if event

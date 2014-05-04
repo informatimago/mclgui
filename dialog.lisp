@@ -380,6 +380,7 @@ STRING:         A string against which to compare the text of the
                 t)
               t))
      (progn
+       (niy set-current-key-handler dialog item select-all) #-(and)
        (with-handle (winh dialog)
          (with-handle (viewh item)
            [winh makeFirstResponder:viewh]))

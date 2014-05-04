@@ -186,8 +186,11 @@
 
 ;; Shortcuts:
 
-(defun nsrect (pos siz)
-  (ns:make-ns-rect (point-h pos) (point-v pos) (point-h siz) (point-v siz)))
+(defun nsrect (a &optional b c d)
+  (cond
+    (d (ns:make-ns-rect (cgfloat a) (cgfloat b) (cgfloat c) (cgfloat d)))
+    (b (ns:make-ns-rect (cgfloat (point-h a)) (cgfloat (point-v a)) (cgfloat (point-h b)) (cgfloat (point-v b))))
+    (t (ns:make-ns-rect (cgfloat (rect-left a)) (cgfloat (rect-top a)) (cgfloat (rect-width a)) (cgfloat (rect-height a))))))
 
 (defun nspoint (pos)
   (ns:make-ns-point (point-h pos) (point-v pos)))
@@ -315,7 +318,8 @@
                     (code-char (ldb (byte 21 0) message)))))))
 
 
-(defmethod wrap ((nsevent ns:ns-event))
+(defun nsevent-to-event (nsevent)
+  (check-type nsevent ns:ns-event)
   ;; (format-trace 'wrap nsevent)
   (let ((what (case [nsevent type]
                 ((#.#$NSLeftMouseDown)         mouse-down)
@@ -361,25 +365,46 @@
      :when      (truncate [nsevent timestamp] (/ +tick-per-second+))
      :where     (nsscreen-to-screen-point
                  (if (or (= what mouse-down) (= what mouse-up))
-                     (let ((winh [nsevent window]))
+                     (let ((winh [nsevent window])
+                           (pt (get-nspoint [nsevent locationInWindow])))
                        (if (nullp winh)
-                           (get-nspoint [nsevent locationInWindow])
-                           (nswindow-to-nsscreen-point winh (sret [nsevent locationInWindow]))))
+                           pt
+                           (nswindow-to-nsscreen-point winh pt)))
                      (get-nspoint [NSEvent mouseLocation])))
      :modifiers (nsmodifier-to-macmodifier [nsevent modifierFlags]))))
 
 
 
+(defmethod wrap ((nsevent ns:ns-event))
+  (nsevent-to-event nsevent))
+
+
+(defun make-key-nsevent (key)
+  [NSEvent keyEventWithType:#$NSKeyDown
+           location:(ns:make-ns-point 100.0 50.0)
+           modifierFlags:0
+           timestamp:(cgfloat 0.0)
+           windowNumber:0
+           context:[NSGraphicsContext currentContext]
+           characters:(objcl:objcl-string key)
+           charactersIgnoringModifiers:(objcl:objcl-string (string-downcase key))
+           isARepeat:nil
+           keyCode:(char-code (aref key 0))])
+
+;; (nsevent-to-event (make-key-nsevent "a"))
+
 ;;;------------------------------------------------------------
 
+(defun print-backtrace (&optional (output *error-output*))
+  #+ccl (format output "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~&"
+                (ccl::backtrace-as-list)))
 
 (defmacro reporting-errors (&body body)
   (let ((vhandler (gensym)))
     `(block ,vhandler
        (handler-bind ((error (lambda (err)
                                (declare (stepper disable))
-                               #+ccl (format *error-output* "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~&"
-                                             (ccl::backtrace-as-list))
+                               (print-backtrace)
                                (format *error-output* "~%ERROR while ~S:~%~A~2%"
                                        ',(if (= 1 (length body)) body `(progn ,@body))
                                        err)
@@ -445,10 +470,10 @@ RETURN:         x y w h of the main screen (in Cocoa rounded coordinates).
 
 
 (defun nswindow-to-nsscreen-point (nswindow nspoint)
-  #-cocoa-10.7 (get-nspoint [nswindow convertBaseToScreen:nspoint])
-  #+cocoa-10.7  (let* ((r (ns:make-ns-rect (ns:ns-point-x nspoint) (ns:ns-point-x nspoint) 1 1))
-                       (c (ns:ns-rect-width (get-nsrect [nswindow convertRectToScreen:r]))))
-                  (ns:make-ns-point (ns:ns-rect-x c) (ns:ns-rect-y c))))
+  #-cocoa-10.7 (get-nspoint [nswindow convertBaseToScreen:(unwrap nspoint)])
+  #+cocoa-10.7 (let* ((r (ns:make-ns-rect (nspoint-x nspoint) (nspoint-y nspoint) 1 1))
+                      (c (get-nsrect [nswindow convertRectToScreen:r])))
+                 (make-nspoint :x (nsrect-x c) :y (nsrect-y c))))
 
 
 ;; (nswindow-to-nsscreen-point (handle (first (windows))) (ns:make-ns-point 10.0 20.0))
@@ -730,17 +755,17 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (format-trace '|-[MclguiWindow keyDown:]| self event)
-  (post-event (wrap event))]
+  (post-event (nsevent-to-event event))]
 
 @[MclguiWindow
   method:(keyUp:(:id)event)
   resultType:(:void)
   body:
   (format-trace '|-[MclguiWindow keyUp:]| self event)
-  (post-event (wrap event))]
+  (post-event (nsevent-to-event event))]
 
 (defun needs-to-draw-rect (window rect)
-  (format-trace 'needs-to-draw-rect (point-to-list (rect-topleft rect))  (point-to-list (rect-bottomright rect)))
+  (format-trace 'needs-to-draw-rect :posi (point-to-list (rect-topleft rect)) :size (point-to-list (rect-size rect)))
   (with-handle (winh window)
     [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]
     [winh setViewsNeedDisplay:yes]))
@@ -754,14 +779,14 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (format-trace '|-[MclguiWindow mouseDown:]| self event)
-  (post-event (wrap event))]
+  (post-event (nsevent-to-event event))]
 
 @[MclguiWindow
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
   (format-trace '|-[MclguiWindow mouseUp:]| self event)
-  (post-event (wrap event))]
+  (post-event (nsevent-to-event event))]
 
 ;;;------------------------------------------------------------
 ;;; MclguiView
@@ -777,18 +802,20 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:<bool>)
   body:YES]
 
-
 (defun *nsrect-to-nsrect (prect)
+  #+ccl
   (make-nsrect 
    :x (ccl:pref prect :<nsr>ect.origin.x)
    :y (ccl:pref prect :<nsr>ect.origin.y) 
    :width (ccl:pref prect :<nsr>ect.size.width) 
-   :height (ccl:pref prect :<nsr>ect.size.height)))
+   :height (ccl:pref prect :<nsr>ect.size.height))
+  #-ccl prect)
 
 @[MclguiView
   method:(drawRect:(:<NSR>ect)rect)
   resultType:(:void)
   body:
+  (format-trace  '|-[MclguiView drawRect:]| (*nsrect-to-nsrect rect) self)
   (let ((view (nsview-view self)))
     (when view
       (view-draw-contents view)))]
@@ -799,14 +826,14 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (format-trace '|-[MclguiView mouseDown:]| self event)
-  (post-event (wrap event))]
+  (post-event (nsevent-to-event event))]
 
 @[MclguiView
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
   (format-trace '|-[MclguiView mouseUp:]| self event)
-  (post-event (wrap event))]
+  (post-event (nsevent-to-event event))]
 
 
 @[MclguiView
@@ -815,7 +842,7 @@ DO:             Evaluates the BODY in a lexical environment where
   body:
   ;; (format-trace "-[MclguiView mouseMoved:]" self (nsview-view self) event)
   (when (nsview-view self)
-    (let ((*current-event* (wrap event))
+    (let ((*current-event* (nsevent-to-event event))
           (*multi-click-count* [event clickCount]))
       ;;(unfrequently 1/10 (format-trace '|mouseMoved:| *current-event*))
       (window-null-event-handler (view-window (nsview-view self)))))]
@@ -827,7 +854,7 @@ DO:             Evaluates the BODY in a lexical environment where
   body:
   ;; (format-trace "-[MclguiView mouseDragged]" self (nsview-view self) event)
   (when (nsview-view self)
-    (let ((*current-event* (wrap event))
+    (let ((*current-event* (nsevent-to-event event))
           (*multi-click-count* [event clickCount]))
       (unfrequently 1/10 (format-trace '|mouseDragged:| *current-event*))
       (window-null-event-handler (view-window (nsview-view self)))))]

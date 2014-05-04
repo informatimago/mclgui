@@ -693,7 +693,6 @@ RETURN:         If called during event processing, return true if
 
 
 
-
 (defparameter *last-mouse-down-time*     0)
 (defparameter *last-mouse-down-position* 0)
 (defparameter *last-null-event-time*     0)
@@ -706,12 +705,12 @@ RETURN:         If called during event processing, return true if
              (double-click-spacing-p where *last-mouse-down-position*))
         (incf *multi-click-count*)
         (setf *last-mouse-down-position* where
-              *multi-click-count* 1)))
-  (setq *last-mouse-down-time* when))
+              *multi-click-count* 1))
+    (setq *last-mouse-down-time* when)))
 
 
 (defun process-event (event)
-  ;; Note: we don't dispatch on menu events (meny key or menu select),
+  ;; Note: we don't dispatch on menu events (menu key or menu select),
   ;; since those events are handled by Cocoa. 
   (let ((window  (front-window))
         (what    (event-what    event))
