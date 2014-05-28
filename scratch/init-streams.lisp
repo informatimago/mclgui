@@ -1,10 +1,16 @@
 (in-package :ui)
 
-(load #P"~/works/patchwork/src/patchwork/src/pw-kernel/environment/lelisp-macros")
-(load #P"~/works/patchwork/src/patchwork/src/packages.lisp")
-(load #P"~/works/patchwork/src/patchwork/src/stream/redirecting-stream.lisp")
+(unless (find-package "MIDI")
+  (let ((midi (make-package "MIDI" :use '())))
+    (export (mapcar (lambda (name) (intern name midi))
+                    '("CLOCK-TIME" "MIDI-READ" "MIDI-WRITE" "MIDI-WRITE-TIME"))
+            midi)))
 
-(defun identify-streams (&optional label)
+(load #P"PATCHWORK:SRC;PW-KERNEL;ENVIRONMENT;LELISP-MACROS.LISP")
+(load #P"PATCHWORK:SRC;PACKAGES.LISP")
+(load #P"PATCHWORK:SRC;STREAM;REDIRECTING-STREAM.LISP")
+
+(defun identify-streams (&key label verbose)
   (dolist (stream-var '(*terminal-io*
                         *query-io*
                         *debug-io*
@@ -13,7 +19,7 @@
                         *error-output*
                         *trace-output*))
     (let ((stream (symbol-value stream-var)))
-      (format stream "~&~20S~@[(~A)~]~%" stream-var label)
+      (format stream "~&~20S~@[~20<(~A)~;~>~]~@[~S~]~%" stream-var label (and verbose stream))
       (finish-output stream))))
 
 
@@ -42,10 +48,13 @@
 
 
 (defvar *patchwork-io* (make-synonym-stream '*terminal-io*))
+(defvar *patchwork-io-initialized* nil)
 #+swank (defvar swank::*current-terminal-io*)
 
 (defun initialize-streams ()
-  (setf *patchwork-io* (make-patchwork-io))
+  (unless *patchwork-io-initialized*    
+    (setf *patchwork-io* (make-patchwork-io)
+          *patchwork-io-initialized* t))
   #+swank (setf swank::*current-terminal-io* *patchwork-io*)
   (let ((stream (make-synonym-stream '*terminal-io*)))
     (setf *terminal-io*       *patchwork-io*
@@ -57,4 +66,13 @@
           *debug-io*          stream
           *package*           (find-package "MCLGUI"))))
 
+;; (setf *patchwork-io-initialized* nil)
+
 (initialize-streams)
+(identify-streams :label :app :verbose t)
+
+(application-eval-enqueue *application* (lambda ()
+                                          (initialize-streams)
+                                          (identify-streams :label :app :verbose t)))
+(application-eval-enqueue *application* (lambda ()
+                                          (identify-streams :label :app :verbose t)))

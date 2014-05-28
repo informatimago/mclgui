@@ -34,6 +34,7 @@
 
 #+(and ccl darwin)
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (require :cocoa))
+  (require :cocoa)
+  (pushnew :cocoa *features*))
 
 ;;;; THE END ;;;;

@@ -1253,6 +1253,7 @@ CONTAINER:      The container of the view.
     (view-click-event-handler view (convert-coordinates where container view))))
 
 
+
 (defmacro with-view-frame ((x y w h) view &body body)
   (let ((vpos (gensym))
         (vsiz (gensym))

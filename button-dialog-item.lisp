@@ -172,8 +172,8 @@ dialog-item-action method for button.
       (niy  press-button button)
       ;; (let ((handle (dialog-item-handle button)))
       ;;   (#_deactivatecontrol handle) ;(#_HiliteControl handle 1)
-      ;;   (let ((time (%tick-sum 3 (get-tick-count))))
-      ;;     (while (< (%tick-difference (get-tick-count) time) 0)))
+      ;;   (let ((time (%tick-sum 3 (tick-count))))
+      ;;     (while (< (%tick-difference (tick-count) time) 0)))
       ;;   (when (setq handle (dialog-item-handle button))   ; window may have closed
       ;;     (#_activatecontrol handle)) ;(#_HiliteControl handle 0))
       ;;   (dialog-item-action button))

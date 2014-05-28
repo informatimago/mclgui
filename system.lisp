@@ -152,7 +152,7 @@ list.
 (defmacro define-on-operators (base-name list-var &key and-now)
   (let ((fname (intern (format nil "ON-~A*" (symbol-name base-name))))
         (mname (intern (format nil "ON-~A"  (symbol-name base-name)))))
-    `(progn
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
        (defun ,fname (function-name thunk and-now)
          (when thunk
            (setf (symbol-function function-name) thunk))

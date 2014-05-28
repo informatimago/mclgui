@@ -724,11 +724,10 @@ RETURN:         If called during event processing, return true if
          (unless (= time (setq *last-null-event-time* (tick-count)))
            ;; (view-mouse-moved-event-handler window)
            (window-null-event-handler window))))
-      ((#.mouse-down)
-       (view-click-event-handler message where)
-       (view-double-click-event-handler message where))
-      ((#.mouse-up)
-       (window-mouse-up-event-handler message))
+      ((#.mouse-down #.mouse-up)
+       ;; NOTE: menu mouse events are processed by Cocoa.
+       (when (typep message 'window)
+         (window-event message)))
       ((#.key-down #.auto-key #.key-up)
        (if window
            (window-event window)

@@ -478,7 +478,7 @@ RETURN:         x y w h of the main screen (in Cocoa rounded coordinates).
 
 ;; (nswindow-to-nsscreen-point (handle (first (windows))) (ns:make-ns-point 10.0 20.0))
 
-(defun nswindow-to-window-rect (frame)
+(defun nswindow-to-window-frame (frame)
   "
 FRAME:  A NSRECT (in screen coordinates).
 RETURN: a RECT (in flipped \"screen coordinates\").
@@ -501,14 +501,42 @@ RETURN: A NSRect containing the frame of the window.
                      (point-h size)
                      (point-v size))))
 
-(defun window-to-nswindow-origin (position size)
+
+
+
+(defgeneric window-frame-from-nswindow-frame (window))
+(defgeneric nswindow-frame-from-window-frame (window))
+
+(defmethod window-frame-from-nswindow-frame ((window window))
   "
-RETURN: A NSPoint containing the origin of the nswindow.
+RETURN: a RECT containing the position and size of the window,
+        computed from the NSWindow frame.
 "
-  (multiple-value-bind (sx sy sw sh) (main-screen-frame)
-    (declare (ignore sw))
-    (ns:make-ns-point (+ sx (point-h position))
-                      (- (+ sy sh) (point-v position) (point-v size)))))
+  (with-handle (winh window)
+    (let ((frame (get-nsrect [winh contentRectForFrameRect:[winh frame]])))
+      (multiple-value-bind (sx sy sw sh) (main-screen-frame)
+        (declare (ignore sw))
+        (make-rect (- (nsrect-x frame)                           sx) ; left
+                   (- (+ sy sh)   (+ (nsrect-y frame) (nsrect-height frame))) ; top
+                   (- (+ (nsrect-x frame) (nsrect-width frame))  sx) ; right
+                   (- (+ sy sh)   (nsrect-y frame))))))) ; bottom
+
+(defmethod nswindow-frame-from-window-frame ((window window))
+  "
+RETURN: A NSRect containing the frame of the window, compute from the position and size.
+"
+  (with-handle (winh window)
+    (multiple-value-bind (sx sy sw sh) (main-screen-frame)
+      (declare (ignore sw))
+      (let ((position (view-position window))
+            (size     (view-size window)))
+        (get-nsrect [winh frameRectForContentRect:(ns:make-ns-rect (+ sx (point-h position))
+                                                                   (- (+ sy sh) (+ (point-v position) (point-v size)))
+                                                                   (point-h size)
+                                                                   (point-v size))])))))
+
+
+
 
 
 ;;;------------------------------------------------------------
@@ -618,7 +646,7 @@ DO:             Evaluates the BODY in a lexical environment where
     (let* ((window (nswindow-window self)))
       ;; (format-trace "-[MclguiWindow windowDidMove:]" window)
       (with-handle (handle  window)
-        (window-move-event-handler window (rect-topleft (nswindow-to-window-rect (get-nsrect [handle frame])))))))]
+        (window-move-event-handler window (rect-topleft (window-frame-from-nswindow-frame window))))))]
 
 
 @[MclguiWindow
@@ -629,7 +657,7 @@ DO:             Evaluates the BODY in a lexical environment where
   (reporting-errors
     (let ((window (nswindow-window self)))
       ;; (unfrequently 1/3 (format-trace "-[MclguiWindow windowDidResize:]" window))
-      (window-grow-event-handler window (add-points (view-position window) (view-size window)))))]
+      (window-size-event-handler window (rect-size (window-frame-from-nswindow-frame window)))))]
 
 
 

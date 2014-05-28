@@ -79,6 +79,68 @@
   ;;   [texth superKeyDown])
   item)
 
+
+(defmethod view-draw-contents ((item basic-editable-text-dialog-item))
+  (with-focused-view item
+   (let* ((frame (view-frame item))
+          (x (rect-left   frame))
+          (y (rect-top    frame))
+          (w (rect-width  frame))
+          (h (rect-height frame)))
+     (progn (format t "~&view ~A~%" (view-nick-name item))
+            (format t "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
+            (format t "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
+            (finish-output))
+     ;; (with-fore-color *red-color*
+     ;;   (fill-rect* x y w h))
+     (erase-rect* x y w h)
+     (draw-text x y w h (dialog-item-text item))))
+  
+  ;; We shouldn't have to do anything really
+  #-(and)
+  (when (installed-item-p item)
+    (without-interrupts
+     (with-focused-view (view-container item)
+       (let ((position           (view-position item))
+             (size               (view-size item))
+             (text-justification (slot-value item 'text-justification))
+             (truncation         (slot-value item 'text-truncation))
+             (enabled-p          (dialog-item-enabled-p item))
+             (compress-p         (compress-text item))
+             (old-state          nil))
+         (declare (ignorable position size text-justification truncation enabled-p compress-p old-state))
+         (let* ((rect (make-rect position (add-points position size)))
+                (theme-back nil ;; (theme-background-p item)
+                            )
+                (back (or (part-color item :body)
+                          (when (not theme-back)
+                            (slot-value (view-window item) 'back-color))))                          
+                (fore (if enabled-p
+                        (part-color item :text)
+                        *gray-color*)))
+           ;; (when (and (not back) theme-back) ; (not (dialog-item-enabled-p item)))  ;; sometimes background goes white??
+           ;; (rlet ((old-statep :ptr))
+           ;;   (#_getthemedrawingstate old-statep)
+           ;;   (setq old-state (%get-ptr old-statep)))
+           ;; (let* ((wptr (wptr item))
+           ;;        (depth (current-pixel-depth)))
+           ;;   (#_setthemebackground  #$kThemeBrushModelessDialogBackgroundActive depth (wptr-color-p wptr)))
+           ;; )
+           (with-back-color back
+             (multiple-value-bind (ff ms)(view-font-codes item)
+               (when t ;; or when back?
+                 (erase-rect* item
+                             (point-h position) (point-v position)
+                             (point-h size) (point-v size)))  
+               (draw-string-in-rect (dialog-item-text item) rect 
+                                    :justification text-justification
+                                    :compress-p compress-p
+                                    :truncation truncation
+                                    :ff ff :ms ms :color fore)))
+           ;; (if old-state (#_setthemedrawingstate old-state t))
+           ))))))
+
+
 ;;;---------------------------------------------------------------------
 ;;;
 

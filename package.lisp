@@ -33,7 +33,6 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 
-
 (defpackage "MCLGUI"
   (:use
    ;; "COMMON-LISP-STEPPER"
@@ -409,7 +408,7 @@
    "EVENT-DISPATCH" "GET-NEXT-EVENT" "EVENT-TICKS" "SET-EVENT-TICKS"
    "WINDOW-EVENT" "WITHOUT-INTERRUPTS" "VIEW-CURSOR"
    "WINDOW-UPDATE-CURSOR" "VIEW-MOUSE-ENTER-EVENT-HANDLER"
-   "VIEW-MOUSE-LEAVE-EVENT-HANDLER" "GET-TICK-COUNT"
+   "VIEW-MOUSE-LEAVE-EVENT-HANDLER" "TICK-COUNT"
 
    "*ARROW-CURSOR*" "*I-BEAM-CURSOR*" "*WATCH-CURSOR*" "*CURSORHOOK*"
    "SET-CURSOR" "UPDATE-CURSOR" "WITH-CURSOR" "MAKE-CURSOR"

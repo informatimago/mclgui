@@ -439,7 +439,6 @@ STRING:         A string against which to compare the text of the
 
 
 
-
 (defmethod view-convert-coordinates-and-click ((item dialog-item) where container)
   (when (dialog-item-enabled-p item)
     (with-focused-dialog-item (item container)

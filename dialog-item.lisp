@@ -31,8 +31,6 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
-
 (in-package "MCLGUI")
 
 
@@ -131,14 +129,11 @@ dialog items. It is built on SIMPLE-VIEW.
 (defgeneric call-with-focused-dialog-item (item fn &optional container)
   (:method (item fn &optional container)
     (declare (ignore container))
-    #-(and)
     (call-with-focused-view (or container (view-container item))
                             (lambda (container)
                               (declare (ignore container))
                               (funcall fn item))
-                            item)
-    (call-with-focused-view ;; (or container (view-container item))
-     item fn item)))
+                            item)))
 
 
 (defmacro with-focused-dialog-item ((item &optional container) &body body)
@@ -160,8 +155,6 @@ CONTAINER:      The view focused on whose coordinate system body will
                                       (declare (ignorable ,item-var))
                                       ,@body)
                                     ,@(when container `(,container)))))
-
-
 
 
 
@@ -286,13 +279,13 @@ VISRGN:         Region records from the view’s wptr.  They are ignored.
 CLIPRGN:        Region records from the view’s wptr.  They are ignored.
 "
   (declare (ignore visrgn cliprgn))
-  (with-focused-dialog-item item
+  (with-focused-dialog-item (item) 
     (view-draw-contents item))
   #-(and) (with-temp-rgns (visrgn cliprgn)
             (get-window-visrgn  (wptr item) visrgn)
             (get-window-cliprgn (wptr item) cliprgn)      
             (when (view-is-invalid-p item visrgn cliprgn)
-              (call-with-focused-dialog-item item (function view-draw-contents)))))))
+              (call-with-focused-dialog-item item (function view-draw-contents)))))
 
 
 (defmethod set-view-position ((item dialog-item) h &optional v)

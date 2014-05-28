@@ -65,12 +65,18 @@
 
 (defmethod view-draw-contents ((item static-text-dialog-item))
   (with-focused-view item
-   (let* ((bounds (view-bounds item))
-          (x (rect-left   bounds))
-          (y (rect-top    bounds))
-          (w (rect-width  bounds))
-          (h (rect-height bounds)))
-     (erase-rect* x y w h)
+   (let* ((frame (view-frame item))
+          (x (rect-left   frame))
+          (y (rect-top    frame))
+          (w (rect-width  frame))
+          (h (rect-height frame)))
+     (progn (format t "~&view ~A~%" (view-nick-name item))
+            (format t "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
+            (format t "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
+            (finish-output))
+     (with-fore-color *red-color*
+       (fill-rect* x y w h))
+     ;; (erase-rect* x y w h)
      (draw-text x y w h (dialog-item-text item))))
   
   ;; We shouldn't have to do anything really

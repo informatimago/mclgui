@@ -111,7 +111,7 @@
   (with-handle (winh window)
     (let* ((frame (get-nsrect [winh frame]))
            (bound (get-nsrect [[winh contentView] bounds]))
-           (posiz (nswindow-to-window-rect frame))
+           (posiz (nswindow-to-window-frame frame))
            (ori   (subtract-points #@(0 0) (rect-topleft (nsrect-to-rect bound)))))
       (setf (slot-value window 'window-title)         (objcl:lisp-string [winh title])
             (slot-value window 'view-position)        (rect-topleft posiz)
@@ -386,30 +386,45 @@ V:              The vertical coordinate of the new position, or NIL if
             (mswindow (handle window)))
         (setf (%view-position window) pos)
         (when (and (not *window-moving*) mswindow)
-          (on-main-thread [mswindow setFrameOrigin:(window-to-nswindow-origin pos (view-size window))])
-          (on-main-thread [mswindow invalidateShadow]))
-        pos)
+          (if [mswindow isVisible]
+              (application-eval-enqueue
+               *application*
+               (lambda ()
+                 [mswindow setFrameOrigin:(unwrap (nswindow-frame-from-window-frame window))]
+                 [mswindow invalidateShadow]
+                 (setf (%view-position window) (rect-topleft (window-frame-from-nswindow-frame window)))))
+              (progn
+                [mswindow setFrameOrigin:(unwrap (nswindow-frame-from-window-frame window))]
+                (setf (%view-position window) (rect-topleft (window-frame-from-nswindow-frame window))))))
+        (%view-position window))
       (set-view-position window (center-window (view-size window) h)))) 
-
-
 
 
 (defvar *window-growing* nil
   "Disable calling the handle in SET-VIEW-SIZE.")
 
 (defmethod set-view-size ((window window) h &optional v)
-  (let ((pos      (view-position window))
-        (siz      (make-point h v))
+  (let ((siz      (make-point h v))
         (mswindow (handle window)))
-    (setf (slot-value window 'view-size) siz)
+    (setf (%view-size window) siz)
     (when (and (not *window-growing*) mswindow)
       (if [mswindow isVisible]
+          (application-eval-enqueue
+           *application*
+           (lambda ()
+             [mswindow setFrame:(unwrap (nswindow-frame-from-window-frame window))]
+             [mswindow invalidateShadow]
+             (let ((frame  (window-frame-from-nswindow-frame window)))
+               (setf (%view-position window) (rect-topleft frame)
+                     (%view-size     window) (rect-size frame)))))
           (progn
-            (on-main-thread [mswindow setFrame:(window-to-nswindow-frame pos siz)])
-            (on-main-thread [mswindow invalidateShadow]))
-          [mswindow setFrame:(window-to-nswindow-frame pos siz) display:NO]))
+            [mswindow setFrame:(unwrap (nswindow-frame-from-window-frame window)) display:NO]
+            [mswindow invalidateShadow]
+            (let ((frame  (window-frame-from-nswindow-frame window)))
+              (setf (%view-position window) (rect-topleft frame)
+                    (%view-size     window) (rect-size frame))))))
     (refocus-view window)
-    siz))
+    (%view-size window)))
 
 
 (defgeneric window-size-parts (w)
@@ -566,6 +581,14 @@ DEFAULT-SIZE:   The default size of the window. The default default-size is
           (unless (window-on-screen-p window)
             (set-view-size window (or default-size (window-on-screen-size window)))))))))
 
+
+(defun screen-to-window-point (window screen-point)
+  "
+SCREEN-POINT:  A screen coordinate.
+RETURN:        The coordinate of SCREEN-POINT in the WINDOW coordinate system.
+"
+  (add-points screen-point (subtract-points (view-scroll-position window)
+                                            (view-position window))))
 
 
 (defgeneric window-layer (w &optional include-invisibles)
@@ -1049,9 +1072,13 @@ RETURN:         A BOOLEAN value indicating whether view can perform
          ;; (view-mouse-moved-event-handler window)
          (window-null-event-handler window))
         ((#.mouse-down)
-         (view-click-event-handler window where)
-         (when (double-click-p)
-           (view-double-click-event-handler window where)))
+         (format *terminal-io* "~&screen point ~S~%" (point-to-list where))
+         (let ((where (screen-to-window-point window where)))
+           (format *terminal-io* "~&window point ~S~%" (point-to-list where))
+           (finish-output *terminal-io*)
+           (view-click-event-handler window where)
+           (when (double-click-p)
+             (view-double-click-event-handler window where))))
         ((#.mouse-up)
          (window-mouse-up-event-handler window))
         ((#.key-down #.auto-key)
@@ -1062,7 +1089,6 @@ RETURN:         A BOOLEAN value indicating whether view can perform
              (view-deactivate-event-handler window)))
         ((#.update-evt)
          (window-update-event-handler window))))))
-
 
 ;;;---------------------------------------------------------------------
 ;;; Colors

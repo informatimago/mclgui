@@ -75,7 +75,7 @@
     attributes))
 
 (defun draw-text (x y width height text)
-  (print-backtrace)
+  ;; (print-backtrace)
   ;; (format-trace "draw-string" x y str *current-view* (when *current-view* (view-window *current-view*)))
   ;; (with-fore-color *yellow-color*
   ;;   (let* ((o (view-origin *current-view*))
@@ -90,8 +90,8 @@
       (declare (ignore mode)) ; TODO: manage mode (:srcOr …)
       (let ((attributes (font-attributes descriptor)))
         ;; [context setCompositingOperation:(mode-to-compositing-operation (pen-mode pen))]
-        (format-trace "draw-text" descriptor)
-        (format-trace "draw-text" x y width height (subseq text 0 10) attributes)
+        ;; (format-trace "draw-text" descriptor)
+        ;; (format-trace "draw-text" x y width height (subseq text 0 (min (length text) 10)) attributes)
         [(objcl:objc-string text)
          drawInRect: (nsrect x y width height)
          withAttributes:attributes])))

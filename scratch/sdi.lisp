@@ -1,16 +1,46 @@
+(ql:quickload :mclgui)
 (in-package :ui)
 (initialize)
 
-(defvar *w* (make-instance 'window :window-title "Test"))
+
+(defclass sdi-window (window)
+  ((position-item :initform '() :accessor position-item)))
+
+(defmethod set-view-position :after ((win sdi-window) h &optional v)
+  (let ((pos  (make-point h v))
+        (posi (position-item win)))
+    (when posi
+      (set-dialog-item-text posi (print (format nil "~S ~S"
+                                                  (point-to-list pos)
+                                                  (point-to-list (view-position win))))))))
+
+(defvar *w* (make-instance 'sdi-window :window-title "Test"))
 
 
 (defgeneric draw-view-bounds (view)
   (:method   ((view simple-view))
+    #-(and) (progn (format t "~&view ~A~%" (view-nick-name view))
+                   (format t "~&  frame  = ~S~%" (rect-to-list (view-frame view)))
+                   (format t "~&  bounds = ~S~%" (rect-to-list (view-bounds view)))
+                   (finish-output))
     (let* ((bounds (view-bounds view))
            (x (rect-left   bounds))
            (y (rect-top    bounds))
            (w (rect-width  bounds))
            (h (rect-height bounds)))
+      (draw-rect* x y w h))))
+
+
+(defgeneric draw-view-frame (view)
+  (:method   ((view simple-view))
+    #-(and) (progn (format t "~&frame  = ~S~%" (rect-to-list (view-frame view)))
+                   (format t "~&bounds = ~S~%" (rect-to-list (view-bounds view)))
+                   (finish-output))
+    (let* ((frame (view-frame view))
+           (x (rect-left   frame))
+           (y (rect-top    frame))
+           (w (rect-width  frame))
+           (h (rect-height frame)))
       (draw-rect* x y w h))))
 
 
@@ -38,17 +68,20 @@
               'color-box 
               :color *red-color*
               :view-position (make-point 20 10)
-              :view-size     (make-point 100 20)))
+              :view-size     (make-point 100 20)
+              :view-nick-name "red"))
         (blue (make-instance
                'color-box 
                :color *blue-color*
                :view-position (make-point 2 2)
-               :view-size     (make-point 12 12)))
+               :view-size     (make-point 12 12)
+               :view-nick-name "blue"))
         (green (make-instance
                 'color-box 
                 :color *green-color*
                 :view-position (make-point 2 2)
-                :view-size     (make-point 12 12))))
+                :view-size     (make-point 12 12)
+                :view-nick-name "green")))
     (add-subviews red blue)
     (add-subviews *w* red)
     (add-subviews *w* green)))
@@ -126,45 +159,80 @@
 
 
 (defmethod view-draw-contents :after ((item boxed-static-text-dialog-item))
-  (with-focused-view item
-    (draw-view-bounds item)))
+  (with-focused-dialog-item (item)
+    (draw-view-frame item)))
 
 
 (defclass boxed-editable-text-dialog-item (editable-text-dialog-item)
   ())
 
 (defmethod view-draw-contents :after ((item boxed-editable-text-dialog-item))
-  (with-focused-view item
-    (draw-view-bounds item)))
+  (with-focused-dialog-item (item)
+    (draw-view-frame item)))
 
 
 (defun test-text-box ()
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
   (add-subviews *w*
+
+                (setf (position-item *w*) (make-instance
+                                           'boxed-static-text-dialog-item
+                                           :dialog-item-text "positions"
+                                           :view-position (make-point 20 100)
+                                           :view-size     (make-point 200 20)
+                                           :view-nick-name "positions"))
+
+                (make-instance
+                 'color-box 
+                 :color *blue-color*
+                 :view-position (make-point 18 8)
+                 :view-size     (make-point 104 24)
+                 :view-nick-name "blue 1")
+
+                (make-instance
+                 'color-box 
+                 :color *blue-color*
+                 :view-position (make-point 18 28)
+                 :view-size     (make-point 104 24)
+                 :view-nick-name "blue 2")
+
+                (make-instance
+                 'color-box 
+                 :color *blue-color*
+                 :view-position (make-point 18 48)
+                 :view-size     (make-point 104 24)
+                 :view-nick-name "blue 3")
+
                 
                 (make-instance
                  'boxed-static-text-dialog-item
                  :dialog-item-text "STATIC TEXT"
                  :dialog-item-action (lambda (item)
-                                       (format t "~&~S ~S~%" item (dialog-item-text item)))
+                                       (format t "~&~S~%~S~2%" item (dialog-item-text item)))
                  :view-position (make-point 20 10)
-                 :view-size     (make-point 100 20))
+                 :view-size     (make-point 100 20)
+                 :view-nick-name "static text")
 
                 (make-instance
                  'boxed-editable-text-dialog-item
                  :dialog-item-text "EDIT IT"
                  :dialog-item-action (lambda (item)
-                                       (format t "~&~S ~S~%" item (dialog-item-text item)))
+                                       (format t "~&~S~%~S~2%" item (dialog-item-text item)))
                  :view-position (make-point 20 30)
-                 :view-size     (make-point 100 20))
+                 :view-size     (make-point 100 20)
+                 ::view-nick-name "edit text")
 
                 (make-instance
                  'boxed-editable-text-dialog-item
                  :dialog-item-text "Another edit"
                  :dialog-item-action (lambda (item)
-                                       (format t "~&~S ~S~%" item (dialog-item-text item)))
+                                       (format t "~&~S~%~S~2%" item (dialog-item-text item)))
                  :view-position (make-point 20 50)
-                 :view-size     (make-point 100 20))))
+                 :view-size     (make-point 100 20)
+                 :view-nick-name "another edit text")
+
+
+                ))
 
 
 (defgeneric first-responder (w)
@@ -173,12 +241,21 @@
       [winh firstResponder])))
 
 #-(and)(progn
-
+         (identify-streams)
+          
          (test-text-box)
+         (position-item *w*)
+         (set-view-position (front-window) 0 180)
 
+         (map 'list (lambda (view) (list (point-to-list (convert-coordinates #@(0 0) view (view-window view)))
+                                         (point-to-list (view-position view))))
+           (view-subviews(first(windows))))
+         
+
+         (load "scratch/dump.lisp")
          (pprint (dump (front-window)))
 
-         
+                  
          (set-view-position (aref (view-subviews (front-window)) 0) 20 40)
          
          (point-to-list (view-position (aref (view-subviews (front-window)) 0)))
@@ -244,4 +321,9 @@ publié en 1962 par MIT Press, un des maîtres­livres de l'Informatique.
          (window-close *w*)
          )
 
+#-(and) (progn
+          (#/CGContextGetCTM)
+          (#/CGAffineTransformInvert)
+          (#/CGContextConcatCTM)
 
+          )
