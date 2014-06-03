@@ -31,7 +31,6 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
 (in-package "MCLGUI")
 
 
@@ -65,26 +64,26 @@
     (let ((string      (nsubseq string start end))
           (pos         (pen-position (view-pen view))))
       (if (find #\Newline string)
-        (loop ; there's at least one newline.
-          :with line-height   = (font-line-height (view-font view))
-          :with len           = (length string)
-          :for previous-start = nil :then start
-          :for previous-end   = nil :then end
-          :for start = 0 :then (1+ end)
-          :for end   = (or (position #\Newline string :start start) len)
-          :while (< start len)
-          :do (progn
-                (draw-string (point-h pos) (point-v pos) (nsubseq string start end))
-                (when (< end (1- len))
-                  (setf pos (make-point 0 (+ (point-v pos) line-height)))))
-          :finally  (setf pos (make-point (+ (string-width (nsubseq string
-                                                                    previous-start
-                                                                    previous-end))
-                                             (point-h pos))
-                                          (point-v pos))))
+          (loop
+            ;; there's at least one newline.
+            :with line-height   = (font-line-height (view-font view))
+            :with len           = (length string)
+            :for previous-start = nil :then start
+            :for previous-end   = nil :then end
+            :for start = 0 :then (1+ end)
+            :for end   = (or (position #\Newline string :start start) len)
+            :while (< start len)
+            :do (let ((line (nsubseq string start end)))
+                  (when (< start end)
+                    (draw-string (point-h pos) (point-v pos) line))
+                  (setf pos (if (<= end (1- len))
+                                (make-point 0
+                                            (+ (point-v pos) line-height))
+                                (make-point (+ (point-h pos) (string-width line))
+                                            (point-v pos))))))
         (progn
           (draw-string (point-h pos) (point-v pos) string)
-          (setf pos (make-point (+ (string-width string) (point-h pos))
+          (setf pos (make-point (+ (point-h pos) (string-width string) )
                                 (point-v pos)))))
       (move-to view (point-h pos) (point-v pos))
       string)))
