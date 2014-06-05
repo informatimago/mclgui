@@ -42,6 +42,40 @@
 
 ;; (initialize/window)
 
+(defgeneric window-frame-from-nswindow-frame (window))
+(defgeneric nswindow-frame-from-window-frame (window))
+
+(defmethod window-frame-from-nswindow-frame ((window window))
+  "
+RETURN: a RECT containing the position and size of the window,
+        computed from the NSWindow frame.
+"
+  (with-handle (winh window)
+    (let ((frame (get-nsrect [winh contentRectForFrameRect:[winh frame]])))
+      (multiple-value-bind (sx sy sw sh) (main-screen-frame)
+        (declare (ignore sw))
+        (make-rect (- (nsrect-x frame)                           sx) ; left
+                   (- (+ sy sh)   (+ (nsrect-y frame) (nsrect-height frame))) ; top
+                   (- (+ (nsrect-x frame) (nsrect-width frame))  sx) ; right
+                   (- (+ sy sh)   (nsrect-y frame))))))) ; bottom
+
+(defmethod nswindow-frame-from-window-frame ((window window))
+  "
+RETURN: A NSRect containing the frame of the window, compute from the position and size.
+"
+  (with-handle (winh window)
+    (multiple-value-bind (sx sy sw sh) (main-screen-frame)
+      (declare (ignore sw))
+      (let ((position (view-position window))
+            (size     (view-size window)))
+        (get-nsrect [winh frameRectForContentRect:(ns:make-ns-rect (+ sx (point-h position))
+                                                                   (- (+ sy sh) (+ (point-v position) (point-v size)))
+                                                                   (point-h size)
+                                                                   (point-v size))])))))
+
+
+
+
 (defmethod update-handle ((window window))
   (setf (%view-position window) (center-window (view-size window) (view-position window)))
   (setf (view-valid window) (list nil))
@@ -1084,7 +1118,7 @@ RETURN:         A BOOLEAN value indicating whether view can perform
         ((#.key-down #.auto-key)
          (view-key-event-handler window (nth-value 1 (decode-key-message message))))
         ((#.activate-evt)
-         (if (logbitp active-flag modifiers)
+         (if (logtest active-flag modifiers)
              (view-activate-event-handler window)
              (view-deactivate-event-handler window)))
         ((#.update-evt)

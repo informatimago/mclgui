@@ -294,6 +294,7 @@
   (nsmodifier-to-macmodifier (modifier-flags)))
 
 
+
 (defun encode-key-message (kcode characters)
   (let ((kcode  (ldb (byte 8 0) kcode)))
    (case (length characters)
@@ -500,42 +501,6 @@ RETURN: A NSRect containing the frame of the window.
                      (- (+ sy sh) (+ (point-v position) (point-v size)))
                      (point-h size)
                      (point-v size))))
-
-
-
-
-(defgeneric window-frame-from-nswindow-frame (window))
-(defgeneric nswindow-frame-from-window-frame (window))
-
-(defmethod window-frame-from-nswindow-frame ((window window))
-  "
-RETURN: a RECT containing the position and size of the window,
-        computed from the NSWindow frame.
-"
-  (with-handle (winh window)
-    (let ((frame (get-nsrect [winh contentRectForFrameRect:[winh frame]])))
-      (multiple-value-bind (sx sy sw sh) (main-screen-frame)
-        (declare (ignore sw))
-        (make-rect (- (nsrect-x frame)                           sx) ; left
-                   (- (+ sy sh)   (+ (nsrect-y frame) (nsrect-height frame))) ; top
-                   (- (+ (nsrect-x frame) (nsrect-width frame))  sx) ; right
-                   (- (+ sy sh)   (nsrect-y frame))))))) ; bottom
-
-(defmethod nswindow-frame-from-window-frame ((window window))
-  "
-RETURN: A NSRect containing the frame of the window, compute from the position and size.
-"
-  (with-handle (winh window)
-    (multiple-value-bind (sx sy sw sh) (main-screen-frame)
-      (declare (ignore sw))
-      (let ((position (view-position window))
-            (size     (view-size window)))
-        (get-nsrect [winh frameRectForContentRect:(ns:make-ns-rect (+ sx (point-h position))
-                                                                   (- (+ sy sh) (+ (point-v position) (point-v size)))
-                                                                   (point-h size)
-                                                                   (point-v size))])))))
-
-
 
 
 
@@ -748,9 +713,8 @@ DO:             Evaluates the BODY in a lexical environment where
         (let ((event (get-null-event))
               (*multi-click-count* 0))
           (setf (event-what event) activate-evt
-                (event-modifiers event)
-                (logior (event-modifiers event)
-                        active-flag)
+                (event-modifiers event) (logior (event-modifiers event)
+                                                active-flag)
                 (event-message event) window)
           ;; (format-trace '|becomeMainWindow| event)
           ;; (view-activate-event-handler window)
@@ -769,9 +733,8 @@ DO:             Evaluates the BODY in a lexical environment where
         (let ((event (get-null-event))
               (*multi-click-count* 0))
           (setf (event-what event) activate-evt
-                (event-modifiers event)
-                (logandc2 (event-modifiers event)
-                          active-flag)
+                (event-modifiers event) (logandc2 (event-modifiers event)
+                                                  active-flag)
                 (event-message event) window)
           ;; (format-trace '|resignMainWindow| event)
           ;; (view-deactivate-event-handler window)
