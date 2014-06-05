@@ -232,7 +232,8 @@
                  :view-nick-name "another edit text")
 
 
-                ))
+                )
+  (invalidate-view *w*))
 
 
 (defgeneric first-responder (w)
@@ -243,6 +244,7 @@
 #-(and)(progn
          (identify-streams)
           
+         (invalidate-view *w*)
          (test-text-box)
          (position-item *w*)
          (set-view-position (front-window) 0 180)
