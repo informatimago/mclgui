@@ -32,7 +32,6 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
 (in-package "MCLGUI")
 (objcl:enable-objcl-reader-macros)
 
@@ -324,8 +323,6 @@ RETURN:         NEW-HANDLE.
           [old-handle release]
           (setf (slot-value wrapper 'handle) nil))))
     new-handle))
-
-
 
 
 

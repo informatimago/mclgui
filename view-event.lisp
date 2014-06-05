@@ -42,9 +42,9 @@
   (values))
 
 (defmethod view-activate-event-handler ((view view))
+  (call-next-method)
   (dovector (v (view-subviews view))
-    (view-activate-event-handler v))
-  (call-next-method))
+    (view-activate-event-handler v)))
 
 (defmethod view-deactivate-event-handler ((view view))
   (dovector (v (view-subviews view))
@@ -137,11 +137,6 @@
       (setf (%get-key-handler-list dialog) (delete item (%get-key-handler-list dialog))))))
 
 
-
-(defmethod view-draw-contents ((view view))
-  (call-next-method)
-  (dovector (subview (view-subviews view))
-    (view-focus-and-draw-contents subview)))
 
 
 ;;;; THE END ;;;;

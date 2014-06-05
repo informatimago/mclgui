@@ -41,6 +41,7 @@
                          :initarg  :help-spec
                          :accessor help-spec)
    (view-container       :initform nil
+                         :initarg :view-container
                          :reader view-container
                          :documentation "The view that contains this view.")
    (view-position        :initform #@(0 0)
@@ -170,7 +171,7 @@ DO:             Remove the property KEY from the VIEW.
 
 (defvar *next-window-ptr* 0)
 
-(defclass window (view  wrapper)
+(defclass window (view wrapper)
   ((window-cursor                    :reader    window-cursor
                                      :initform  *arrow-cursor*)
    (view-pen                         :reader    view-pen

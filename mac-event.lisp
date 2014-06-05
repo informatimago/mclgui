@@ -127,7 +127,7 @@ application        used defined.
   (format stream " :message ~S" (event-message event))
   (format stream " :when ~S" (event-when event))
   (format stream " :where #@(~A ~A)" (point-h (event-where event)) (point-v (event-where event)))
-  (format stream " :modifiers ~S" (event-modifiers-label (event-modifiers event)))
+  (format stream " :modifiers ~D ~S"  (event-modifiers event) (event-modifiers-label (event-modifiers event)))
   (format stream ")")
   event)
 

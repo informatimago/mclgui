@@ -797,7 +797,7 @@ IDLE:           An argument representing whether the main Lisp process
   (let ((*current-event* (get-next-event idle event-mask)))
     (when *current-event*
       (unless (= null-event (event-what *current-event*))
-       (format-trace 'event-dispatch *current-event*))
+        (format-trace 'event-dispatch *current-event*))
       (unless (dispatch-eventhook)
         (when (= null-event (process-event *current-event*))
           (receive-appleevent))))))

@@ -67,12 +67,14 @@
    ;; ## GROW-ICON-P ADDED:
    (grow-icon-p           :reader   grow-icon-p
                           :initarg  :grow-icon-p
-                          :initform NIL)
+                          :initform nil)
    (field-size            :initarg  :field-size
                           :initform nil
                           :reader   field-size)
-   (scroller-outline      :accessor scroller-outline)
-   (scroll-bar-correction :accessor scroll-bar-correction)))
+   (scroller-outline      :accessor scroller-outline
+                          :initform nil)
+   (scroll-bar-correction :accessor scroll-bar-correction
+                          :initform nil)))
 
 
 (defclass scroller (scroller-mixin view)
@@ -295,8 +297,10 @@
 (defclass scroller-pane (view)
   ((scroller              :accessor scroller)
    (scroller-outline      :accessor scroller-outline
+                          :initform nil
                           :initarg :scroller-outline)
    (draw-scroller-outline :accessor draw-scroller-outline
+                          :initform nil
                           :initarg :draw-scroller-outline)))
 
 (defgeneric v-scroller (pane)
