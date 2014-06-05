@@ -37,6 +37,38 @@
 
 
 
+;; On MacOSX 10.9, system fonts are not found in the normal font
+;; families.  So we need to process them specially.
+
+(defun additional-fonts ()
+  "
+RETURN: A list of additional NSFont that may be in families not
+        obtained by -[NSFontManager availableFontFamilies].
+"
+  (list [NSFont boldSystemFontOfSize:(cgfloat 12.0d0)]
+        [NSFont controlContentFontOfSize:(cgfloat 12.0d0)]
+        [NSFont labelFontOfSize:(cgfloat 12.0d0)]
+        [NSFont menuFontOfSize:(cgfloat 12.0d0)]
+        [NSFont menuBarFontOfSize:(cgfloat 12.0d0)]
+        [NSFont messageFontOfSize:(cgfloat 12.0d0)]
+        [NSFont paletteFontOfSize:(cgfloat 12.0d0)]
+        [NSFont systemFontOfSize:(cgfloat 12.0d0)]
+        [NSFont titleBarFontOfSize:(cgfloat 12.0d0)]
+        [NSFont toolTipsFontOfSize:(cgfloat 12.0d0)]))
+
+
+(defun additional-font-families ()
+  "
+RETURN:         A list of lisp strings naming the additional font families.
+"
+  (delete-duplicates
+   (mapcar (lambda (font) (objcl:lisp-string [font familyName]))
+           (additional-fonts))
+   :test (function string=)))
+
+
+;; ---
+
 (defun available-fonts ()
   "
 RETURN:         A list of font names (STRING)
@@ -48,7 +80,10 @@ RETURN:         A list of font names (STRING)
   "
 RETURN:         A list of font family names (STRING).
 "
-  (nsarray-to-list [[NSFontManager sharedFontManager] availableFontFamilies]))
+  (delete-duplicates
+   (append (additional-font-families)
+           (nsarray-to-list [[NSFontManager sharedFontManager] availableFontFamilies]))
+   :test (function string=)))
 
 
 (defun available-members-of-font-family (family)
@@ -252,10 +287,13 @@ EXAMPLE:        (style-to-font-traits '(:italic :bold :underline :outline :exten
                                   :test (function string-equal)))))
 
 (defun system-font-name ()
-  (car (font-family (objcl:lisp-string [[NSFont systemFontOfSize:(cgfloat 12.0d0)] fontName]))))
+  (objcl:lisp-string [[NSFont systemFontOfSize:(cgfloat 12.0d0)] familyName]))
 
 (defun application-font-name ()
-  (car (font-family (objcl:lisp-string [[NSFont userFontOfSize:(cgfloat 12.0d0)] fontName]))))
+  (objcl:lisp-string [[NSFont userFontOfSize:(cgfloat 12.0d0)] familyName]))
+
+
+
 
 
 (defvar *mac-font-names*
@@ -1066,6 +1104,7 @@ DO:             Change the view font codes of view.  The font/face
 ;;                                            :outline :shadow :condense :extend))
 ;;   [(font-descriptor-from-codes ff ms) fontAttributes])
 ;; (string-width "Hello World! Hello World!" '("American Typewriter" 12))
+
 
 
 ;;;; THE END ;;;;
