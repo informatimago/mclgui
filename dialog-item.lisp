@@ -113,8 +113,8 @@ dialog items. It is built on SIMPLE-VIEW.
 (defgeneric dialog-item-action-p (item)
   (:method ((item dialog-item))
     (or (dialog-item-action-function item)
-        (not (eq (find-1st-arg-combined-method (function dialog-item-action) item)
-                 (method-function (reference-method dialog-item-action (dialog-item))))))))
+        (not (eql (find-1st-arg-combined-method (function dialog-item-action) item)
+                  (method-function (reference-method dialog-item-action (dialog-item))))))))
 
 
 (defmacro do-dialog-items ((item-var dialog &optional (item-class ''dialog-item) must-be-enabled)
@@ -128,7 +128,6 @@ dialog items. It is built on SIMPLE-VIEW.
 
 (defgeneric call-with-focused-dialog-item (item fn &optional container)
   (:method (item fn &optional container)
-    (declare (ignore container))
     (call-with-focused-view (or container (view-container item))
                             (lambda (container)
                               (declare (ignore container))
