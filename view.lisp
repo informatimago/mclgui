@@ -72,17 +72,21 @@
 ;;                      (point-h size)
 ;;                      (point-v size))))
 
-
-(defmethod initialize-instance ((view view) &key view-font &allow-other-keys)
+(defmethod initialize-instance ((view simple-view) &key &allow-other-keys)
   (declare (stepper trace))
+  (call-next-method)
   (unless (and (slot-boundp view 'view-position)
                (slot-value view 'view-position))
     (setf (%view-position view) (view-default-position view)))
   (unless (and (slot-boundp view 'view-size)
                (slot-value view 'view-size))
     (setf (%view-size view) (view-default-size view)))
-  (when (slot-boundp  view 'view-container)
-    (set-view-container view (slot-value view 'view-container)))
+  (when (slot-boundp view 'view-container)
+    (set-view-container view (slot-value view 'view-container))))
+
+
+(defmethod initialize-instance ((view view) &key view-font &allow-other-keys)
+  (declare (stepper trace))
   (call-next-method)
   (when view-font
     (set-initial-view-font view view-font))
@@ -181,9 +185,9 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
           (ms (or ms 0)))
       ;; (format-trace "set-font" :ff ff :ms ms)
       (multiple-value-bind (font mode) (font-from-codes ff ms)
-        (declare (ignore mode))
+        (declare (ignorable mode))
         ;; TODO: manage mode (:srcOr …)
-        (format-trace "set-font" font mode)
+        ;; (format-trace "set-font" font mode)
         [font set])
       (list ff ms))))
 
@@ -702,8 +706,7 @@ RETURN:  The VIEW rectangle in the view container coordinates.
 RETURN:  The VIEW rectangle in the view coordinates.
 ")
   (:method ((view simple-view))
-    (let ((topleft (view-scroll-position view) ;; (subtract-points #@(0 0) (view-origin view))
-                   ))
+    (let ((topleft (view-scroll-position view)))
       (make-rect topleft (add-points topleft (view-size view))))))
 
 (defun erase (window bounds)
@@ -911,7 +914,8 @@ VIEW:           A view or simple view.
   (:method ((view simple-view))
     nil)
   (:method ((view view))
-    (window-invalid-region (view-window view)))
+    (when (view-window view)
+      (window-invalid-region (view-window view))))
   (:method ((view window))
     nil))
 
@@ -1283,19 +1287,30 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
 ")
   (:method ((view simple-view) &optional visrgn cliprgn)
     (declare (ignore visrgn cliprgn)) ; for now ; we could compute a clip rect.
-    (with-focused-view view
+    (with-focused-view (view-container view)
       (view-draw-contents view)))
 
   (:method ((view view) &optional visrgn cliprgn)
     (declare (ignore visrgn cliprgn)) ; for now ; we could compute a clip rect.
     (with-focused-view view
       (view-draw-contents view)
-      #-(and)
-      (with-temp-rgns (visrgn cliprgn)
-        (get-window-visrgn wptr visrgn)
-        (get-window-cliprgn wptr cliprgn)
-        (when (regions-overlap-p visrgn cliprgn)
-          (view-draw-contents view))))))
+      #-(and) (with-temp-rgns (visrgn cliprgn)
+                (get-window-visrgn wptr visrgn)
+                (get-window-cliprgn wptr cliprgn)
+                (when (regions-overlap-p visrgn cliprgn)
+                  (view-draw-contents view))))))
+
+(defmethod view-draw-contents :before ((view simple-view))
+  (format-trace 'view-draw-contents
+                (eql view *current-view*)
+                view *current-view*))
+
+(defmethod view-draw-contents ((view view))
+  ;; bug for bug compatibility :-(
+  (when (wptr view)
+    (dovector (subview (view-subviews view))
+      (view-focus-and-draw-contents subview))
+    (call-next-method)))
 
 
 
