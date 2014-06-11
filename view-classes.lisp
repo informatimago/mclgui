@@ -258,6 +258,9 @@ DO:             Remove the property KEY from the VIEW.
                                                          :tool))
    (erase-anonymous-invalidations    :initform   t
                                      :initarg   :erase-anonymous-invalidations)
+   (affine-transform                 :initform nil
+                                     :accessor window-affine-transform
+                                     :documentation "The initial window NSAffineTransform object.")
    (transform-stack                  :initform nil
                                      :accessor transform-stack
                                      :documentation "A stack of NSAffineTransform currently applied to

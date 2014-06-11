@@ -118,9 +118,12 @@ are called in reverse order from the order in which they appear in the
 list. 
 ")
 
+(defvar *application-should-terminate-functions* '()
+  "Functions called when the delegate of NSApplication receives -applicationShouldTerminate:.
+If :CANCEL is thrown, the application doesn't terminate.")
 
 (defvar *application-did-finish-launching-functions* '()
-  "Functions called when NSApplication sends the applicationDidFinishLaunching: notification.")
+  "Functions called when NSApplication sends the -applicationDidFinishLaunching: notification.")
 
 
 #| in ccl:
@@ -174,6 +177,7 @@ list.
 
 (define-on-operators restore      *restore-lisp-functions*)
 (define-on-operators application-did-finish-launching  *application-did-finish-launching-functions*)
+(define-on-operators application-should-terminate      *application-should-terminate-functions*)
 
 
 #-ccl

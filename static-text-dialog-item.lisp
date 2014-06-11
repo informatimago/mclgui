@@ -64,7 +64,7 @@
 
 
 (defmethod view-draw-contents ((item static-text-dialog-item))
-  (with-focused-view item
+  (with-focused-dialog-item (item)
    (let* ((frame (view-frame item))
           (x (rect-left   frame))
           (y (rect-top    frame))

@@ -195,41 +195,107 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 
 
 
+#-(and) (defgeneric call-with-focused-view (view function &optional font-view)
+          (:method ((view simple-view) function &optional font-view)
+            (flet ((call-it ()
+                     (let ((transtack (transform-stack (view-window view)))
+                           (inverse   nil))
+                       (unwind-protect
+                            (progn
+                              (format-trace 'with-focused-view
+                                            :before (get-ctm (view-window view))
+                                            (mapcar (function get-at) transtack))
+                              (when transtack ; remove the top transform
+                                (setf inverse [[NSAffineTransform alloc] initWithTransform:(car transtack)])
+                                [inverse invert]
+                                [inverse concat])
+                              (let ((trans  [[[NSAffineTransform class] performSelector:(objc:@selector |transform|)] retain])
+                                    ;; A bug in ccl prevents this to work: [NSAffineTransform transform]
+                                    (origin (convert-coordinates #@(0 0) view (view-window view))
+                                            #-(and)
+                                            (if (view-container view)
+                                                (view-origin view)
+                                                (subtract-points (view-position view)
+                                                                 (view-scroll-position (view-container view)))
+                                                (view-scroll-position view))))
+                                (unwind-protect
+                                     (progn
+                                       [trans translateXBy: (cgfloat (point-h origin)) yBy: (cgfloat (point-v origin))]
+                                       [trans concat]
+                                       (format-trace 'with-focused-view
+                                                     :during (get-ctm (view-window view))
+                                                     (mapcar (function get-at) transtack))
+                                       (setf (transform-stack (view-window view)) (cons trans transtack))
+                                       (call-with-pen-state (lambda () (funcall function view))
+                                                            (view-pen view)))
+                                  (setf (transform-stack (view-window view)) transtack)
+                                  [trans invert]
+                                  [trans concat]
+                                  [trans release])))
+                         (when inverse ; put back the top transform.
+                           [inverse invert]
+                           [inverse concat]
+                           [inverse release])
+                         (format-trace 'with-focused-view
+                                       :_after  (get-ctm (view-window view))
+                                       (mapcar (function get-at) transtack))))))
+              #-(and) (or (null font-view) (eq font-view old-font-view))
+              (if (eq *current-view* view)
+                  (if (eq *current-font-view* font-view)
+                      (let ((*current-view* view)
+                            (*current-font-view* font-view)
+                            (*current-font-codes* (copy-list *current-font-codes*)))
+                        (call-it))
+                      (unwind-protect
+                           (let* ((*current-view* view)
+                                  (*current-font-view*  font-view)
+                                  (*current-font-codes* (set-font *current-font-view*))) ; change font
+                             (call-it))
+                        (set-font *current-font-view*))) ; revert font
+                  (with-view-handle (handle view)
+                    (let ((unlock   nil))
+                      (unwind-protect
+                           (let ((*current-view* view)
+                                 (*current-font-view* (or font-view *current-font-view*))
+                                 (*current-font-codes* (copy-list *current-font-codes*)))
+                             (when (setf unlock [handle lockFocusIfCanDraw])
+                               (focus-view *current-view* *current-font-view*)
+                               (apply (function set-current-font-codes) (set-font *current-font-view*))
+                               (call-it)
+                               [[NSGraphicsContext currentContext] flushGraphics]))
+                        (when unlock
+                          (set-font *current-font-view*)
+                          [handle unlockFocus])
+                        (focus-view *current-view* *current-font-view*))))))))
+
+
+(defun get-at (at)
+  (list (list (ccl::pref at #>CGAffineTransform.a)
+              (ccl::pref at #>CGAffineTransform.b))
+        (list (ccl::pref at #>CGAffineTransform.c)
+              (ccl::pref at #>CGAffineTransform.d))
+        (list (ccl::pref at #>CGAffineTransform.tx)
+              (ccl::pref at #>CGAffineTransform.ty))))
+
+(defun get-ctm (window)
+  (get-at (cg:context-get-ctm  [[(handle window) graphicsContext] graphicsPort])))
+
+
 (defgeneric call-with-focused-view (view function &optional font-view)
   (:method ((view simple-view) function &optional font-view)
     (flet ((call-it ()
-             (let ((transtack (transform-stack (view-window view)))
-                   (inverse   nil))
+             (let* ((window (view-window view))
+                    (wtrans (window-affine-transform window))
+                    (vtrans (make-affine-transform))
+                    (origin (convert-coordinates #@(0 0) view window)))
+               [wtrans set]
+               [vtrans translateXBy:(cgfloat (point-h origin)) yBy:(cgfloat (point-v origin))]
+               [vtrans concat]
+               [vtrans release]
                (unwind-protect
-                    (progn
-                      (when transtack ; remove the top transform
-                        (setf inverse [[NSAffineTransform alloc] initWithTransform:(car transtack)])
-                        [inverse invert]
-                        [inverse concat])
-                      (let ((trans  [[[NSAffineTransform class] performSelector:(objc:@selector |transform|)] retain])
-                            ;; A bug in ccl prevents this to work: [NSAffineTransform transform]
-                            (origin (convert-coordinates #@(0 0) view (view-window view))
-                                    #-(and)
-                                    (if (view-container view)
-                                        (view-origin view)
-                                        (subtract-points (view-position view)
-                                                         (view-scroll-position (view-container view)))
-                                        (view-scroll-position view))))
-                        (unwind-protect
-                             (progn
-                               [trans translateXBy: (cgfloat (point-h origin)) yBy: (cgfloat (point-v origin))]
-                               [trans concat]
-                               (push trans (transform-stack (view-window view)))
-                               (call-with-pen-state (lambda () (funcall function view))
-                                                    (view-pen view)))
-                          (setf (transform-stack (view-window view)) transtack)
-                          [trans invert]
-                          [trans concat]
-                          [trans release])))
-                 (when inverse ; put back the top transform.
-                   [inverse invert]
-                   [inverse concat]
-                   [inverse release])))))
+                    (call-with-pen-state (lambda () (funcall function view))
+                                         (view-pen view))
+                 [wtrans set]))))
       #-(and) (or (null font-view) (eq font-view old-font-view))
       (if (eq *current-view* view)
           (if (eq *current-font-view* font-view)
@@ -1549,6 +1615,11 @@ RETURN:         The cursor shape to display when the mouse is at
          fromRect:(unwrap (make-nsrect :x 0 :y 0 :size (view-size view)))
          operation:#$NSCompositeCopy
          fraction:(cgfloat 1.0)]
+        (format-trace 'new-instance :before
+                      :frame (get-nsrect [viewh frame])
+                      :bounds (get-nsrect [viewh bounds]))
+        (format-trace 'new-instance
+                      :instance (first (view-instance view)))
         #+cocoa-10.6
         [(first (view-instance view))
          drawInRect:[viewh bounds]
@@ -1556,7 +1627,11 @@ RETURN:         The cursor shape to display when the mouse is at
          operation:#$NSCompositeCopy
          fraction:(cgfloat 1.0)
          respectFlipped:yes
-         hints: *null*]))))
+         hints: *null*]
+        (format-trace 'new-instance :after_
+                      :frame (get-nsrect [viewh frame])
+                      :bounds (get-nsrect [viewh bounds]))))))
+
 
 (defmacro with-instance-drawing (view &body body)
   (let ((vview (gensym)))
@@ -1567,15 +1642,24 @@ RETURN:         The cursor shape to display when the mouse is at
 
 
 (defun example/instance-drawing ()
-  (let ((view (first (windows))))
+  (let ((view (front-window)))
     (with-instance-drawing view
-      (loop for i from 0 to 200 by 10 do
+      (loop for i from 20 to 200 by 10 do
         (sleep 0.1)
         (new-instance view)
         (with-focused-view view
-          (draw-line 0 i 100 200)))
+          (draw-line 20 i 100 200)))
       (new-instance view))))
 
+(defun example/instance-drawing/2 ()
+  (let ((view (front-window)))
+    (with-instance-drawing view
+      (with-focused-view view
+        (draw-line 20 20 200 100))
+      (sleep 5)
+      (new-instance view))))
+
+;; (example/instance-drawing/2)
 ;; (example/instance-drawing)
 
 (defun initialize/view ()

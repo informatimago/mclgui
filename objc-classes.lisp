@@ -565,6 +565,22 @@ DO:             Evaluates the BODY in a lexical environment where
 
 #+ccl (ccl:def-foreign-type ns-rect-ptr (:* :<NSR>ect))
 
+;;;------------------------------------------------------------
+;;; Application Delegate
+
+
+
+@[LispApplicationDelegate
+  method:(applicationShouldTerminate:(id)sender)
+  resultType:(:int)
+  body:
+  (declare (ignore sender))
+  (block nil
+   (catch :cancel
+     (mapc (function funcall) *application-should-terminate-functions*)
+     (return #$NSTerminateNow))
+   #$NSTerminateCancel)]
+
 
 ;;;------------------------------------------------------------
 ;;; NSWindow

@@ -75,6 +75,9 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
 
 
 
+(defun make-affine-transform ()
+  ;; A bug in ccl prevents this to work: [NSAffineTransform transform]
+  [[[NSAffineTransform class] performSelector:(objc:@selector |transform|)] retain])
 
 (defmethod update-handle ((window window))
   (setf (%view-position window) (center-window (view-size window) (view-position window)))
@@ -129,8 +132,12 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     ;; [winh setDelegate:(make-instance 'mclgui-window-delegate :window window)]
     [winh setDelegate:winh]
     [winh setTitle:(objcl:objc-string (window-title window))]
+    (let ((trans (make-affine-transform)))
+      [trans setTransformStruct:(cg:context-get-ctm [[winh graphicsContext] graphicsPort])]
+      (setf (window-affine-transform window) trans))
     ;; (format-trace "created window" (window-title window) (point-to-list (view-position window)) (point-to-list (view-size window)) (window-to-nswindow-frame (view-position window) (view-size window)))
     winh))
+  
 
 
 (defmethod initialize-instance ((window window)

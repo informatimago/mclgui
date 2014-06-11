@@ -33,370 +33,375 @@
 ;;;;**************************************************************************
 
 (asdf:defsystem :mclgui
-    :name "mclgui"
-    :description "Macintosh Common Lisp Graphical User Interface for OpenStep"
-    :author "Pascal J. Bourguignon"
-    :version "1.1.0"
-    :license "GPL3"
-    :depends-on ("closer-mop" ; window.lisp uses closer-mop:class-precedence-list, etc.
-                 "bordeaux-threads"
-                 "cffi" 
-                 "trivial-gray-streams"
-                 "alexandria"
-                 "split-sequence"
-                 "com.informatimago.objcl"
-                 "com.informatimago.clext"   ; closer-weak: wrapper.lisp uses weak lists
-                 ;; While developping:
-                 "com.informatimago.common-lisp.cesarum")
-    :components ((:file "cocoa"
-                        :depends-on ())
+  :name "mclgui"
+  :description "Macintosh Common Lisp Graphical User Interface for OpenStep"
+  :author "Pascal J. Bourguignon"
+  :version "1.1.0"
+  :license "GPL3"
+  :depends-on ("closer-mop" ; window.lisp uses closer-mop:class-precedence-list, etc.
+               "bordeaux-threads"
+               "cffi" 
+               "trivial-gray-streams"
+               "alexandria"
+               "split-sequence"
+               "com.informatimago.objcl"
+               "com.informatimago.clext"   ; closer-weak: wrapper.lisp uses weak lists
+               ;; While developping:
+               "com.informatimago.common-lisp.cesarum")
+  :components ((:file "cocoa"
+                :depends-on ())
 
-                 (:file "package"
-                        :depends-on ("cocoa"))
+               (:file "cg"
+                :depends-on ())
 
-                 (:file "macros"
-                        :depends-on ("package"))
+               (:file "package"
+                :depends-on ("cocoa"))
 
-                 (:file "mutex"
-                        :depends-on ("package"))
-                 
-                 (:file "mailbox"
-                        :depends-on ("package"))
+               (:file "macros"
+                :depends-on ("package"))
 
-                 (:file "process"
-                        :depends-on ("package" "mailbox"))
+               (:file "mutex"
+                :depends-on ("package"))
+               
+               (:file "mailbox"
+                :depends-on ("package"))
 
-                 (:file "variables"
-                        :depends-on ("package" 
-                                     "point"))
-                 (:file "system"
-                        :depends-on ("package"))
+               (:file "process"
+                :depends-on ("package" "mailbox"))
 
-                 (:file "circular"
-                        :depends-on ("package"))
+               (:file "variables"
+                :depends-on ("package" 
+                             "point"))
+               (:file "system"
+                :depends-on ("package"))
 
-                 (:file "wrapper"
-                        :depends-on ("package" "system" "circular"))
+               (:file "circular"
+                :depends-on ("package"))
 
-                 (:file "notification"
-                        :depends-on ("package"
-                                     "wrapper"))
+               (:file "wrapper"
+                :depends-on ("package" "system" "circular"))
 
-                 (:file "mac-event"
-                        :depends-on ("package"
-                                     "macros" "variables" "point" "mutex"))
+               (:file "notification"
+                :depends-on ("package"
+                             "wrapper"))
 
-                 (:file "objc-classes"
-                        :depends-on ("package"
-                                      "macros" "wrapper" "variables" "point" "rect"
-                                      "mac-event"))
-                 
-                 (:file "graphics"
-                        :depends-on ("package"
-                                     "macros" "variables" "point" "color" "font"))
-                 
-                 ;; Chapter 2:
+               (:file "mac-event"
+                :depends-on ("package"
+                             "macros" "variables" "point" "mutex"))
 
-                 (:file "point"
-                        :depends-on ("package"))
+               (:file "objc-classes"
+                :depends-on ("package"
+                             "macros" "wrapper" "variables" "point" "rect"
+                             "system" "mac-event"))
+               
+               (:file "graphics"
+                :depends-on ("package"
+                             "macros" "variables" "point" "color" "font"))
+               
+               ;; Chapter 2:
 
-                 (:file "font"
-                        :depends-on ("package" 
-                                     "macros" "variables" "system"
-                                     "point" "objc-classes" "color"
-                                     "wrapper"))
-                 
-                 (:file "pattern"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point"
-                                     "wrapper"))
+               (:file "point"
+                :depends-on ("package"))
 
-                 ;; Chapter 3: Menus
+               (:file "font"
+                :depends-on ("package" 
+                             "macros" "variables" "system"
+                             "point" "objc-classes" "color"
+                             "wrapper"))
+               
+               (:file "pattern"
+                :depends-on ("package" 
+                             "macros" "variables" "point"
+                             "wrapper"))
 
-                 (:file "menu"
-                        :depends-on ("package" 
-                                     "macros" "variables" "color"
-                                     "point" "font" "wrapper" "notification"))
+               ;; Chapter 3: Menus
 
-                 (:file "window-menu-item"
-                        :depends-on ("package" 
-                                     "menu" "window"))
-                 
-                 ;; Chapter 4: Views and Windows
+               (:file "menu"
+                :depends-on ("package" 
+                             "macros" "variables" "color"
+                             "point" "font" "wrapper" "notification"))
 
-                 (:file "view-classes"
-                        :depends-on ("package" 
-                                     "macros" "variables" "color"
-                                     "wrapper"))
+               (:file "window-menu-item"
+                :depends-on ("package" 
+                             "menu" "window"))
+               
+               ;; Chapter 4: Views and Windows
 
-                 (:file "view"
-                        :depends-on ("package" "process"
-                                     "macros" "variables" "color"
-                                     "point" "region" "font" "pen" 
-                                     "wrapper" "view-classes" "objc-classes"))
+               (:file "view-classes"
+                :depends-on ("package" 
+                             "macros" "variables" "color"
+                             "wrapper"))
 
-                 (:file "view-stream"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "font" "pen"
-                                     "view-classes" "view" "graphics"))
+               (:file "view"
+                :depends-on ("package" "process"
+                                       "macros" "variables" "color"
+                                       "point" "region" "font" "pen" 
+                                       "wrapper" "view-classes" "objc-classes"
+                                       "cg"))
 
-                 (:file "window"
-                        :depends-on ("package" "process"
-                                     "macros" "variables" "color"
-                                     "point" "region" "font"
-                                     "view-classes" "objc-classes"
-                                     "wrapper" "view" "notification"
-                                     "menu"))
+               (:file "view-stream"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "font" "pen"
+                             "view-classes" "view" "graphics"))
 
-                 (:file "fred-window"
-                        :depends-on ("package" 
-                                     "macros" "variables" "color"
-                                     "point" "region" "font"
-                                     "view-classes" "view" "window"))
+               (:file "window"
+                :depends-on ("package" "process"
+                                       "macros" "variables" "color"
+                                       "point" "region" "font"
+                                       "view-classes" "objc-classes"
+                                       "wrapper" "view" "notification"
+                                       "menu"
+                                       "cg"))
 
-                 ;; Chapter 5: Dialog Items and Dialogs
+               (:file "fred-window"
+                :depends-on ("package" 
+                             "macros" "variables" "color"
+                             "point" "region" "font"
+                             "view-classes" "view" "window"))
 
-                
-                 (:file "dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event"
-                                     "region"))
+               ;; Chapter 5: Dialog Items and Dialogs
 
-                 (:file "default-button-mixin"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event" "dialog"))
+               
+               (:file "dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "region"))
 
-                 (:file "control-dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" ; "event"
-                                     "dialog-item"))
-                 
-                 (:file "button-dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" ; "event"
-                                     "dialog-item" "control-dialog-item"
-                                     "default-button-mixin"))
+               (:file "default-button-mixin"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event" "dialog"))
 
-                 (:file "check-box-dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event"
-                                     "dialog-item" "control-dialog-item"
-                                     "button-dialog-item"))
+               (:file "control-dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" ; "event"
+                             "dialog-item"))
+               
+               (:file "button-dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" ; "event"
+                             "dialog-item" "control-dialog-item"
+                             "default-button-mixin"))
 
-                 (:file "radio-button-dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" ; "event"
-                                     "dialog-item" "control-dialog-item"
-                                     "button-dialog-item"))
-                 
-                 (:file "static-text-dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event"
-                                     "dialog-item"))
+               (:file "check-box-dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "dialog-item" "control-dialog-item"
+                             "button-dialog-item"))
 
-                 (:file "focus-rect-mixin"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event"
-                                     "dialog-item"))
+               (:file "radio-button-dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" ; "event"
+                             "dialog-item" "control-dialog-item"
+                             "button-dialog-item"))
+               
+               (:file "static-text-dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "dialog-item"))
 
-                 (:file "key-handler-mixin"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window"))
-                 
-                 (:file "editable-text-dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event"
-                                     "dialog-item" "view-event" "key-handler-mixin"))
+               (:file "focus-rect-mixin"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "dialog-item"))
 
-                 (:file "table-dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system" "region"
-                                     "view-classes" "view" "window" ; "event"
-                                     "dialog-item" "view-event" "key-handler-mixin"
-                                     "scroll-bar-dialog-item"))
+               (:file "key-handler-mixin"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window"))
+               
+               (:file "editable-text-dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "dialog-item" "view-event" "key-handler-mixin"))
 
-                 (:file "sequence-dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event"
-                                     "dialog-item" "view-event" "key-handler-mixin"
-                                     "scroll-bar-dialog-item" "table-dialog-item"))
+               (:file "table-dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system" "region"
+                             "view-classes" "view" "window" ; "event"
+                             "dialog-item" "view-event" "key-handler-mixin"
+                             "scroll-bar-dialog-item"))
 
-                 (:file "scroll-bar-dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" ; "event"
-                                     "dialog-item" "view-event"))
+               (:file "sequence-dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "dialog-item" "view-event" "key-handler-mixin"
+                             "scroll-bar-dialog-item" "table-dialog-item"))
 
-                 (:file "pop-up-menu-dialog-item"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" ; "event"
-                                     "dialog-item" "view-event"))
+               (:file "scroll-bar-dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" ; "event"
+                             "dialog-item" "view-event"))
 
-                 (:file "dialog"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window"  "view-event" "event"
-                                     "dialog-item" "key-handler-mixin"))
+               (:file "pop-up-menu-dialog-item"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" ; "event"
+                             "dialog-item" "view-event"))
 
-                 (:file "y-or-n-dialog"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event"
-                                     "dialog-item" "key-handler-mixin"
-                                     "button-dialog-item" 
-                                     "static-text-dialog-item" "editable-text-dialog-item"
-                                     "dialog"))
+               (:file "dialog"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window"  "view-event" "event"
+                             "dialog-item" "key-handler-mixin"))
 
-                 (:file "select-dialog"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event"
-                                     "dialog-item" "key-handler-mixin"
-                                     "button-dialog-item" 
-                                     "static-text-dialog-item" "editable-text-dialog-item"
-                                     "dialog"))
+               (:file "y-or-n-dialog"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "dialog-item" "key-handler-mixin"
+                             "button-dialog-item" 
+                             "static-text-dialog-item" "editable-text-dialog-item"
+                             "dialog"))
 
-                 (:file "message-dialog"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event"
-                                     "dialog-item" "key-handler-mixin"
-                                     "button-dialog-item" 
-                                     "static-text-dialog-item" "editable-text-dialog-item"
-                                     "dialog"))
+               (:file "select-dialog"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "dialog-item" "key-handler-mixin"
+                             "button-dialog-item" 
+                             "static-text-dialog-item" "editable-text-dialog-item"
+                             "dialog"))
 
-                 (:file "get-string-dialog"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "view-classes" "view" "window" "event"
-                                     "dialog-item" "key-handler-mixin"
-                                     "button-dialog-item" 
-                                     "static-text-dialog-item" "editable-text-dialog-item"
-                                     "dialog"))
+               (:file "message-dialog"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "dialog-item" "key-handler-mixin"
+                             "button-dialog-item" 
+                             "static-text-dialog-item" "editable-text-dialog-item"
+                             "dialog"))
 
-                 (:file "scroller"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "graphics"
-                                     "view-classes" "view" "window" ; "event"
-                                     "dialog-item" "key-handler-mixin"
-                                     "scroll-bar-dialog-item"
-                                     "dialog"))
-                 
-                 ;; Chapter 6: Color
+               (:file "get-string-dialog"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "dialog-item" "key-handler-mixin"
+                             "button-dialog-item" 
+                             "static-text-dialog-item" "editable-text-dialog-item"
+                             "dialog"))
 
-                 (:file "color"
-                        :depends-on ("package" "wrapper"))
+               (:file "scroller"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "graphics"
+                             "view-classes" "view" "window" ; "event"
+                             "dialog-item" "key-handler-mixin"
+                             "scroll-bar-dialog-item"
+                             "dialog"))
+               
+               ;; Chapter 6: Color
 
-                 (:file "color-dialog"
-                        :depends-on ("package" "wrapper" "color" "dialog"))
+               (:file "color"
+                :depends-on ("package" "wrapper"))
 
-                 ;; Chapter 8: File System Interface
+               (:file "color-dialog"
+                :depends-on ("package" "wrapper" "color" "dialog"))
 
-                 (:file "file"
-                        :depends-on ("package"))
-                 
-                 ;; We only implement the file chooser dialogs.
-                 ;; The rest is covered by CL.
-                 
+               ;; Chapter 8: File System Interface
 
-                 ;; Chapter 10: Events
+               (:file "file"
+                :depends-on ("package"))
+               
+               ;; We only implement the file chooser dialogs.
+               ;; The rest is covered by CL.
+               
 
-                 (:file "event"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system"
-                                     "objc-classes"
-                                     "view-classes" "view" "window"))
-                 
-                 (:file "view-event"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point" "system" "view-classes" "view"
-                                     "event" "key-handler-mixin"))
+               ;; Chapter 10: Events
 
-                 (:file "window-event"
-                        :depends-on ("package" "process"
-                                     "macros" "variables" "point" "system" "view-classes" "window"
-                                     "view-event" "event" "application"))
+               (:file "event"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system"
+                             "objc-classes"
+                             "view-classes" "view" "window"))
+               
+               (:file "view-event"
+                :depends-on ("package" 
+                             "macros" "variables" "point" "system" "view-classes" "view"
+                             "event" "key-handler-mixin"))
 
-                 
-                 (:file "cursor"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point"
-                                     "wrapper" "pattern"))
-                 
-                 (:file "scrap"
-                        :depends-on ("package" 
-                                     "macros" "variables" "point"))
-                 
-                 (:file "eval"
-                        :depends-on ("package" 
-                                     "macros" "variables" "application"))
+               (:file "window-event"
+                :depends-on ("package" "process"
+                                       "macros" "variables" "point" "system" "view-classes" "window"
+                                       "view-event" "event" "application"))
 
-                 ;; Chapter 11: Apple Events
+               
+               (:file "cursor"
+                :depends-on ("package" 
+                             "macros" "variables" "point"
+                             "wrapper" "pattern"))
+               
+               (:file "scrap"
+                :depends-on ("package" 
+                             "macros" "variables" "point"))
+               
+               (:file "eval"
+                :depends-on ("package" 
+                             "macros" "variables" "application"))
 
-                 (:file "application"
-                        :depends-on ("package" "process"
-                                     "macros" "variables" "wrapper"
-                                     "objc-classes"))
-                 
-                 ;; Appendix D: Quickdraw Graphics:
+               ;; Chapter 11: Apple Events
 
-                 (:file "rect"
-                        :depends-on ("package" "point"))
+               (:file "application"
+                :depends-on ("package" "process"
+                                       "macros" "variables" "wrapper"
+                                       "objc-classes"))
+               
+               ;; Appendix D: Quickdraw Graphics:
 
-                 (:file "region"
-                        :depends-on ("package" "macros" "variables" "point" "rect"
-                                               "view-classes"))
+               (:file "rect"
+                :depends-on ("package" "point"))
 
-                 (:file "pen"
-                        :depends-on ("package"
-                                     "macros" "variables" "point" 
-                                     "objc-classes" "view-classes"
-                                     "pattern"
-                                     "rect"))
+               (:file "region"
+                :depends-on ("package" "macros" "variables" "point" "rect"
+                                       "view-classes"))
 
-                 (:file "quickdraw"
-                        :depends-on ("package" "macros" "variables" "point"
-                                               "objc-classes" "view-classes"
-                                               "pattern" "rect" "region" "pen"))
-                 
-                 #+has-appleevent
-                 (:file "apple-event"
-                        :depends-on ("package" "application"))
+               (:file "pen"
+                :depends-on ("package"
+                             "macros" "variables" "point" 
+                             "objc-classes" "view-classes"
+                             "pattern"
+                             "rect"))
+
+               (:file "quickdraw"
+                :depends-on ("package" "macros" "variables" "point"
+                                       "objc-classes" "view-classes"
+                                       "pattern" "rect" "region" "pen"))
+               
+               #+has-appleevent
+               (:file "apple-event"
+                :depends-on ("package" "application"))
 
 
-                 ;; MCLGUI:
-                 
-                 (:file "mclgui"
-                        :depends-on ("package"
-                                     "macros" "variables" "process"
-                                     "objc-classes"
-                                     "point" "font" "pen" "pattern" "cursor" "view-stream"
-                                     "menu" "view" "window" "dialog" "fred-window"
-                                     "dialog-item" "control-dialog-item"
-                                     "button-dialog-item" "check-box-dialog-item"
-                                     "radio-button-dialog-item" "static-text-dialog-item"
-                                     "focus-rect-mixin" "editable-text-dialog-item"
-                                     "table-dialog-item" "scroll-bar-dialog-item"
-                                     "pop-up-menu-dialog-item" "sequence-dialog-item"
-                                     "y-or-n-dialog" "message-dialog" "get-string-dialog"
-                                     "select-dialog"
-                                     "scroller"
-                                     "event" "view-event" "window-event"
-                                     "cursor" "scrap" "eval" "application"
-                                     #+has-appleevent "apple-event"))))
+               ;; MCLGUI:
+               
+               (:file "mclgui"
+                :depends-on ("package"
+                             "macros" "variables" "process"
+                             "objc-classes"
+                             "point" "font" "pen" "pattern" "cursor" "view-stream"
+                             "menu" "view" "window" "dialog" "fred-window"
+                             "dialog-item" "control-dialog-item"
+                             "button-dialog-item" "check-box-dialog-item"
+                             "radio-button-dialog-item" "static-text-dialog-item"
+                             "focus-rect-mixin" "editable-text-dialog-item"
+                             "table-dialog-item" "scroll-bar-dialog-item"
+                             "pop-up-menu-dialog-item" "sequence-dialog-item"
+                             "y-or-n-dialog" "message-dialog" "get-string-dialog"
+                             "select-dialog"
+                             "scroller"
+                             "event" "view-event" "window-event"
+                             "cursor" "scrap" "eval" "application"
+                             #+has-appleevent "apple-event"))))
 
 
 ;;;; THE END ;;;;
