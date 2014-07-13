@@ -130,7 +130,7 @@ All views contained in a given window have the same wptr.
 ;; (view-origin view) = (view-scroll-position view)
 
 (defgeneric compute-view-origin (view container)
-  (:method ((view view) container)
+  (:method ((view simple-view) container)
     (setf (view-origin-slot view)
           (if container
               (add-points (subtract-points (view-scroll-position view)
@@ -283,19 +283,29 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 
 (defgeneric call-with-focused-view (view function &optional font-view)
   (:method ((view simple-view) function &optional font-view)
-    (flet ((call-it ()
-             (let* ((window (view-window view))
-                    (wtrans (window-affine-transform window))
-                    (vtrans (make-affine-transform))
-                    (origin (convert-coordinates #@(0 0) view window)))
-               [wtrans set]
-               [vtrans translateXBy:(cgfloat (point-h origin)) yBy:(cgfloat (point-v origin))]
-               [vtrans concat]
-               [vtrans release]
-               (unwind-protect
-                    (call-with-pen-state (lambda () (funcall function view))
-                                         (view-pen view))
-                 [wtrans set]))))
+    (labels ((call-it ()
+               (call-with-pen-state (lambda () (funcall function view))
+                                    (view-pen view)))
+             (call-it/trans ()
+               (let* ((window (view-window view))
+                      (wtrans (window-affine-transform window))
+                      (vtrans (make-affine-transform))
+                      (origin (convert-coordinates #@(0 0) view window)))
+                 [wtrans set]
+                 [vtrans translateXBy:(cgfloat 0.0) yBy:(cgfloat (point-v (view-size (view-window view))))]
+                 [vtrans scaleXBy:(cgfloat 1.0) yBy:(cgfloat -1.0)]
+                 [vtrans translateXBy:(cgfloat (point-h origin)) yBy:(cgfloat (point-v origin))]
+                 [vtrans concat]
+                 [vtrans release]
+                 ;; (setf *trace-output* cl-user::*to*)
+                 (format-trace 'call-with-focused-view (list (class-name (class-of view))
+                                                             :origin (point-to-list origin)
+                                                             :frame (rect-to-list (view-frame view))
+                                                             :bounds (rect-to-list (view-bounds view)))
+                               :ctm (get-ctm window))
+                 (unwind-protect
+                      (call-it)
+                   [wtrans set]))))
       #-(and) (or (null font-view) (eq font-view old-font-view))
       (if (eq *current-view* view)
           (if (eq *current-font-view* font-view)
@@ -318,7 +328,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                      (when (setf unlock [handle lockFocusIfCanDraw])
                        (focus-view *current-view* *current-font-view*)
                        (apply (function set-current-font-codes) (set-font *current-font-view*))
-                       (call-it)
+                       (call-it/trans)
                        [[NSGraphicsContext currentContext] flushGraphics]))
                 (when unlock
                   (set-font *current-font-view*)
@@ -1368,8 +1378,9 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
 
 (defmethod view-draw-contents :before ((view simple-view))
   (format-trace 'view-draw-contents
-                (eql view *current-view*)
-                view *current-view*))
+                :already-current (eql view *current-view*)
+                :view view
+                :current *current-view*))
 
 (defmethod view-draw-contents ((view view))
   ;; bug for bug compatibility :-(

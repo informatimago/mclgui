@@ -667,10 +667,10 @@
   (setf *color-available* t)
   (with-focused-view view
    (with-fore-color *blue-color*
-     (let* ((o (view-origin view))
-            (x (- (point-h o)))
-            (y (- (point-v o)))
-            (s (view-size view))
+     (let* ((b (view-bounds view))
+            (x (- (point-h (rect-origin b))))
+            (y (- (point-v (rect-origin b))))
+            (s (rect-size b))
             (w (point-h s))
             (h (point-v s)))
        (draw-rect* x y w h)))))

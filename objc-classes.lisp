@@ -479,30 +479,6 @@ RETURN:         x y w h of the main screen (in Cocoa rounded coordinates).
 
 ;; (nswindow-to-nsscreen-point (handle (first (windows))) (ns:make-ns-point 10.0 20.0))
 
-(defun nswindow-to-window-frame (frame)
-  "
-FRAME:  A NSRECT (in screen coordinates).
-RETURN: a RECT (in flipped \"screen coordinates\").
-"
-  (multiple-value-bind (sx sy sw sh) (main-screen-frame)
-    (declare (ignore sw))
-    (make-rect (- (nsrect-x frame)                           sx) ; left
-               (- (+ sy sh)   (+ (nsrect-y frame) (nsrect-height frame))) ; top
-               (- (+ (nsrect-x frame) (nsrect-width frame))  sx) ; right
-               (- (+ sy sh)   (nsrect-y frame))))) ; bottom
-
-(defun window-to-nswindow-frame (position size)
-  "
-RETURN: A NSRect containing the frame of the window.
-"
-  (multiple-value-bind (sx sy sw sh) (main-screen-frame)
-    (declare (ignore sw))
-    (ns:make-ns-rect (+ sx (point-h position))
-                     (- (+ sy sh) (+ (point-v position) (point-v size)))
-                     (point-h size)
-                     (point-v size))))
-
-
 
 ;;;------------------------------------------------------------
 ;;; mouse coordinates
@@ -624,10 +600,9 @@ DO:             Evaluates the BODY in a lexical environment where
   body:
   (declare (ignore nsnotification))
   (reporting-errors
-    (let* ((window (nswindow-window self)))
+    (let ((window (nswindow-window self)))
       ;; (format-trace "-[MclguiWindow windowDidMove:]" window)
-      (with-handle (handle  window)
-        (window-move-event-handler window (rect-topleft (window-frame-from-nswindow-frame window))))))]
+      (window-move-event-handler window (rect-topleft (window-frame-from-nswindow-frame window)))))]
 
 
 @[MclguiWindow
@@ -772,7 +747,7 @@ DO:             Evaluates the BODY in a lexical environment where
   (post-event (nsevent-to-event event))]
 
 (defun needs-to-draw-rect (window rect)
-  (format-trace 'needs-to-draw-rect :posi (point-to-list (rect-topleft rect)) :size (point-to-list (rect-size rect)))
+  (format-trace 'needs-to-draw-rect :posi (point-to-list (rect-topleft rect)) :size (point-to-list (rect-size rect)) :win window)
   (with-handle (winh window)
     [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]
     [winh setViewsNeedDisplay:yes]))

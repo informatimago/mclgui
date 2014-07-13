@@ -62,7 +62,7 @@ the container.
                          :accessor %view-scroll-position
                          :documentation "
 The current scroll position of the view, which is the coordinate of
-the upper-left corner of the view.
+the top-left corner of the view.
 ")
    (view-origin          :initform #@(0 0)
                          :accessor view-origin-slot
@@ -70,7 +70,7 @@ the upper-left corner of the view.
 This is the vector to the origin of the view in the view coordinate
 system, relative to the top-left corner of the view.  (The coordinate
 of the top-left corner of the view, in the view coordinate system, is
-the opposite of view-origin.)
+the opposite of view-origin).
 ")
    (view-nick-name       :initform nil
                          :initarg  :view-nick-name

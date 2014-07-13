@@ -19,10 +19,10 @@
 
 (defgeneric draw-view-bounds (view)
   (:method   ((view simple-view))
-    #-(and) (progn (format t "~&view ~A~%" (view-nick-name view))
-                   (format t "~&  frame  = ~S~%" (rect-to-list (view-frame view)))
-                   (format t "~&  bounds = ~S~%" (rect-to-list (view-bounds view)))
-                   (finish-output))
+    (progn (format t "~&view ~A~%" (view-nick-name view))
+           (format t "~&  frame  = ~S~%" (rect-to-list (view-frame view)))
+           (format t "~&  bounds = ~S~%" (rect-to-list (view-bounds view)))
+           (finish-output))
     (let* ((bounds (view-bounds view))
            (x (rect-left   bounds))
            (y (rect-top    bounds))
@@ -33,9 +33,9 @@
 
 (defgeneric draw-view-frame (view)
   (:method   ((view simple-view))
-    #-(and) (progn (format t "~&frame  = ~S~%" (rect-to-list (view-frame view)))
-                   (format t "~&bounds = ~S~%" (rect-to-list (view-bounds view)))
-                   (finish-output))
+    (progn (format t "~&frame  = ~S~%" (rect-to-list (view-frame view)))
+           (format t "~&bounds = ~S~%" (rect-to-list (view-bounds view)))
+           (finish-output))
     (let* ((frame (view-frame view))
            (x (rect-left   frame))
            (y (rect-top    frame))
@@ -59,7 +59,8 @@
     (call-next-method)))
 
 (defmethod view-draw-contents :after ((view color-box))
-  (draw-view-bounds view))
+  (with-focused-view view
+    (draw-view-bounds view)))
 
 (defun test-color-box ()
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
@@ -89,13 +90,46 @@
 #-(and) (progn
 
           (test-color-box)
+          
+          (let ((red (make-instance
+                      'color-box 
+                      :color *red-color*
+                      :view-position (make-point 40 40)
+                      :view-size     (make-point 80 80)
+                      :view-nick-name "red"))
+                (blue (make-instance
+                       'color-box 
+                       :color *blue-color*
+                       :view-position (make-point 10 10)
+                       :view-size     (make-point 60 60)
+                       :view-nick-name "blue"))
+                (green (make-instance
+                        'color-box 
+                        :color *green-color*
+                        :view-position (make-point 10 10)
+                        :view-size     (make-point 40 40)
+                        :view-nick-name "green"))
+                (yellow (make-instance
+                         'color-box 
+                         :color *yellow-color*
+                         :view-position (make-point 10 10)
+                         :view-size     (make-point 20 20)
+                         :view-nick-name "yellow")))
+            (add-subviews red blue)
+            (add-subviews blue green)
+            (add-subviews green yellow)
+            (add-subviews *w* red))
+
+
 
           (with-focused-view (front-window)
             (draw-rect* 2 2 12 12)
             (draw-rect* 20 10 100 20))
 
+          (view-draw-contents  (front-window))
+          
           (let ((view (aref (view-subviews (front-window)) 0)))
-           (view-draw-contents view))
+            (view-draw-contents view))
 
           (let ((view (aref (view-subviews (front-window)) 0)))
             (with-focused-view view
@@ -148,6 +182,13 @@
                              (compose point-to-list view-position)
                              (compose point-to-list view-scroll-position))
             (view-subviews *w*))
+
+
+          (defparameter *w* (make-instance 'window :view-size (make-point 200 100) :view-position (make-point 200 100)))
+
+          (add-subviews *w* (make-))
+          (with-focused-view *w*
+            (draw-rect* 10 10 80 50))
 
           )
 
@@ -242,6 +283,8 @@
       [winh firstResponder])))
 
 #-(and)(progn
+
+
          (identify-streams)
           
          (invalidate-view *w*)

@@ -70,7 +70,7 @@
           (y (rect-top    frame))
           (w (rect-width  frame))
           (h (rect-height frame)))
-     (progn (format t "~&view ~A~%" (view-nick-name item))
+     (progn (format t "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
             (format t "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
             (format t "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
             (finish-output))

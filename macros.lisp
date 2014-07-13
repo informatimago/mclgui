@@ -35,10 +35,14 @@
 (objcl:enable-objcl-reader-macros)
 (declaim (declaration stepper))
 
+(defvar *mclgui-trace* *trace-output*)
+(defvar *mclgui-package* (load-time-value (find-package "MCLGUI")))
+
 (defmacro unfrequently (frequency &body body)
   (let ((vcount (gensym))
         (vfrequency (gensym)))
     `(let ((*print-case* :downcase)
+           (*package*    *mclgui-package*)
            (,vcount (load-time-value (list 0)))
            (,vfrequency ,frequency))
        (when (<= 1 (incf (car ,vcount) ,vfrequency))
@@ -49,29 +53,33 @@
 (defmacro niy (operator &rest parameters)
   (let ((vonce (gensym)))
    `(let ((*print-case* :downcase)
+          (*package*    *mclgui-package*)
           (,vonce (load-time-value (list t))))
       (when (prog1 (car ,vonce) (setf (car ,vonce) nil))
-        (format *trace-output* "~&(~40A (~S~:{ (~S ~S)~}))~%"
+        (format *mclgui-trace* "~&(~40A (~S~:{ (~S ~S)~}))~%"
                 "not implemented yet:"
                 ',operator (mapcar (lambda (var) (list var (type-of var)))
                                    (list ,@parameters)))
-        (force-output *trace-output*)))))
+        (force-output *mclgui-trace*)))))
 
 
 (defmacro uiwarn (control-string &rest args)
-  `(let ((*print-case* :downcase))
-     (format *trace-output* "~&(~?)~%" ',control-string (list ,@args))
-     (force-output *trace-output*)))
+  `(let ((*print-case* :downcase)
+         (*package*    *mclgui-package*))
+     (format *mclgui-trace* "~&(~?)~%" ',control-string (list ,@args))
+     (force-output *mclgui-trace*)))
 
 
 (defun format-trace (method &rest arguments)
   (declare (stepper disable))
-  (let ((*print-case* :downcase))
+  (let ((*print-case* :downcase)
+        (*package*    *mclgui-package*))
     (flet ((out (stream)
              (format stream "~&(~40A ~{~S~^ ~})~%" method arguments)
              (force-output stream)
              t))
-      (or (ignore-errors (out *trace-output*))
+      (or (ignore-errors (out *mclgui-trace*))
+          (ignore-errors (out *trace-output*))
           (ignore-errors (out *standard-output*))))
     (first arguments)))
 

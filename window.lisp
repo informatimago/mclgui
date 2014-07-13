@@ -45,6 +45,18 @@
 (defgeneric window-frame-from-nswindow-frame (window))
 (defgeneric nswindow-frame-from-window-frame (window))
 
+(defmethod window-frame-from-nswindow-frame ((frame nsrect))
+  "
+FRAME:  A NSRECT (in screen coordinates).
+RETURN: a RECT (in flipped \"screen coordinates\").
+"
+  (multiple-value-bind (sx sy sw sh) (main-screen-frame)
+    (declare (ignore sw))
+    (make-rect (- (nsrect-x frame)                           sx) ; left
+               (- (+ sy sh)   (+ (nsrect-y frame) (nsrect-height frame))) ; top
+               (- (+ (nsrect-x frame) (nsrect-width frame))  sx) ; right
+               (- (+ sy sh)   (nsrect-y frame)))))
+
 (defmethod window-frame-from-nswindow-frame ((window window))
   "
 RETURN: a RECT containing the position and size of the window,
@@ -52,26 +64,29 @@ RETURN: a RECT containing the position and size of the window,
 "
   (with-handle (winh window)
     (let ((frame (get-nsrect [winh contentRectForFrameRect:[winh frame]])))
-      (multiple-value-bind (sx sy sw sh) (main-screen-frame)
-        (declare (ignore sw))
-        (make-rect (- (nsrect-x frame)                           sx) ; left
-                   (- (+ sy sh)   (+ (nsrect-y frame) (nsrect-height frame))) ; top
-                   (- (+ (nsrect-x frame) (nsrect-width frame))  sx) ; right
-                   (- (+ sy sh)   (nsrect-y frame))))))) ; bottom
+      (window-frame-from-nswindow-frame frame)))) 
+
+
+
+(defmethod nswindow-frame-from-window-frame ((frame rect))
+  "
+RETURN: A NSRect containing the frame of the window.
+"
+  (multiple-value-bind (sx sy sw sh) (main-screen-frame)
+    (declare (ignore sw))
+    (let ((position (rect-topleft frame))
+          (size     (rect-size frame)))
+      (ns:make-ns-rect (+ sx (point-h position))
+                       (- (+ sy sh) (+ (point-v position) (point-v size)))
+                       (point-h size)
+                       (point-v size)))))
 
 (defmethod nswindow-frame-from-window-frame ((window window))
   "
 RETURN: A NSRect containing the frame of the window, compute from the position and size.
 "
   (with-handle (winh window)
-    (multiple-value-bind (sx sy sw sh) (main-screen-frame)
-      (declare (ignore sw))
-      (let ((position (view-position window))
-            (size     (view-size window)))
-        (get-nsrect [winh frameRectForContentRect:(ns:make-ns-rect (+ sx (point-h position))
-                                                                   (- (+ sy sh) (+ (point-v position) (point-v size)))
-                                                                   (point-h size)
-                                                                   (point-v size))])))))
+    (get-nsrect [winh frameRectForContentRect:(nswindow-frame-from-window-frame (view-frame window))])))
 
 
 
@@ -88,9 +103,12 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     ;; only needed for non-theme color background
     (setf (window-invalid-region window) (new-rgn)))
   (add-to-list *window-list* window)
+  (format-trace '(update-handle window)
+                :pos (point-to-list (view-position window))
+                :siz (point-to-list (view-size window))
+                :content-rect (nswindow-frame-from-window-frame (view-frame window)))
   (let ((winh [[MclguiWindow alloc]
-               initWithContentRect:(window-to-nswindow-frame (view-position window)
-                                                             (view-size window))
+               initWithContentRect:(nswindow-frame-from-window-frame (view-frame window))
                styleMask:(ecase (window-type window)
                            ((:document)
                             (logior #$NSTitledWindowMask
@@ -119,9 +137,10 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
                defer:NO]))
     (setf (slot-value winh 'window) window)
     (setf (handle window) winh) ; must be done before setDelegate.
+    (format-trace '(update-handle window)
+                :cview-frame  (nswindow-frame-from-window-frame window))
     (let ((cviewh [[MclguiView alloc]
-                   initWithFrame:(window-to-nswindow-frame (make-point 0 0)
-                                                           (view-size window))]))
+                   initWithFrame:(unwrap (nswindow-frame-from-window-frame window))]))
       (setf (slot-value cviewh 'view) window)
       [cviewh setAutoresizingMask:(logior #$NSViewWidthSizable #$NSViewHeightSizable)]
       [winh setContentView:cviewh] window)
@@ -135,7 +154,11 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     (let ((trans (make-affine-transform)))
       [trans setTransformStruct:(cg:context-get-ctm [[winh graphicsContext] graphicsPort])]
       (setf (window-affine-transform window) trans))
-    ;; (format-trace "created window" (window-title window) (point-to-list (view-position window)) (point-to-list (view-size window)) (window-to-nswindow-frame (view-position window) (view-size window)))
+    (format-trace '(update-handle window)
+                  :wintitle (window-title window)
+                  :pos (point-to-list (view-position window))
+                  :size (point-to-list (view-size window))
+                  :nsframe (nswindow-frame-from-window-frame window))
     winh))
   
 
@@ -152,7 +175,7 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
   (with-handle (winh window)
     (let* ((frame (get-nsrect [winh frame]))
            (bound (get-nsrect [[winh contentView] bounds]))
-           (posiz (nswindow-to-window-frame frame))
+           (posiz (window-frame-from-nswindow-frame window))
            (ori   (subtract-points #@(0 0) (rect-topleft (nsrect-to-rect bound)))))
       (setf (slot-value window 'window-title)         (objcl:lisp-string [winh title])
             (slot-value window 'view-position)        (rect-topleft posiz)
@@ -163,7 +186,6 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     (setf (slot-value window 'visiblep) nil)
     (window-show window)
     [(handle window) display]))
-
 
 
 (defmethod view-allocate-clip-region ((window window))
