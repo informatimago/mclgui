@@ -166,6 +166,16 @@ DO:             Remove the property KEY from the VIEW.
                          :accessor view-clip-region-slot)))
 
 
+(defmethod print-object ((view view) stream)
+  (declare (stepper disable))
+  (print-parseable-object
+   (view stream :type t :identity t)
+   (:view-position        (point-to-list (view-position view)))
+   (:position/window      (point-to-list (convert-coordinates (view-position view)
+                                                              view (view-window view))))
+   (:view-size            (point-to-list (view-size view)))
+   (:view-scroll-position (point-to-list (view-scroll-position view)))
+   (:view-valid           (view-valid view))))
 
 ;;;---------------------------------------------------------------------
 

@@ -243,8 +243,10 @@
 
 
 (defun all-superclasses (object)
-  (map nil 'print (com.informatimago.common-lisp.cesarum.utility:compute-closure 
+  (map nil 'print (com.informatimago.common-lisp.cesarum.utility:transitive-closure
                    (function class-direct-superclasses)
-                   (list (class-of object)))))
+                   (list (if (classp object)
+                             object
+                             (class-of object))))))
 
 ;;;; THE END ;;;;

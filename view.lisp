@@ -129,23 +129,26 @@ All views contained in a given window have the same wptr.
 ;; else
 ;; (view-origin view) = (view-scroll-position view)
 
-(defgeneric compute-view-origin (view container)
-  (:method ((view simple-view) container)
-    (setf (view-origin-slot view)
-          (if container
-              (add-points (subtract-points (view-scroll-position view)
-                                           (view-position view))
-                          (view-origin container))
-              (view-scroll-position view)))))
+(defgeneric compute-view-origin (view)
+  (:method ((view simple-view))
+    (let ((container (view-container view)))
+      (setf (view-origin-slot view)
+            (if container
+                (add-points (subtract-points (view-scroll-position view)
+                                             (view-position view))
+                            (view-origin container))
+                (view-scroll-position view))))))
 
 (defgeneric view-origin (view)
   (:method ((view simple-view))
+    (setf (view-origin-slot view) (compute-view-origin view)))
+  (:method ((view view))
     (if (view-valid-p view)
         (view-origin-slot view)
-        (let ((container (view-container view)))
-          (prog1 (compute-view-origin view container)
-            (make-view-valid view)
-            (compute-view-region view (view-clip-region-slot view) container))))))
+        (prog1 (compute-view-origin view)
+          (make-view-valid view)
+          (compute-view-region view (view-clip-region-slot view)  (view-container view))))))
+
 
 (defmethod view-allocate-clip-region ((view view))
   (let ((rgn (view-clip-region view)))
@@ -156,10 +159,9 @@ All views contained in a given window have the same wptr.
   (:method ((view view))
     (let ((rgn (view-clip-region-slot view)))
       (unless (or (null rgn) (view-valid-p view))
-        (let ((container (view-container view)))
-          (compute-view-origin view container)
-          (make-view-valid view)
-          (compute-view-region view rgn container)))
+        (compute-view-origin view)
+        (make-view-valid view)
+        (compute-view-region view rgn (view-container view)))
       rgn)))
 
 
@@ -1047,6 +1049,7 @@ V:              The height of the new size, or NIL if the complete
       (unless (eql siz (view-size view))
         (invalidate-view view t)
         (setf (slot-value view 'view-size) siz)
+        (make-view-invalid view)
         (invalidate-view view t))
       (refocus-view view)
       siz)))
