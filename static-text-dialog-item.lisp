@@ -74,7 +74,9 @@
             (format t "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
             (format t "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
             (finish-output))
-     (with-fore-color *red-color*
+     (erase-rect* x y w h)
+     ;; #+debug-view-colors
+     (with-fore-color *light-gray-color*
        (fill-rect* x y w h))
      ;; (erase-rect* x y w h)
      (draw-text x y w h (dialog-item-text item))))
