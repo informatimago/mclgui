@@ -204,6 +204,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                            (inverse   nil))
                        (unwind-protect
                             (progn
+                              #+debug-views
                               (format-trace 'with-focused-view
                                             :before (get-ctm (view-window view))
                                             (mapcar (function get-at) transtack))
@@ -224,6 +225,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                                      (progn
                                        [trans translateXBy: (cgfloat (point-h origin)) yBy: (cgfloat (point-v origin))]
                                        [trans concat]
+                                       #+debug-views
                                        (format-trace 'with-focused-view
                                                      :during (get-ctm (view-window view))
                                                      (mapcar (function get-at) transtack))
@@ -238,6 +240,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                            [inverse invert]
                            [inverse concat]
                            [inverse release])
+                         #+debug-views
                          (format-trace 'with-focused-view
                                        :_after  (get-ctm (view-window view))
                                        (mapcar (function get-at) transtack))))))
@@ -300,6 +303,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                  [vtrans concat]
                  [vtrans release]
                  ;; (setf *trace-output* cl-user::*to*)
+                 #+debug-views
                  (format-trace 'call-with-focused-view (list (class-name (class-of view))
                                                              :origin (point-to-list origin)
                                                              :frame (rect-to-list (view-frame view))
@@ -827,6 +831,7 @@ ERASE-P:        A value indicating whether or not to add the
                            (region-bounds region)
                            (view-bounds view))
                        view window)))
+          #+debug-views
           (format-trace "invalidate-region"
                         (not (not region))
                         :position (point-to-list (view-position view)) :size (point-to-list (view-size view))
@@ -1232,6 +1237,7 @@ SOURCE-VIEW:    A view in whose coordinate system point is given.
 (defmethod find-view-containing-point :around (view h &optional v direct-subviews-only)
   (declare (ignorable view h v direct-subviews-only))
   (let ((result (call-next-method)))
+    #+debug-views
     (format-trace 'find-view-containing-point result
                   (subviews result))
     result))
@@ -1380,6 +1386,7 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
                   (view-draw-contents view))))))
 
 (defmethod view-draw-contents :before ((view simple-view))
+  #+debug-views
   (format-trace 'view-draw-contents
                 :already-current (eql view *current-view*)
                 :view view
@@ -1607,17 +1614,40 @@ RETURN:         The cursor shape to display when the mouse is at
 ;;; instance drawing
 ;;; ------------------------------------------------
 
+
 (defun focused-screenshot (view)
-  (with-view-handle (viewh view)
-    (let ((image [[[NSImage alloc] initWithSize:(unwrap (size-to-nssize (view-size view)))] autorelease])
-          bitmap)
-      [viewh lockFocus]
-      (unwind-protect
-           (setf bitmap [[[NSBitmapImageRep alloc] initWithFocusedViewRect:[viewh bounds]] autorelease])
-        [viewh unlockFocus])
-      [image addRepresentation:bitmap]
-      #-cocoa-10.6 [image setFlipped:YES]
-      image)))
+  (with-focused-view (view-window view)
+    (with-view-handle (viewh view)
+      (let ((image [[[NSImage alloc] initWithSize:(unwrap (size-to-nssize (view-size view)))] autorelease])
+            bitmap)
+        [viewh lockFocus]
+        (unwind-protect
+             ;; [viewh bounds]
+             (setf bitmap [[[NSBitmapImageRep alloc] initWithFocusedViewRect:(unwrap (rect-to-nsrect (convert-rectangle (view-bounds view)
+                                                                                                                        view
+                                                                                                                        (view-window view))))] autorelease])
+          [viewh unlockFocus])
+        [image addRepresentation:bitmap]
+        #+debug-views
+        (format-trace 'focused-screenshot
+                      :size (point-to-list  (view-size view))
+                      :from-rect (rect-to-list (convert-rectangle (view-bounds view)
+                                                                  view
+                                                                  (view-window view)))
+                      :ctm (get-ctm (view-window view))
+                      :viewh viewh
+                      :bitmap bitmap
+                      :image image)
+        #-cocoa-10.6 [image setFlipped:YES]
+        image))))
+
+(defmacro with-instance-drawing (view &body body)
+  (let ((vview (gensym)))
+    `(let ((,vview ,view))
+       (push (focused-screenshot ,vview) (view-instance ,vview))
+       (unwind-protect (progn ,@body)
+         (pop (view-instance ,vview))))))
+
 
 (defun new-instance (view)
   (when (view-instance view)
@@ -1629,9 +1659,11 @@ RETURN:         The cursor shape to display when the mouse is at
          fromRect:(unwrap (make-nsrect :x 0 :y 0 :size (view-size view)))
          operation:#$NSCompositeCopy
          fraction:(cgfloat 1.0)]
+        #+debug-views
         (format-trace 'new-instance :before
                       :frame (get-nsrect [viewh frame])
                       :bounds (get-nsrect [viewh bounds]))
+        #+debug-views
         (format-trace 'new-instance
                       :instance (first (view-instance view)))
         #+cocoa-10.6
@@ -1642,17 +1674,10 @@ RETURN:         The cursor shape to display when the mouse is at
          fraction:(cgfloat 1.0)
          respectFlipped:yes
          hints: *null*]
+        #+debug-views
         (format-trace 'new-instance :after_
                       :frame (get-nsrect [viewh frame])
                       :bounds (get-nsrect [viewh bounds]))))))
-
-
-(defmacro with-instance-drawing (view &body body)
-  (let ((vview (gensym)))
-    `(let ((,vview ,view))
-       (push (focused-screenshot ,vview) (view-instance ,vview))
-       (unwind-protect (progn ,@body)
-         (pop (view-instance ,vview))))))
 
 
 (defun example/instance-drawing ()

@@ -1,0 +1,88 @@
+There is no applicable method for the generic function:
+  #<COMMON-LISP:STANDARD-GENERIC-FUNCTION MCLGUI::UNWRAP #x302003B5836F>
+when called with arguments:
+  (#<A Null Foreign Pointer>)
+   [Condition of type CCL:NO-APPLICABLE-METHOD-EXISTS]
+
+Restarts:
+ 0: [CONTINUE] Try calling it again
+ 1: [ABORT] Process the next event
+
+Backtrace:
+  0: (#<ccl::standard-kernel-method no-applicable-method (t)> #<common-lisp:standard-generic-function mclgui::unwra..
+      Locals:
+        ccl::gf = #<common-lisp:standard-generic-function mclgui::unwrap #x302003B5836F>
+        ccl::args = (#<A Null Foreign Pointer>)
+  1: (nil #<Unknown Arguments>)
+      [No Locals]
+  2: (#<common-lisp:standard-method mclgui::unwrap (cons)> (#<A Null Foreign Pointer> nil 9.0D0 #S(mclgui::color :r..
+      Locals:
+        seq = (#<A Null Foreign Pointer> nil 9.0D0 #S(mclgui::color :red 0.0 :green 0.0 :blue 0.0 :alpha 1.0) #<ns-dictionar..
+        nsarray = #<ns-mutable-array ( ..
+        element = #<A Null Foreign Pointer>
+        #:loop-list-80910 = (nil 9.0D0 #S(mclgui::color :red 0.0 :green 0.0 :blue 0.0 :alpha 1.0) #<ns-dictionary { ..
+  3: (mclgui::unwrap-plist ("NSFont" #<A Null Foreign Pointer> "NSFontNameAttribute" nil "NSFontSizeAttribute" 9.0D..
+  4: ((:internal mclgui::font-descriptor-from-codes))
+      Locals:
+        traits = nil
+        color = 0
+        size = 9
+        name = nil
+  5: (mclgui::font-descriptor-from-codes 0 65545)
+      Locals:
+        ff = 0
+        ms = 65545
+        name = nil
+        size = 9
+        mode = :srcor
+        face = :plain
+        color = 0
+        traits = nil
+        others = (:plain)
+        #:g85180 = #<ccl:compiled-lexical-closure (:internal mclgui::font-descriptor-from-codes) #x3020056278AF>
+  6: (mclgui::font-from-codes 0 65545)
+      Locals:
+        ff = 0
+        ms = 65545
+  7: (mclgui::set-font (c-pw-text-box:c-pw-text-box :view-position (143 318) :position/window (286 636) :view-size ..
+      Locals:
+        font-view = (c-pw-text-box:c-pw-text-box :view-position (143 318) :position/window (286 636) :view-size (209 29) :view-scr..
+        ff = 0
+        ms = 65545
+        ff = 0
+        ms = 65545
+  8: (#<common-lisp:standard-method mclgui::call-with-focused-view (simple-view t)> (c-pw-text-box:c-pw-text-box :v..
+      Locals:
+        view = (c-pw-text-box:c-pw-text-box :view-position (143 318) :position/window (286 636) :view-size (209 29) :view-scr..
+        function = #<Compiled-function (:internal (view-draw-contents (c-pw-text-box:c-pw-text-box))) (Non-Global)  #x302004C9BAF..
+        font-view = (c-pw-text-box:c-pw-text-box :view-position (143 318) :position/window (286 636) :view-size (209 29) :view-scr..
+        *current-view* = (c-pw-text-box:c-pw-text-box :view-position (143 318) :position/window (286 636) :view-size (209 29) :view-scr..
+        *current-font-view* = (c-pw-text-box:c-pw-text-box :view-position (143 318) :position/window (286 636) :view-size (209 29) :view-scr..
+  9: (#<common-lisp:standard-method view-draw-contents (c-pw-text-box:c-pw-text-box)> (c-pw-text-box:c-pw-text-box ..
+      Locals:
+        patchwork:self = (c-pw-text-box:c-pw-text-box :view-position (143 318) :position/window (286 636) :view-size (209 29) :view-scr..
+ 10: ((:internal (view-focus-and-draw-contents (c-patch))) (c-pw-text-box:c-pw-text-box :view-position (143 318) :p..
+ 11: ((:internal mclgui::call-it (mclgui::call-with-focused-view (simple-view t))))
+ 12: (mclgui::call-with-pen-state #<ccl:compiled-lexical-closure (:internal mclgui::call-it (mclgui::call-with-focu..
+ 13: ((:internal mclgui::call-it (mclgui::call-with-focused-view (simple-view t))))
+ 14: (#<common-lisp:standard-method mclgui::call-with-focused-view (simple-view t)> (c-pw-text-box:c-pw-text-box :v..
+ 15: (#<common-lisp:standard-method view-focus-and-draw-contents (c-patch)> (c-pw-text-box:c-pw-text-box :view-posi..
+ 16: (#<common-lisp:standard-method view-draw-contents (view)> (c-pw-window :title "interpolation" :view-position (..
+ 17: (ccl::%call-next-method ((nil) (#<common-lisp:standard-method view-draw-contents (t)>) (c-pw-window :title "in..
+ 18: ((:internal (view-draw-contents (window))) (c-pw-window :title "interpolation" :view-position (117 41) :view-s..
+ 19: ((:internal mclgui::call-it (mclgui::call-with-focused-view (simple-view t))))
+ 20: (mclgui::call-with-pen-state #<ccl:compiled-lexical-closure (:internal mclgui::call-it (mclgui::call-with-focu..
+ 21: ((:internal mclgui::call-it (mclgui::call-with-focused-view (simple-view t))))
+ 22: (#<common-lisp:standard-method mclgui::call-with-focused-view (simple-view t)> (c-pw-window :title "interpolat..
+ 23: (#<common-lisp:standard-method view-draw-contents (window)> (c-pw-window :title "interpolation" :view-position..
+ 24: (ccl::%%before-and-after-combined-method-dcode (nil (#<common-lisp:standard-method view-draw-contents (view)> ..
+ 25: (ccl::%%standard-combined-method-dcode ((#<common-lisp:standard-method view-draw-contents :before (c-pw-window..
+ 26: (nil #<Unknown Arguments>)
+ 27: (mclgui::|-[MclguiView drawRect:]| 17591849973978)
+ 28: (ccl::%pascal-functions% 361 17591849973978)
+ 29: (nil #<Unknown Arguments>)
+ 30: (#<Anonymous Function #x3020028737BF> #<lisp-application <LispApplication: 0x132b30> (#x132B30)> #S(ccl::objc-..
+ 31: ((:objc-dispatch nextstep-functions:|run|) #<Unknown Arguments>)
+ 32: (gui::event-loop nil)
+ 33: (gui::run-event-loop)
+ 34: ((:internal gui::cocoa-startup gui::start-cocoa-ide))

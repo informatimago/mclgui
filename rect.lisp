@@ -76,8 +76,8 @@ The function MAKE-RECT can be called with either:
 RETURN:         A list of two lists containing the coordinates of the
                 topLeft and bottomRight points of the RECT rectangle.
 "
-  (list (point-to-list (rect-topleft rect))
-        (point-to-list (rect-bottomright rect))))
+  (list :topleft (point-to-list (rect-topleft rect))
+        :size (point-to-list (rect-size rect))))
 
 ;; (make-rect 1 2 3 4)
 ;; #S(rect :topleft 131073 :bottomright 262147)

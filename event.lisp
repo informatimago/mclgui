@@ -463,15 +463,16 @@ VIEW:           A simple view.
     (if (handle view)
         ;; We don't use the *current-event* since it may not be an event
         ;; relative to (view-window view).
-        (nspoint-to-point
-         (with-handle (winh (first (windows)))
-           #-(and)                     ; only for 10.6+
-           (get-nsrect [winh convertRectFromScreen:(ns:make-ns-rect (nspoint-x pt) (nspoint-y pt) 1 1)])
-           ;; deprecated, but 10.6+ doesn't work on ccl-1.8.
-           (with-view-handle (viewh (first(windows)))
-             (get-nspoint
-              [viewh convertPoint:[winh convertScreenToBase:[NSEvent mouseLocation]]
-                     fromView:*null*]))))
+        (let ((window (view-window view)))
+         (nspoint-to-point
+          (with-handle (winh window)
+            #-(and)                     ; only for 10.6+
+            (get-nsrect [winh convertRectFromScreen:(ns:make-ns-rect (nspoint-x pt) (nspoint-y pt) 1 1)])
+            ;; deprecated, but 10.6+ doesn't work on ccl-1.8.
+            (with-view-handle (viewh window) ;; TODO: viewh = contentView of window. therefore we convert to window coordinates, not view coordinates??? ; see also window-mouse
+              (get-nspoint
+               [viewh convertPoint:[winh convertScreenToBase:[NSEvent mouseLocation]]
+                      fromView:*null*])))))
         ;; The following is not very meaningful, but then why a view
         ;; without a handle would need a view-mouse-position?
         (call-next-method))))

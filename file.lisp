@@ -294,14 +294,14 @@ CHOOSE-DIRECTORY-DIALOG dialog box to pathname.  It returns pathname.
 
 (defun set-mac-file-type (path type)
   [[NSFileManager defaultManager]
-   setAttributes: [NSDictionary dictionaryWithObjects:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:(mactype-from-string type)]]
+   setAttributes: [NSDictionary dictionaryWithObjects:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:(mactype-from-string (string type))]]
                                 forKeys:[NSArray arrayWithObject:#$NSFileHFSTypeCode]]
    ofItemAtPath:(objcl:objc-string (namestring (truename path)))
    error:oclo:*null*])
 
 (defun set-mac-file-creator (path creator)
   [[NSFileManager defaultManager]
-   setAttributes: [NSDictionary dictionaryWithObjects:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:(mactype-from-string  creator)]]
+   setAttributes: [NSDictionary dictionaryWithObjects:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:(mactype-from-string (string creator))]]
                                 forKeys:[NSArray arrayWithObject:#$NSFileHFSCreatorCode]]
    ofItemAtPath:(objcl:objc-string (namestring (truename path)))
    error:oclo:*null*])

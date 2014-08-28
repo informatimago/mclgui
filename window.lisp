@@ -103,6 +103,7 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     ;; only needed for non-theme color background
     (setf (window-invalid-region window) (new-rgn)))
   (add-to-list *window-list* window)
+  #+debug-views
   (format-trace '(update-handle window)
                 :pos (point-to-list (view-position window))
                 :siz (point-to-list (view-size window))
@@ -137,8 +138,9 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
                defer:NO]))
     (setf (slot-value winh 'window) window)
     (setf (handle window) winh) ; must be done before setDelegate.
+    #+debug-views
     (format-trace '(update-handle window)
-                :cview-frame  (nswindow-frame-from-window-frame window))
+                  :cview-frame  (nswindow-frame-from-window-frame window))
     (let ((cviewh [[MclguiView alloc]
                    initWithFrame:(unwrap (nswindow-frame-from-window-frame window))]))
       (setf (slot-value cviewh 'view) window)
@@ -154,13 +156,14 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     (let ((trans (make-affine-transform)))
       [trans setTransformStruct:(cg:context-get-ctm [[winh graphicsContext] graphicsPort])]
       (setf (window-affine-transform window) trans))
+    #+debug-views
     (format-trace '(update-handle window)
                   :wintitle (window-title window)
                   :pos (point-to-list (view-position window))
                   :size (point-to-list (view-size window))
                   :nsframe (nswindow-frame-from-window-frame window))
     winh))
-  
+
 
 
 (defmethod initialize-instance ((window window)

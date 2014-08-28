@@ -505,6 +505,7 @@ DO:             Evaluates the BODY in a lexical environment where
 
 (defun window-mouse (window)
   "Current position of the mouse in the coordinates of the given window."
+  ;; see also view-mouse-position
   (or (with-handle (winh window)
         (with-view-handle (viewh window)
           (nspoint-to-point
@@ -747,6 +748,7 @@ DO:             Evaluates the BODY in a lexical environment where
   (post-event (nsevent-to-event event))]
 
 (defun needs-to-draw-rect (window rect)
+  #+debug-views
   (format-trace 'needs-to-draw-rect :posi (point-to-list (rect-topleft rect)) :size (point-to-list (rect-size rect)) :win window)
   (with-handle (winh window)
     [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]
@@ -797,7 +799,7 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(drawRect:(:<NSR>ect)rect)
   resultType:(:void)
   body:
-  (format-trace  '|-[MclguiView drawRect:]| (*nsrect-to-nsrect rect) self)
+  (format-trace "-[MclguiView drawRect:]" (*nsrect-to-nsrect rect) self)
   (let ((view (nsview-view self)))
     (when view
       (view-draw-contents view)))]
@@ -807,14 +809,14 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(mouseDown:(:id)event)
   resultType:(:void)
   body:
-  (format-trace '|-[MclguiView mouseDown:]| self event)
+  (format-trace "-[MclguiView mouseDown:]" self event)
   (post-event (nsevent-to-event event))]
 
 @[MclguiView
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
-  (format-trace '|-[MclguiView mouseUp:]| self event)
+  (format-trace "-[MclguiView mouseUp:]" self event)
   (post-event (nsevent-to-event event))]
 
 
@@ -838,7 +840,7 @@ DO:             Evaluates the BODY in a lexical environment where
   (when (nsview-view self)
     (let ((*current-event* (nsevent-to-event event))
           (*multi-click-count* [event clickCount]))
-      (unfrequently 1/10 (format-trace '|mouseDragged:| *current-event*))
+      (unfrequently 1/10 (format-trace "mouseDragged:" *current-event*))
       (window-null-event-handler (view-window (nsview-view self)))))]
 
 
