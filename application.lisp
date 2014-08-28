@@ -255,6 +255,8 @@ FORM:           A symbol, function or lisp form.
    (let ((*idle* nil))
     (event-dispatch))))
 
+
+;; (application-eval-enqueue *application* '(invoke-debugger (make-condition 'error)))
 ;; (setf (evaluator-thunk *run-loop-evaluator*) (function run-loop-task))
 
 (defun initialize-run-loop-evaluator ()

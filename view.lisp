@@ -287,6 +287,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 
 
 (defgeneric call-with-focused-view (view function &optional font-view)
+  ;; Note: be careful to return the FUNCTION results in all cases.
   (:method ((view simple-view) function &optional font-view)
     (labels ((call-it ()
                (call-with-pen-state (lambda () (funcall function view))
@@ -334,8 +335,8 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                      (when (setf unlock [handle lockFocusIfCanDraw])
                        (focus-view *current-view* *current-font-view*)
                        (apply (function set-current-font-codes) (set-font *current-font-view*))
-                       (call-it/trans)
-                       [[NSGraphicsContext currentContext] flushGraphics]))
+                       (call-it/trans)))
+                [[NSGraphicsContext currentContext] flushGraphics]
                 (when unlock
                   (set-font *current-font-view*)
                   [handle unlockFocus])

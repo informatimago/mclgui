@@ -410,6 +410,7 @@
                                        ',(if (= 1 (length body)) body `(progn ,@body))
                                        err)
                                (finish-output *error-output*)
+                               #+debug (invoke-debugger err)
                                (return-from ,vhandler nil))))
          ,@body))))
 

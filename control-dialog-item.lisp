@@ -230,12 +230,11 @@
 
 (defmethod view-draw-contents ((item control-dialog-item))
   (when (installed-item-p item)
-    (with-handle (handle item)
-      (niy view-draw-contents item)
-      #-(and)
-      (if (#_iscontrolvisible handle)
+    (niy view-draw-contents item)
+    #-(and)
+    (if (#_iscontrolvisible handle)
         (#_Draw1Control handle)
-        (#_ShowControl handle)))))
+        (#_ShowControl handle))))
 
 
 (defmethod view-click-event-handler ((item control-dialog-item) where)
