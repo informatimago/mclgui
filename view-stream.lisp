@@ -68,8 +68,6 @@
             ;; there's at least one newline.
             :with line-height   = (font-line-height (view-font view))
             :with len           = (length string)
-            :for previous-start = nil :then start
-            :for previous-end   = nil :then end
             :for start = 0 :then (1+ end)
             :for end   = (or (position #\Newline string :start start) len)
             :while (< start len)

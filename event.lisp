@@ -45,7 +45,7 @@ This generic function is called when an app?-evt is received.
 APPLICATION: *APPLICATION*
 EVENT:       The EVENT received.")
   (:method (application event)
-    (declare (ignore (application event)))
+    (declare (ignore application event))
     nil))
 
 
@@ -715,8 +715,7 @@ RETURN:         If called during event processing, return true if
   ;; since those events are handled by Cocoa. 
   (let ((window  (front-window))
         (what    (event-what    event))
-        (message (event-message event))
-        (where   (event-where   event)))
+        (message (event-message event)))
     (when (= what mouse-down) 
       (process-multi-clicks event))
     (case what

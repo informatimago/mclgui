@@ -650,7 +650,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
     (declare (ignore item))
     nil))
 
-
+(defgeneric make-text-item (item &key selectable editable bordered bezeled))
 (defmethod make-text-item ((item dialog-item) &key selectable editable bordered bezeled)
   (let* ((pos (or (slot-value item 'view-position) #@(0   0)))
          (siz (or (slot-value item 'view-size)     #@(10 10)))

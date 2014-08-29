@@ -60,6 +60,7 @@
 
 
 (defmethod set-dialog-item-text :after ((item static-text-dialog-item) text)
+  (declare (ignore text))
   (invalidate-view item t))
 
 

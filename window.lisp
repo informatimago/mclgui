@@ -44,6 +44,7 @@
 
 (defgeneric window-frame-from-nswindow-frame (window))
 (defgeneric nswindow-frame-from-window-frame (window))
+(defgeneric window-event (window))
 
 (defmethod window-frame-from-nswindow-frame ((frame nsrect))
   "
@@ -176,8 +177,7 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
 
 (defmethod initialize-instance :after ((window window) &key &allow-other-keys)
   (with-handle (winh window)
-    (let* ((frame (get-nsrect [winh frame]))
-           (bound (get-nsrect [[winh contentView] bounds]))
+    (let* ((bound (get-nsrect [[winh contentView] bounds]))
            (posiz (window-frame-from-nswindow-frame window))
            (ori   (subtract-points #@(0 0) (rect-topleft (nsrect-to-rect bound)))))
       (setf (slot-value window 'window-title)         (objcl:lisp-string [winh title])
@@ -1138,10 +1138,12 @@ RETURN:         A BOOLEAN value indicating whether view can perform
          ;; (view-mouse-moved-event-handler window)
          (window-null-event-handler window))
         ((#.mouse-down)
+         #+debug
          (format *terminal-io* "~&screen point ~S~%" (point-to-list where))
          (let ((where (screen-to-window-point window where)))
-           (format *terminal-io* "~&window point ~S~%" (point-to-list where))
-           (finish-output *terminal-io*)
+           #+debug
+           (progn (format *terminal-io* "~&window point ~S~%" (point-to-list where))
+                  (finish-output *terminal-io*))
            (view-click-event-handler window where)
            (when (double-click-p)
              (view-double-click-event-handler window where))))
@@ -1182,9 +1184,11 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 
 
 (defmethod view-draw-contents ((window window))
+  (format-trace '(view-draw-contents window))
   (with-focused-view window
     (let ((bounds (view-bounds window)))
-      (erase-rect* (rect-left bounds) (rect-top bounds)
+      ;; TODO: originally, it seems MCL didn't erase it, but relied on MacOS visrg/cliprgn/etc.
+      #-(and) (erase-rect* (rect-left bounds) (rect-top bounds)
                    (rect-width bounds) (rect-height bounds))
       (call-next-method))))
 

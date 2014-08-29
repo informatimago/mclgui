@@ -53,6 +53,36 @@
              [(objc:send panel "URL") path])))
 
 
+(defun path-to-pathname (path)
+  (let ((last/ (position #\/ path :from-end t))
+        (last. (position #\. path :from-end t)))
+    (when (and last. (if (null last/) (= 0 last.) (<= last. (1+ last/))))
+      (setf last. nil))
+    (flet ((escape-path (path)
+             (with-output-to-string (*standard-output*)
+               (loop
+                 :for i :from 0
+                 :for ch :across path
+                 :do (cond
+                       ((or (find ch "/-_")
+                            (eql i last.)
+                            (alphanumericp ch))
+                        (write-char ch))
+                       (t
+                        (write-char #\\)
+                        (write-char ch)))))))
+      (pathname (escape-path path)))))
+
+#-(and)(
+        (path-to-pathname "/Users/pjb/Documents/Patchwork/PW-user-patches/B/éponge rand*dens x>")
+        (with-open-file (in #P"/Users/pjb/Documents/Patchwork/PW-user-patches/B/éponge rand\\*dens x>")
+          (list (read in) (read in)))
+
+        (wild-pathname-p #P"/Users/pjb/Documents/Patchwork/PW-user-patches/B/éponge rand\\*dens x>" )
+        (namestring  #P"/Users/pjb/Documents/Patchwork/PW-user-patches/B/éponge rand\\*dens x>")
+        )
+
+
 (defun choose-file-dialog (&key
                            (directory *default-directory*)
                            file-types
@@ -110,7 +140,7 @@ PROMPT:         A string, displayed as title of the choose file dialog.
       (let* ((urls  (objc:send panel "URLs"))
              (files '()))
         (dotimes (i [urls count])
-          (push (pathname (objcl:lisp-string [[urls objectAtIndex:i] path])) files))
+          (push (path-to-pathname (objcl:lisp-string [[urls objectAtIndex:i] path])) files))
         (if (endp (rest files))
             (first files)
             files)))))

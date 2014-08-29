@@ -37,6 +37,8 @@
 
 
 
+(defgeneric view-draw-contents (view))
+(defgeneric find-view-containing-point (view h &optional v direct-subviews-only))
 
 ;; (defun nsview-to-view-position (frame-nsrect size-point)
 ;;   "
@@ -1385,6 +1387,7 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
                 (get-window-cliprgn wptr cliprgn)
                 (when (regions-overlap-p visrgn cliprgn)
                   (view-draw-contents view))))))
+
 
 (defmethod view-draw-contents :before ((view simple-view))
   #+debug-views

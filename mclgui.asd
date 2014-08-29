@@ -133,7 +133,7 @@
                              "wrapper"))
 
                (:file "view"
-                :depends-on ("package" "process"
+                :depends-on ("package" "process" 
                                        "macros" "variables" "color"
                                        "point" "region" "font" "pen" 
                                        "wrapper" "view-classes" "objc-classes"
