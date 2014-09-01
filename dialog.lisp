@@ -198,12 +198,12 @@ EVENTHOOK:       A hook.  The function modal-dialog binds *EVENTHOOK*
           (eventhook
            (lambda (&aux (event *current-event*)
                          (what (rref event eventrecord.what)))
-               (when (and *modal-dialog-on-top* (eq dialog (caar *modal-dialog-on-top*)))
+               (when (and *modal-dialog-on-top* (eql dialog (caar *modal-dialog-on-top*)))
                  (unless (wptr dialog) ; this does nothing if *modal-dialog-on-top* is nil
                    (return-from-modal-dialog :cancel))
                  (when (wptr dialog)              ; it may be gone
                    (when (not *in-foreign-window*) ;; added 05/24/05
-                     (unless (eq (window-layer dialog) 0)
+                     (unless (eql (window-layer dialog) 0)
                        (set-window-layer dialog 0)))
                    (if (and eventhook
                             (if (listp eventhook)
@@ -211,15 +211,15 @@ EVENTHOOK:       A hook.  The function modal-dialog binds *EVENTHOOK*
                                 (when (funcall f) (return t)))
                               (funcall eventhook)))
                      t                   
-                     (if (eq #$mouseDown what)
+                     (if (eql #$mouseDown what)
                        (%stack-block ((wp 4))
                                      (let* ((code (#_FindWindow (rref event eventrecord.where) wp)))
                                        (cond 
-                                         ((eq code #$inMenubar) nil)
+                                         ((eql code #$inMenubar) nil)
                                          ((%ptr-eql (wptr dialog) (%get-ptr wp))
                                           nil)                          
                                          (t  (#_Sysbeep 5) t))))
-                       (if nil ; (or (eq what #$keyDown) (eq what #$autoKey))
+                       (if nil ; (or (eql what #$keyDown) (eql what #$autoKey))
                          (when (menukey-modifiers-p (rref event eventrecord.modifiers))
                            (ed-beep)
                            t))))))))
@@ -263,12 +263,12 @@ EVENTHOOK:       A hook.  The function modal-dialog binds *EVENTHOOK*
                                      (window-show dialog)
                                         ;(setf ms (update-menus :disable))
                                      (loop
-                                       (when t ;(eq *current-process* *event-processor*)  ;; 05/24/05
+                                       (when t ;(eql *current-process* *event-processor*)  ;; 05/24/05
                                          (process-wait "Event-poll" #'event-available-p))
                                        (event-dispatch))))
                                (abort () :cancel)
                                (abort-break () :cancel))))
-                  (if (eq (car ret) :cancel)
+                  (if (eql (car ret) :cancel)
                     (throw-cancel :cancel)
                     (apply #'values ret))))
             (without-interrupts     ; << maybe this helps - not really
@@ -368,7 +368,7 @@ STRING:         A string against which to compare the text of the
                    (key-handler-p item)))
     (error "~s is either disabled or is not a key-handler item of ~s" item dialog))
   (without-interrupts
-   (if (and (not (eq item (setf old (%get-current-key-handler dialog))))
+   (if (and (not (eql item (setf old (%get-current-key-handler dialog))))
             (if old 
               (when (exit-key-handler old item)
                 (multiple-value-bind (s e) (selection-range old)
@@ -391,7 +391,7 @@ STRING:         A string against which to compare the text of the
          (if (window-active-p dialog)
            (view-activate-event-handler item))
          (enter-key-handler item old)))
-     (when (and item (eq item old) select-all)
+     (when (and item (eql item old) select-all)
        (set-selection-range item 0 most-positive-fixnum))))
   item)
 

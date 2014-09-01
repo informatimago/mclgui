@@ -314,7 +314,7 @@ RETURN:         NEW-HANDLE.
   (:method (new-handle (wrapper wrapper))
     (let ((old-handle (handle wrapper)))
       (if new-handle
-        (unless (eq old-handle new-handle)
+        (unless (eql old-handle new-handle)
           (when old-handle
             [old-handle release])
           [new-handle retain]

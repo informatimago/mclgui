@@ -57,9 +57,9 @@
 (defmethod dialog-item-disable :before ((item basic-editable-text-dialog-item))
   (let ((window (view-window item)))
     (when window
-      (when (eq item (current-key-handler window))
+      (when (eql item (current-key-handler window))
         (change-key-handler window))
-      (when (eq item (current-key-handler window)) ;still current, so only one
+      (when (eql item (current-key-handler window)) ;still current, so only one
         (set-selection-range item 0 0)
         (setf (%get-current-key-handler window) nil)))))
 
@@ -87,6 +87,7 @@
           (y (rect-top    frame))
           (w (rect-width  frame))
           (h (rect-height frame)))
+     #+debug-view
      (progn (format t "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
             (format t "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
             (format t "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))

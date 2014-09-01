@@ -266,7 +266,7 @@ SELECTEDP:      The state (selected or unselected) of the cell.  If
     (let ((window (view-window item)))
       (when (and window
                  (not (and (window-active-p window)
-                           (eq item (current-key-handler window)))))
+                           (eql item (current-key-handler window)))))
         (highlight-rect-frame rect)))))
 
 
@@ -632,7 +632,7 @@ FONT-SPEC:      A font spec.
 
 (defun invert-cell-selection (item h v selected-p)
   (with-focused-dialog-item (item)
-    (with-back-color (or (and (eq (cell-colors item) :background)
+    (with-back-color (or (and (eql (cell-colors item) :background)
                               (part-color-h-v item h v))
                          (part-color item :body))
       (let* ((rgn     (if (view-active-p item)
@@ -1111,11 +1111,11 @@ V:              Vertical index. If the value of v is NIL, h is assumed
              table-wrapper flag)
         (declare (fixnum index mask))
         (loop 
-          (if (eq (setq table-wrapper (%gf-dispatch-table-ref dt index)) wrapper)
+          (if (eql (setq table-wrapper (%gf-dispatch-table-ref dt index)) wrapper)
             (return (%gf-dispatch-table-ref dt (the fixnum (1+ index))))
             (progn
               (when (null (%gf-dispatch-table-ref dt (the fixnum (1+ index))))
-                (if (or (not (eq table-wrapper (%unbound-marker-8)))
+                (if (or (not (eql table-wrapper (%unbound-marker-8)))
                         (eql 0 flag))
                   (without-interrupts ; why?
                    (let ((gf (%gf-dispatch-table-gf dt)))
@@ -1141,7 +1141,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
            ;; These two methods make users of the old cell-contents-string
            ;; and draw-table-cell continue to work.
            (let ((cm (find-1st-arg-combined-method #'cell-contents-string item)))
-             (if (eq cm *default-cell-contents-string-combined-method*)
+             (if (eql cm *default-cell-contents-string-combined-method*)
                (call-next-method)
                (funcall cm item (make-point h v))))))
 
@@ -1156,7 +1156,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 (defgeneric draw-table-cell-new (item h v rect selectedp)
   (:method :around ((item table-dialog-item) h v rect selectedp)
            (let ((cm (find-1st-arg-combined-method #'draw-table-cell item)))
-             (if (eq cm *default-draw-table-cell-combined-method*)
+             (if (eql cm *default-draw-table-cell-combined-method*)
                (call-next-method)
                (funcall cm item (make-point h v) rect selectedp))))
   (:method ((item table-dialog-item) h v rect selectedp)
@@ -1214,11 +1214,11 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                      (incf width (- width cell-width)))))
             (declare (dynamic-extent #'mapper))
             (maphash #'mapper column-widths-hash))))
-      (if (eq table-hscrollp :undetermined)
+      (if (eql table-hscrollp :undetermined)
           (setf table-hscrollp 
                 (or (> width max-width)
                     (> columns visible-columns))))
-      (if (eq table-vscrollp :undetermined)  ; dont mess with the slot
+      (if (eql table-vscrollp :undetermined)  ; dont mess with the slot
           (setf table-vscrollp
                 (or (> height max-height)
                     (> rows visible-rows))))
@@ -1238,8 +1238,8 @@ V:              Vertical index. If the value of v is NIL, h is assumed
               (hscrollp (table-hscrollp table))
               (changed nil))
           (declare (fixnum h v))
-          (when (or (eq vscrollp :undetermined)
-                    (eq hscrollp :undetermined))
+          (when (or (eql vscrollp :undetermined)
+                    (eql hscrollp :undetermined))
             (flet ((compute-cell-size ()
                      (let ((columns (table-columns table)))
                        (setf (cell-size-slot table)
@@ -1254,7 +1254,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
               (unless (cell-size table) (compute-cell-size))
               (let (undetermined-vscrollp)
                 (flet ((do-vscrollp (&optional (vsp vscrollp))
-                         (when (eq vsp :undetermined)
+                         (when (eql vsp :undetermined)
                            (setf undetermined-vscrollp t)
                            (let ((rows (table-rows table))
                                  (height 0))
@@ -1267,7 +1267,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                            (decf h 15)
                            (when computed-cell-size (compute-cell-size))))
                        (do-hscrollp ()
-                         (when (eq hscrollp :undetermined)
+                         (when (eql hscrollp :undetermined)
                            (let ((cols (table-columns table))
                                  (width 0))
                              (setf hscrollp
@@ -1346,7 +1346,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
            (let ((old-visible-p (separator-visible-p item)))
              (prog1
                  (call-next-method)
-               (unless (eq (not (null value)) (not (null old-visible-p)))
+               (unless (eql (not (null value)) (not (null old-visible-p)))
                  (invalidate-view item t)
                  (fixup-scroll-bars item))))))
 
@@ -1424,8 +1424,8 @@ V:              Vertical index. If the value of v is NIL, h is assumed
   (normalize-h&v h v)
   (let ((contents (cell-contents item h v))
         (print-function (slot-value item 'table-print-function)))
-    (if (or (and (or (eq print-function #'princ)
-                     (eq print-function #'write-string))
+    (if (or (and (or (eql print-function #'princ)
+                     (eql print-function #'write-string))
                  (or (stringp contents)
                      (and (symbolp contents)(setf contents (symbol-name contents))))))
         contents
@@ -1453,12 +1453,12 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 (defmethod scroll-bar-page-size ((item table-scroll-bar))
   (let* ((table (scroll-bar-scrollee item))
-         (vertical? (eq item (table-vscroll-bar table)))
+         (vertical? (eql item (table-vscroll-bar table)))
          (dimensions (table-dimensions table))
          (inner-size (table-inner-size table)))
     (if vertical?
         (let ((size-v (point-v inner-size)))
-          (if (eq *table-scroll-bar-tracked-part* :in-page-up)
+          (if (eql *table-scroll-bar-tracked-part* :in-page-up)
               (table-visible-row-count table 
                                        :end-row (table-top-row table)
                                        :from-end t
@@ -1468,7 +1468,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                        :end-row (point-v dimensions)
                                        :size-v size-v)))
         (let ((size-h (point-h inner-size)))
-          (if (eq *table-scroll-bar-tracked-part* :in-page-up)
+          (if (eql *table-scroll-bar-tracked-part* :in-page-up)
               (table-visible-column-count table
                                           :end-column (table-left-column table)
                                           :from-end t
@@ -1971,7 +1971,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
          (hscroll-setting (if hscroll (scroll-bar-setting hscroll) 0))
          (vscroll-setting (if vscroll (scroll-bar-setting vscroll) 0)))
     (scroll-to-cell item hscroll-setting vscroll-setting)
-    (when (and (wptr item) (not (eq scroll-bar t)))  
+    (when (and (wptr item) (not (eql scroll-bar t)))  
       ;; dont bother (FROM FIXUP-SCROLL-BARS), it does invalidate view after this and further
       ;; when doing list-definitions-dialog the grafport-back-color is wrong at this point
       ;; because the dialog-item-action for the editable-text-dialog-item is called
@@ -1996,7 +1996,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
         (multiple-value-bind (ff ms) (view-font-codes item)
           (let* ((top (rect-top rect))
                  (key (cons h v))
-                 (back-color-p (eq (cell-colors item) :background))
+                 (back-color-p (eql (cell-colors item) :background))
                  (cell-color (part-color-h-v item h v)))
             (declare (ignore top))
             (declare (dynamic-extent key))
@@ -2175,7 +2175,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                          (< v bottom-row)
                                          (not (and (eql h last-h) (eql v last-v))))
                                 (setq last-h h last-v v)
-                                (cond ((and (eq type :disjoint)
+                                (cond ((and (eql type :disjoint)
                                             (or shift-key-p command-key-p)                                 
                                             (eql h start-h)(eql v start-v))
                                        (if shift-key-p
@@ -2183,13 +2183,13 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                            (if start-selected-p
                                                (cell-deselect item h v)
                                                (cell-select item h v))))
-                                      ((and (eq type :disjoint)
+                                      ((and (eql type :disjoint)
                                             command-key-p
                                             start-selected-p)
                                        (deselect-cells-between item start-h start-v h v))
-                                      ((or (eq type :single)
+                                      ((or (eql type :single)
                                            (and (not shift-key-p)
-                                                (or ;(eq type :contiguous)
+                                                (or ;(eql type :contiguous)
                                                  (not command-key-p))))
                                        (let* ((hash (table-selection-hash item))
                                               (colored-cells-p (colored-cells-p item)))
@@ -2201,7 +2201,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                            (with-clip-region rgn
                                              (with-hilite-mode
                                                  (if (cell-selected-p item h v)
-                                                     (if (eq type :single)
+                                                     (if (eql type :single)
                                                          (cell-select item h v)
                                                          (when hash
                                                            (when colored-cells-p
@@ -2238,20 +2238,20 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                                                             (table-outline-region item))))
                                                          (compute-selection-regions item))
                                                        (cell-select item h v))))))))
-                                      ((and (eq type :contiguous)
+                                      ((and (eql type :contiguous)
                                             command-key-p
                                             (eql h start-h)(eql v start-v))                          
                                        (deselect-cells item)
                                        (when (not start-selected-p)(cell-select item h v)))
-                                      ((and (eq type :contiguous)
+                                      ((and (eql type :contiguous)
                                             shift-key-p
                                             (cell-selected-p item h v))
                                        (deselect-cells-above item h v))                           
                                       (t 
-                                       (let* ((p (if (eq type :contiguous)(first-selected-cell item)))
+                                       (let* ((p (if (eql type :contiguous)(first-selected-cell item)))
                                               (first-h (if p (point-h p) start-h))
                                               (first-v (if p (point-v p) start-v)))
-                                         (if (and (eq type :contiguous)  ; don't know bout this
+                                         (if (and (eql type :contiguous)  ; don't know bout this
                                                   shift-key-p
                                                   (/= 1 (point-h (table-dimensions item))))
                                              (multiple-value-bind (max-h max-v)(max-selected-h&v item)
@@ -2344,7 +2344,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 (defgeneric colored-cells-p (item)
   (:method ((item table-dialog-item))
-    (and (eq (cell-colors item) :background)
+    (and (eql (cell-colors item) :background)
          (let ((hash (table-cell-color-hash item)))
            (and hash (plusp (hash-table-count hash)))))))
 

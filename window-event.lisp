@@ -52,7 +52,7 @@
     (let ((key (current-key-handler window)))
       (when key
         (dolist (v (key-handler-list window))
-          (unless (or (eq v key) (view-contains-p v key))
+          (unless (or (eql v key) (view-contains-p v key))
             (view-deactivate-event-handler v)))))))
 
 
@@ -89,7 +89,7 @@
     (unless (or (any-modifier-keys-p)
                 #-(and)
                 (and key-hdlr 
-                     (eq (fred-shadowing-comtab key-hdlr) ;; nil if not fred-mixin
+                     (eql (fred-shadowing-comtab key-hdlr) ;; nil if not fred-mixin
                          *control-q-comtab*)))
       (case key
         (#.(ignore-errors (read-from-string "#\\tab"))
@@ -122,16 +122,14 @@ RETURN:     Whether the window should be closed (YES unless canceled).
    (cond ((option-key-p)
           (let ((class (class-of w)))
             (dolist (w (nreverse (windows :class class :include-invisibles t)))
-              (if (eq (class-of w) class)
-                  (window-close w))))
-          (return-from window-close-event-handler t))
+              (if (eql (class-of w) class)
+                  (window-close w)))))
          ((control-key-p)
           (view-put w :display-in-menu-when-hidden t)
-          (window-hide w)
-          (return-from window-close-event-handler nil))
+          (window-hide w))
          (t
-          (window-close w)
-          (return-from window-close-event-handler t))))
+          (window-close w))))
+  ;; We return nil in all cases, because either we won't close, or we already have.
   nil)
 
 
@@ -145,7 +143,7 @@ Called by -[MclguiWindow zoom:] which is called from WINDOW-ZOOM-EVENT-HANDLER."
 
 (defmethod window-zoom-event-handler ((window window) message)
   (with-handle (winh window)
-    (when (xor [winh isZoomed] (eq :inZoomIn message))
+    (when (xor [winh isZoomed] (eql :inZoomIn message))
       (on-main-thread [winh zoom:winh])))
   nil)
 

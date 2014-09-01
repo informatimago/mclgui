@@ -149,11 +149,11 @@ NEW-SEQUENCE:   The sequence to be associated with the sequence dialog
           (set-table-dimensions 
            item
            (setf new-dims
-                 (if (eq sequence-order :horizontal)
+                 (if (eql sequence-order :horizontal)
                      (make-big-point prim sec)
                      (make-big-point sec prim)))))
         (unless (and (equal old-dims new-dims)
-                     (or (eq old-seq new-seq)
+                     (or (eql old-seq new-seq)
                          (every #'eq old-seq new-seq)))
           (when (installed-item-p item)
             (maybe-need-scroll-bars item)
@@ -166,7 +166,7 @@ NEW-SEQUENCE:   The sequence to be associated with the sequence dialog
   (let* ((table-dimensions (table-dimensions item))
          (table-sequence (table-sequence item))
          (sequence-order (slot-value item 'sequence-order))
-         (index (if (eq sequence-order :horizontal)
+         (index (if (eql sequence-order :horizontal)
                     (+ (* (point-h table-dimensions) v) h)
                     (+ (* (point-v table-dimensions) h) v))))
     (if (< index (length table-sequence))
@@ -189,7 +189,7 @@ INDEX:          An index to the sequence (zero based, as would be
   (:method ((item sequence-dialog-item) index)
     (let ((sequence-order (slot-value item 'sequence-order))
           (table-dimensions (table-dimensions item)))
-      (if (eq sequence-order :horizontal)
+      (if (eql sequence-order :horizontal)
           (multiple-value-bind (ind-1 ind-2)
               (floor index (point-h table-dimensions))
             (make-big-point ind-2 ind-1))
@@ -209,7 +209,7 @@ INDEX:          An index to the sequence (zero based, as would be
 
 (defmethod window-can-do-operation ((table sequence-dialog-item) op &optional item)
   (declare (ignore item))
-  (and (eq op 'copy) (first-selected-cell table)))
+  (and (eql op 'copy) (first-selected-cell table)))
 
 
 ;; put-scrap a lisp object and a textual representation thereof
@@ -222,7 +222,7 @@ INDEX:          An index to the sequence (zero based, as would be
     (when (not (7bit-ascii-p text))
       (setf mactext (convert-string text #$kcfstringencodingunicode #$kcfstringencodingmacroman)))
     (put-scrap-flavor :text mactext)
-    (unless (eq mactext text)  ;; unicode text preferred
+    (unless (eql mactext text)  ;; unicode text preferred
       (put-scrap-flavor :|utxt| text))))
 
 

@@ -537,7 +537,7 @@ OLD-MS:         The old mode-size code. A mode-size code is a 32-bit
         ((let ((temp (xfer-mode-arg item)))
            (when temp
              (if mode
-                 (unless (eq item :plain)
+                 (unless (eql item :plain)
                    (error 'invalid-font-spec-error :font-spec font-spec 
                           :reason :duplicate-text-mode  :option item))
                  (setf mode temp
@@ -891,17 +891,17 @@ MS:             Mode/Size code.
   ;;            (hpos (pref rect :rect.left))
   ;;            (vpos (pref rect :rect.top))
   ;;            (max-width (- (pref rect :rect.right) hpos)))
-  ;;       (unless (eq numchars 0)
+  ;;       (unless (eql numchars 0)
   ;;         (%stack-block ((ubuff (%i+ numchars numchars)))
   ;;           (copy-string-to-ptr string start numchars ubuff)
   ;;           (with-atsu-layout (layout ubuff numchars ff ms)
-  ;;             (when (and truncation (not (eq truncation :none)))
+  ;;             (when (and truncation (not (eql truncation :none)))
   ;;               (set-layout-line-truncation-given-layout layout truncation (null compress-p))) ;; aha need no-squash-p                
   ;;             (set-layout-line-width-given-layout layout max-width)
   ;;             (when justification  ;; doesnt work - fixed now
   ;;               (set-layout-line-justification-given-layout layout justification))
   ;;             (cond
-  ;;              ((and truncation (not (eq truncation :none)))
+  ;;              ((and truncation (not (eql truncation :none)))
   ;;               (errchk (#_atsudrawtext layout 0 numchars
   ;;                        (#_long2fix hpos)
   ;;                        (#_long2fix (%i+ vpos line-ascent)))))
@@ -929,7 +929,7 @@ MS:             Mode/Size code.
 
 (defun color->ff-index (color)
   #-(and)
-  (if (and color (not (eq color *black-color*)))
+  (if (and color (not (eql color *black-color*)))
       (fred-palette-closest-entry color)
       0)
   (niy color->ff-index color)
@@ -939,7 +939,7 @@ MS:             Mode/Size code.
   #-(and)
   (multiple-value-bind (ff ms)(grafport-font-codes)
     (let* ((foo (grafport-fore-color))) ;; 0 is black is 0    
-      (if (not (eq foo 0))
+      (if (not (zerop foo))
           (setf ff (logior (logand ff (lognot #xff)) (fred-palette-closest-entry foo))))
       (values ff ms)))
   (current-font-codes))

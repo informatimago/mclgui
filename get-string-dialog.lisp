@@ -75,11 +75,11 @@
         (let ((text-items (subviews d 'editable-text-dialog-item)))
           (when text-items
             (let ((empties (slot-value d 'allow-empty-strings)))
-              (if (or (eq empties t)
+              (if (or (eql empties t)
                       (dolist (item text-items t) ; enables if no text-items but there should be some
                         (unless (and (consp empties)
                                      (member (view-nick-name item) empties))
-                          (when (eq 0 (dialog-item-text-length item))
+                          (when (zerop (dialog-item-text-length item))
                             (return nil)))))
                 (dialog-item-enable debutton)
                 (dialog-item-disable debutton)))))))))

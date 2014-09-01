@@ -160,7 +160,7 @@ DO:             Remove the property KEY from the VIEW.
                          :reader   view-subviews
                          ;; Note: the vector is initialized in initialize-instance.
                          :documentation "A vector of subviews.")
-   (view-valid           :initform nil
+   (view-valid           :initform '()
                          :accessor view-valid) ; for lazy clip-region updating.
    (view-clip-region     :initform nil
                          :accessor view-clip-region-slot)))

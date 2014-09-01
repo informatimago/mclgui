@@ -83,7 +83,7 @@
       (let* ((windows (windows :class (class-of window)))
              (n 1))
         (dolist (win windows)
-          (unless (eq win window)
+          (unless (eql win window)
             (set-window-layer win n)
             (incf n)))))))
 
@@ -95,7 +95,7 @@
   (when (null (slot-value w 'my-item))
     (setf (slot-value w 'my-item) (make-instance 'windows-menu-menu-item :window w)))
   (let* ((enable (and (window-shown-p w)
-                      (or (not (eq w (front-window)))
+                      (or (not (eql w (front-window)))
                           (not (window-active-p w)))))
          (my-item (slot-value w 'my-item))
          (name (window-title w)))

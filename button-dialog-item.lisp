@@ -87,7 +87,7 @@ NEW-BUTTON:     The button that should be made the default button, or
 ")
   (:method ((dialog window) new-button)
     (let ((default-button (%get-default-button dialog)))
-      (unless (eq default-button new-button)
+      (unless (eql default-button new-button)
         (without-interrupts
             (when default-button
               (invalidate-view-border default-button t)
@@ -111,7 +111,7 @@ default button in the view-window of ITEM.  Otherwise it returns NIL.
 ")
   (:method ((item default-button-mixin))
     (let ((window (view-window item)))
-      (and window (eq item (default-button window))))))
+      (and window (eql item (default-button window))))))
 
 
 
@@ -133,12 +133,12 @@ default button in the view-window of ITEM.  Otherwise it returns NIL.
 
 (defmethod dont-throb ((item button-dialog-item))
   (or
-   ;; (not (eq (view-window item)(view-container item)))
+   ;; (not (eql (view-window item)(view-container item)))
    (part-color item :text)
    (part-color item :body)        
    #+ignore ;; font seems to work - oops no it doesn't
    (and (default-button-p item)
-        (or (not (eq (view-window item)(view-container item)))
+        (or (not (eql (view-window item)(view-container item)))
             #+ignore
             (multiple-value-bind (ff ms)(view-font-codes item)
               (declare (ignorable ms))
@@ -224,7 +224,7 @@ dialog-item-action method for button.
 
 (defmethod view-draw-contents :before ((item button-dialog-item))
   (when (and (default-button-p item)
-             (not (eq (view-window item) (view-container item))))
+             (not (eql (view-window item) (view-container item))))
     (niy view-draw-contents item)
     ;; (let ((topLeft (convert-coordinates (view-position item) (view-container item) (view-window item)))
     ;;       (control-rect-position (get-control-bounds item)))
@@ -279,7 +279,7 @@ dialog-item-action method for button.
 (defun maybe-draw-default-button-outline (button)
   (let ((my-dialog (view-window button)))
     (when (and my-dialog
-               (eq button (default-button my-dialog))
+               (eql button (default-button my-dialog))
                (not (view-get button 'no-border)))
       (draw-default-button-outline button))))
 

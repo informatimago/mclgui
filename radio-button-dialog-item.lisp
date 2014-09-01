@@ -87,8 +87,8 @@ govern the behavior of radio buttons.
       (let ((cluster (radio-button-cluster item))
             (container (view-container item)))
         (do-dialog-items (other-item container 'radio-button-dialog-item)
-          (when (and (not (eq item other-item))
-                     (eq cluster (radio-button-cluster other-item)))
+          (when (and (not (eql item other-item))
+                     (eql cluster (radio-button-cluster other-item)))
             (return (setq first nil)))))
     (call-next-method) ;this is failing to do it upon return
     (when (or first (radio-button-pushed-p item))
@@ -138,8 +138,8 @@ ITEM:           A radio-button dialog item.
           )
       (when container
         (do-dialog-items (other-item container 'radio-button-dialog-item)
-          (when (and (not (eq other-item item))
-                     (eq (radio-button-cluster other-item) cluster))
+          (when (and (not (eql other-item item))
+                     (eql (radio-button-cluster other-item) cluster))
             (radio-button-unpush other-item)))
         (niy radio-button-push item)
         ;; (when (and handle (installed-item-p item))

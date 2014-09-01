@@ -317,7 +317,7 @@ condition is signaled with :oserr #$|AEParamMissed| and
                     missed-keyword
                     4
                     actual-size)))
-      (when (eq myerr #$|noErr|)           ; missed a parameter!
+      (when (eql myerr #$|noErr|)           ; missed a parameter!
         (error 'appleevent-error
                :oserr #$|errAEParamMissed|
                :error-string error-string)))))

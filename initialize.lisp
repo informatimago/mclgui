@@ -247,7 +247,7 @@
     (lds (progn
            (menu-item-enable item)
            (dolist (p *all-processes*)
-             (unless (or (eq p *event-processor*)
+             (unless (or (eql p *event-processor*)
                          (not (member p *active-processes*))
                          ; process-active-p true for blocked processes
                          (symbol-value-in-process '*in-read-loop* p)
@@ -413,7 +413,7 @@
 (defun confirmed-quit ()
   (cond ((command-key-p)
          (when (or #+ignore 
-                   (and (eq *break-level* 0)
+                   (and (eql *break-level* 0)
                         (do-all-windows w 
                           (when (window-needs-saving-p w)
                             (return T))))
@@ -462,7 +462,7 @@
       *edit-menu*
       (dolist (menu menus *edit-menu*)
         (dolist (item (slot-value menu 'item-list))
-          (when (eq (command-key item) #\X)
+          (when (eql (command-key item) #\X)
             (return-from find-edit-menu menu)))))))
 
 ; window-do-operation needs a way to elide checking for
@@ -489,7 +489,7 @@
 ; named window rather than just calling method-exists-p
 (defmethod window-can-do-operation ((w window) op &optional item)
   (cond
-   ((and (eq op 'undo)
+   ((and (eql op 'undo)
          (method-exists-p 'window-can-undo-p w))
     (funcall 'window-can-undo-p w))
    ((non-window-method-exists-p op w))                          
@@ -511,7 +511,7 @@
            (dolist (method methods)
              (when (and (null (method-qualifiers method))
                         (let ((spec (car (method-specializers method))))
-                          (and (not (eq spec window-class))
+                          (and (not (eql spec window-class))
                                (if (typep spec 'eql-specializer)
                                  (eql (eql-specializer-object spec) w)
                                  (member spec cpl)))))
@@ -549,7 +549,7 @@
 
 (defun front-window-that-isnt (evil-window)
   (let ((mapper (lambda (w)
-                    (unless (eq w evil-window)
+                    (unless (eql w evil-window)
                       (return-from front-window-that-isnt w)))))
     (declare (dynamic-extent mapper))
     (map-windows mapper)))
@@ -668,7 +668,7 @@
                  (set-command-key item (slot-value item 'command-key)))
                (if (slot-value item 'checkedp)
                  (set-menu-item-check-mark item (slot-value item 'checkedp)))
-               (if (not (eq (slot-value item 'style) :plain))
+               (if (not (eql (slot-value item 'style) :plain))
                  (set-menu-item-style item (slot-value item 'style)))))))))))
 |#
 
@@ -716,7 +716,7 @@
                      (rplaca new-items item)
                      (setq new-items (cdr new-items))
                      (incf nitems)
-                     (when (and order-ok (not (eq item (car items))))
+                     (when (and order-ok (not (eql item (car items))))
                        (setq order-ok nil))
                      (setq items (cdr items))))))))
          (when (or (not order-ok)

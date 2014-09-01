@@ -10,15 +10,16 @@
   (let ((pos  (make-point h v))
         (posi (position-item win)))
     (when posi
-      (set-dialog-item-text posi (print (format nil "~S ~S"
-                                                  (point-to-list pos)
-                                                  (point-to-list (view-position win))))))))
+      (set-dialog-item-text posi (format nil "~S ~S"
+                                         (point-to-list pos)
+                                         (point-to-list (view-position win)))))))
 
 (defvar *w* (make-instance 'sdi-window :window-title "Test"))
 
 
 (defgeneric draw-view-bounds (view)
   (:method   ((view simple-view))
+    #+debug-view
     (progn (format t "~&view ~A~%" (view-nick-name view))
            (format t "~&  frame  = ~S~%" (rect-to-list (view-frame view)))
            (format t "~&  bounds = ~S~%" (rect-to-list (view-bounds view)))
@@ -33,6 +34,7 @@
 
 (defgeneric draw-view-frame (view)
   (:method   ((view simple-view))
+    #+debug-view
     (progn (format t "~&frame  = ~S~%" (rect-to-list (view-frame view)))
            (format t "~&bounds = ~S~%" (rect-to-list (view-bounds view)))
            (finish-output))

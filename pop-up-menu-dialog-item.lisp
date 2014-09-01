@@ -123,7 +123,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 (defmethod install-view-in-window :after ((menu pop-up-menu) window)
   (when (use-pop-up-control menu)
     (let ((item-disp (pop-up-menu-item-display menu)))
-      (when (not (or (eq  item-disp :selection)
+      (when (not (or (eql  item-disp :selection)
                      (equal item-disp "")))
         (warn "*use-pop-up-control* and item display ~s are incompatible." item-disp)))
     (make-new-pop-up-control menu window)))
@@ -188,7 +188,7 @@ default menu item.  Otherwise the value itself is displayed as if by
           (when (and num (/= num 0) items)
             (set-pop-up-item-check-mark (nth (1- num) items) t))
           (setf (pop-up-menu-default-item menu) num)
-          (when (eq (pop-up-menu-item-display menu) :selection)
+          (when (eql (pop-up-menu-item-display menu) :selection)
             (niy set-pop-up-menu-default-item menu num force)
             #-(and)
 
@@ -197,7 +197,7 @@ default menu item.  Otherwise the value itself is displayed as if by
               (with-focused-dialog-item (menu window)
                 (when handle
                   (cond 
-                    ((not (eq (view-container menu) window))
+                    ((not (eql (view-container menu) window))
                      (let ((old-rect (pop-up-menu-rect menu)))
                        (rlet ((gag-rect :rect))
                          (setf (rref gag-rect :rect.topleft) (convert-coordinates (rref old-rect :rect.topleft) (view-container menu) window))
@@ -336,7 +336,7 @@ default menu item.  Otherwise the value itself is displayed as if by
             (+ (if (zerop title-width) 9 18)
                fudge
                ;; we used to dolist always
-               (if (eq item-display :selection)
+               (if (eql item-display :selection)
                    (let ((item-max (max-menu-width menu)))
                      (if (> item-max max-menu-width)
                          item-max
@@ -463,7 +463,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 
 (defun get-menu-body-text (menu)
   (let ((item-display (pop-up-menu-item-display menu)))
-    (cond ((eq item-display :selection)
+    (cond ((eql item-display :selection)
            (let* ((selection (pop-up-menu-default-item menu))
                   (items (menu-items menu)))
              (cond ((null items) (the-empty-menu-string menu))
@@ -524,7 +524,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 (defmethod view-click-event-handler ((menu pop-up-menu) where)
   (declare (ignore where))
   (when (menu-enabled-p menu)
-    (let ((no-text (eq 0  (length (menu-title menu)))))    
+    (let ((no-text (eql 0  (length (menu-title menu)))))    
       (unless no-text ; want to hilite not invert
         (title-hilite menu))
       (allow-view-draw-contents (view-window menu))
@@ -610,7 +610,7 @@ default menu item.  Otherwise the value itself is displayed as if by
   ;; fix this mess or nuke it and do in main method
   ;; nb changing the font of a menu on the fly wont do item style today
   (let ((style-num (ash (logand (view-font-codes menu) #xffff) -8)))
-    (unless (eq style-num (cdr (assoc :plain *style-alist*)))
+    (unless (eql style-num (cdr (assoc :plain *style-alist*)))
       (let ((style (inverse-style-arg style-num)))
         (dolist (i items)
           (when (not (menu-item-style i))
@@ -701,17 +701,17 @@ default menu item.  Otherwise the value itself is displayed as if by
         #-(and)
         (when (typep menu 'pull-down-menu) ; gag-puke
           (inval-window-rect (wptr menu) (pop-up-menu-rect menu)))
-        (unless (eq selected-menu-item 0)
+        (unless (eql selected-menu-item 0)
           (let* ((items (menu-items selected-menu))
                  (update (pop-up-menu-auto-update-default menu)))
             (when update
               (set-pop-up-menu-default-item menu
-                                            (if (eq selected-menu menu)
+                                            (if (eql selected-menu menu)
                                                 selected-menu-item
                                                 (let ((1st-level-submenu selected-menu))
                                                   (loop
                                                     (let ((owner (menu-owner 1st-level-submenu)))
-                                                      (if (eq owner menu)
+                                                      (if (eql owner menu)
                                                           (return (1+ (position 1st-level-submenu (menu-items menu)))))
                                                       (if (null owner)
                                                           (return (pop-up-menu-default-item menu)))
@@ -991,7 +991,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 
 (defmethod size-rectangles ((menu typein-menu-menu))
   (let ((title (menu-title menu)))
-    (if (eq (length title) 0)
+    (if (eql (length title) 0)
         (call-next-method)
         (let* ((my-pos (view-position menu))
                (my-size (view-size menu)))
@@ -1030,7 +1030,7 @@ default menu item.  Otherwise the value itself is displayed as if by
                (br (make-point (point-h (view-size c)) 1))
                t-pos t-w)
           (declare (ignore br) (ignorable t-pos t-w tl))
-          (when (eq pos :left)
+          (when (eql pos :left)
             (let ((text (typein-editable-text c)))
               (setf t-pos (subtract-points (view-position text) #@(2 2)))
               (setf t-w (+  (point-h (view-size text)) 3))
@@ -1048,7 +1048,7 @@ default menu item.  Otherwise the value itself is displayed as if by
             (invalidate-corners menu #@(0 0) (make-point (point-h (view-size menu)) 1))
                                         ;(#_moveto :long view-pos)
                                         ;(#_line :word w :word 0)
-            (when (eq pos :left)
+            (when (eql pos :left)
               (#_moveto (point-h t-pos)(point-v t-pos))
               (#_line t-w 0)))))))
 
@@ -1132,7 +1132,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 (defmethod view-corners ((view typein-menu)) ;; so the focus rect will show up    
   (multiple-value-bind (tl br)
       (multiple-value-call  (function inset-corners) #@(-4 -4) (call-next-method))
-    (if (eq (typein-menu-menu-position view) :left)
+    (if (eql (typein-menu-menu-position view) :left)
         (setf br (add-points br #@(2 0)))
         (setf tl (subtract-points tl #@(2 0))))
     (values tl br)))
@@ -1210,7 +1210,7 @@ default menu item.  Otherwise the value itself is displayed as if by
   (let ((action (menu-item-action-function item)))    
     (let* ((menu     (menu-item-owner item))
            (ti       (typein-editable-text (view-container menu)))
-           (new-text (if (and (eq 1 (pop-up-menu-default-item menu))
+           (new-text (if (and (eql 1 (pop-up-menu-default-item menu))
                               (string= "None" (menu-item-title item)))
                          "" 
                          (menu-item-title item))))
@@ -1231,7 +1231,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 
 (defun set-pop-up-item-check-mark (item mark)  
   (let ((menu (menu-item-owner item)))
-    (when (and menu (eq mark t)
+    (when (and menu (eql mark t)
                (let ((font (ash (view-font-codes menu) -16)))
                  (not (or (eql font (ash (sys-font-codes) -16))
                           (eql font *chicago-font*)))))

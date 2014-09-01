@@ -36,7 +36,7 @@
 (objcl:enable-objcl-reader-macros)
 
 
-(defgeneric view-pen (view)
+0(defgeneric view-pen (view)
   (:documentation "
 RETURN:         The pen-state of the WINDOW of the VIEW.
 ")
@@ -356,12 +356,9 @@ not normally called directly but instead by stream output functions.
 
 (defgeneric mode-to-compositing-operation (mode)
   (:method ((mode integer))
-    (second (elt *mode-to-compositing-operation* mode)))
+    (aref (car *mode-to-compositing-operation*) mode))
   (:method ((mode keyword))
-    (let ((entry (assoc mode *mode-to-compositing-operation*)))
-      (if entry
-        (second entry)
-        (error "Invalid transfer mode.")))))
+    (gethash (cdr *mode-to-compositing-operation*) mode)))
 
 
 ;; A PEN-STATE uses NSGraphicContext, NSBezierPath and NSColor to draw.
@@ -393,28 +390,31 @@ not normally called directly but instead by stream output functions.
       :mode (or (pen-mode-arg mode) (pen-mode pen))
       :pattern (or pattern (pen-state-pattern pen)))))
 
+(defun apply-pen (window pen)
+  (with-handle (winh window)
+    ;; cf. pattern.lisp (update-handle pattern).
+    (with-handle (color (pen-state-pattern pen))
+      [color setFill]
+      [color setStroke]
+      [color set])  
+    (let ((context [winh graphicsContext]))
+      [context setCompositingOperation:(mode-to-compositing-operation (pen-mode pen))])))
 
 (defun call-with-pen-state (thunk pen)
   (when *current-view*
     (let ((window (view-window *current-view*)))
       (when window
-        (with-handle (winh window)
-          (let ((context [winh graphicsContext])
-                (original-pen (view-pen window)))
-            (unwind-protect
-                 (progn
-                   [context saveGraphicsState]
-                   (setf (slot-value window 'view-pen) pen)
-                   ;; cf. pattern.lisp (update-handle pattern).
-                   (with-handle (color (pen-state-pattern pen))
-                     [color setFill]
-                     [color setStroke]
-                     [color set])
-                   [context setCompositingOperation:(mode-to-compositing-operation (pen-mode pen))]
-                   (funcall thunk))
-              [context restoreGraphicsState]
-              (unless (eq original-pen (view-pen window))
-                (setf (slot-value window 'view-pen) pen)))))))))
+        (let ((original-pen (view-pen window)))
+          (unwind-protect
+               (progn
+                 ;; [context saveGraphicsState]
+                 (setf (slot-value window 'view-pen) pen)
+                 (apply-pen window pen)
+                 (funcall thunk))
+            ;; [context restoreGraphicsState]
+            (unless (eql original-pen (view-pen window))
+              (setf (slot-value window 'view-pen) pen)
+              (apply-pen window pen))))))))
 
 
 (defmacro with-pen-state ((&key location size mode pattern) &body body)
@@ -437,24 +437,28 @@ It sets temporarily the view-pen of the focused view.
 
 
 (defun initialize/pen ()
-  (setf *mode-to-compositing-operation*
-        `((:srcCopy        ,#$NSCompositeCopy)
-          (:srcOr          ,#$NSCompositeSourceOver)
-          (:srcXor         ,#$NSCompositeXOR)
-          (:srcBic         ,#$NSCompositeDestinationOut)
-          (:notSrcCopy     ,#$NSCompositePlusLighter)    ; no match
-          (:notSrcOr       ,#$NSCompositeDestinationAtop) ; no match
-          (:notSrcXor      ,#$NSCompositeSourceIn)
-          (:notsrcbic      ,#$NSCompositeSourceOut)
-          (:patCopy        ,#$NSCompositeCopy)
-          (:patOr          ,#$NSCompositeSourceOver)
-          (:patXor         ,#$NSCompositeXOR)
-          (:patBic         ,#$NSCompositeDestinationOut)
-          (:notPatCopy     ,#$NSCompositePlusLighter)    ; no match
-          (:notPatOr       ,#$NSCompositeDestinationAtop) ; no match
-          (:notPatXor      ,#$NSCompositeSourceIn)
-          (:notPatBic      ,#$NSCompositeSourceOut))))
+  (let ((index-to-nscomposite (make-array 16))
+        (mode-to-nscomposite  (make-hash-table)))
+    (loop :for (mode nscomposite) :in `((:srcCopy        ,#$NSCompositeCopy)
+                                        (:srcOr          ,#$NSCompositeSourceOver)
+                                        (:srcXor         ,#$NSCompositeXOR)
+                                        (:srcBic         ,#$NSCompositeDestinationOut)
+                                        (:notSrcCopy     ,#$NSCompositePlusLighter)    ; no match
+                                        (:notSrcOr       ,#$NSCompositeDestinationAtop) ; no match
+                                        (:notSrcXor      ,#$NSCompositeSourceIn)
+                                        (:notsrcbic      ,#$NSCompositeSourceOut)
+                                        (:patCopy        ,#$NSCompositeCopy)
+                                        (:patOr          ,#$NSCompositeSourceOver)
+                                        (:patXor         ,#$NSCompositeXOR)
+                                        (:patBic         ,#$NSCompositeDestinationOut)
+                                        (:notPatCopy     ,#$NSCompositePlusLighter)    ; no match
+                                        (:notPatOr       ,#$NSCompositeDestinationAtop) ; no match
+                                        (:notPatXor      ,#$NSCompositeSourceIn)
+                                        (:notPatBic      ,#$NSCompositeSourceOut))
+          :for index :from 0
+          :do (setf (aref index-to-nscomposite index) nscomposite
+                    (gethash mode mode-to-nscomposite) nscomposite))
+    (setf *mode-to-compositing-operation* (cons index-to-nscomposite mode-to-nscomposite))))
 
 
 ;;;; THE END ;;;;
-

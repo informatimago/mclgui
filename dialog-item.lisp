@@ -373,7 +373,7 @@ explicitly).  The function returns NIL.
 DO:             Enable or disable the dialog ITEM depending on ENABLED-P.
 ")
   (:method ((item dialog-item) enabled-p)
-    (unless (eq (not enabled-p)
+    (unless (eql (not enabled-p)
                 (not (dialog-item-enabled-p item)))
       (if enabled-p
           (dialog-item-enable  item)
@@ -415,7 +415,7 @@ DO:             Enable or disable the dialog ITEM depending on ENABLED-P.
               (dovector (item (view-subviews view))
                 (let ((position (view-position item))
                       (size     (view-outer-size item)))
-                  (unless (or (eq item subview) (not position))                
+                  (unless (or (eql item subview) (not position))                
                     (let ((lower-right (add-points position size)))
                       (setf (rect-topleft s-rect) position
                             (rect-bottomright s-rect) lower-right))

@@ -460,22 +460,18 @@ VIEW:           A simple view.
   (:method ((screen null))
     (nsscreen-to-screen-point (get-nspoint [NSEvent mouseLocation])))
   (:method ((view simple-view))
-    (if (handle view)
-        ;; We don't use the *current-event* since it may not be an event
-        ;; relative to (view-window view).
-        (let ((window (view-window view)))
-         (nspoint-to-point
-          (with-handle (winh window)
-            #-(and)                     ; only for 10.6+
-            (get-nsrect [winh convertRectFromScreen:(ns:make-ns-rect (nspoint-x pt) (nspoint-y pt) 1 1)])
-            ;; deprecated, but 10.6+ doesn't work on ccl-1.8.
-            (with-view-handle (viewh window) ;; TODO: viewh = contentView of window. therefore we convert to window coordinates, not view coordinates??? ; see also window-mouse
-              (get-nspoint
-               [viewh convertPoint:[winh convertScreenToBase:[NSEvent mouseLocation]]
-                      fromView:*null*])))))
-        ;; The following is not very meaningful, but then why a view
-        ;; without a handle would need a view-mouse-position?
-        (call-next-method))))
+    ;; We don't use the *current-event* since it may not be an event
+    ;; relative to (view-window view).
+    (let ((window (view-window view)))
+      (nspoint-to-point
+       (with-handle (winh window)
+         #-(and)                     ; only for 10.6+
+         (get-nsrect [winh convertRectFromScreen:(ns:make-ns-rect (nspoint-x pt) (nspoint-y pt) 1 1)])
+         ;; deprecated, but 10.6+ doesn't work on ccl-1.8.
+         (with-view-handle (viewh window) ;; TODO: viewh = contentView of window. therefore we convert to window coordinates, not view coordinates??? ; see also window-mouse
+           (get-nspoint
+            [viewh convertPoint:[winh convertScreenToBase:[NSEvent mouseLocation]]
+                   fromView:*null*])))))))
 
 ;; (point-to-list (view-mouse-position nil))
 ;; (view-convert-coordinates-and-click subview where view)
@@ -539,7 +535,7 @@ RETURN:         T if the click currently being processed was the
 ;;
 ;; (defun double-click-p ()  
 ;;   (and (and (boundp '*current-event*) *current-event*)
-;;        (eq $MButDwnEvt (rref *current-event* eventrecord.what))
+;;        (eql $MButDwnEvt (rref *current-event* eventrecord.what))
 ;;        (> *multi-click-count* 1)))
 
 
@@ -680,7 +676,7 @@ RETURN:         If called during event processing, return true if
 ;;                  (errchk (#_trackmouselocation (%null-ptr) outpt out-res))
 ;;                  (let ((what (%get-unsigned-word out-res)))
 ;;                    ;; T if mouse moved, key modifiers changed or ... , NIL iff mouse up
-;;                    (not (eq what #$kmousetrackingmouseup))))))))
+;;                    (not (eql what #$kmousetrackingmouseup))))))))
 ;;        (new-mouse-down-p)))
 
 
@@ -796,6 +792,7 @@ IDLE:           An argument representing whether the main Lisp process
 "
   (let ((*current-event* (get-next-event idle event-mask)))
     (when *current-event*
+      #+debug-event
       (unless (= null-event (event-what *current-event*))
         (format-trace 'event-dispatch *current-event*))
       (unless (dispatch-eventhook)

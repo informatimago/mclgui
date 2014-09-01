@@ -71,7 +71,7 @@
     (call-next-method)))
     
 (defmethod view-activate-event-handler ((item fred-dialog-item))
-  (when (eq item (current-key-handler (view-window item)))
+  (when (eql item (current-key-handler (view-window item)))
     (call-next-method)))
 
 ;; view-deactivate-event-handler for fred-dialog-item uses the one for fred-mixin.
@@ -130,7 +130,7 @@
     (call-next-method))
   (when (wptr item)
     (let ((modcnt (buffer-modcnt (fred-buffer item))))
-      (unless (eq modcnt (view-get item 'action-modcnt)) ; what is this
+      (unless (eql modcnt (view-get item 'action-modcnt)) ; what is this
         ; formerly the action was invoked within with-focused-view - now it isn't - that may be bad
         (setf (view-get item 'action-modcnt) modcnt)
         (dialog-item-action item)))))

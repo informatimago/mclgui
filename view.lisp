@@ -198,84 +198,6 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 ;; [(font-from-codes 65536 0) set]
 
 
-
-#-(and) (defgeneric call-with-focused-view (view function &optional font-view)
-          (:method ((view simple-view) function &optional font-view)
-            (flet ((call-it ()
-                     (let ((transtack (transform-stack (view-window view)))
-                           (inverse   nil))
-                       (unwind-protect
-                            (progn
-                              #+debug-views
-                              (format-trace 'with-focused-view
-                                            :before (get-ctm (view-window view))
-                                            (mapcar (function get-at) transtack))
-                              (when transtack ; remove the top transform
-                                (setf inverse [[NSAffineTransform alloc] initWithTransform:(car transtack)])
-                                [inverse invert]
-                                [inverse concat])
-                              (let ((trans  [[[NSAffineTransform class] performSelector:(objc:@selector |transform|)] retain])
-                                    ;; A bug in ccl prevents this to work: [NSAffineTransform transform]
-                                    (origin (convert-coordinates #@(0 0) view (view-window view))
-                                            #-(and)
-                                            (if (view-container view)
-                                                (view-origin view)
-                                                (subtract-points (view-position view)
-                                                                 (view-scroll-position (view-container view)))
-                                                (view-scroll-position view))))
-                                (unwind-protect
-                                     (progn
-                                       [trans translateXBy: (cgfloat (point-h origin)) yBy: (cgfloat (point-v origin))]
-                                       [trans concat]
-                                       #+debug-views
-                                       (format-trace 'with-focused-view
-                                                     :during (get-ctm (view-window view))
-                                                     (mapcar (function get-at) transtack))
-                                       (setf (transform-stack (view-window view)) (cons trans transtack))
-                                       (call-with-pen-state (lambda () (funcall function view))
-                                                            (view-pen view)))
-                                  (setf (transform-stack (view-window view)) transtack)
-                                  [trans invert]
-                                  [trans concat]
-                                  [trans release])))
-                         (when inverse ; put back the top transform.
-                           [inverse invert]
-                           [inverse concat]
-                           [inverse release])
-                         #+debug-views
-                         (format-trace 'with-focused-view
-                                       :_after  (get-ctm (view-window view))
-                                       (mapcar (function get-at) transtack))))))
-              #-(and) (or (null font-view) (eq font-view old-font-view))
-              (if (eq *current-view* view)
-                  (if (eq *current-font-view* font-view)
-                      (let ((*current-view* view)
-                            (*current-font-view* font-view)
-                            (*current-font-codes* (copy-list *current-font-codes*)))
-                        (call-it))
-                      (unwind-protect
-                           (let* ((*current-view* view)
-                                  (*current-font-view*  font-view)
-                                  (*current-font-codes* (set-font *current-font-view*))) ; change font
-                             (call-it))
-                        (set-font *current-font-view*))) ; revert font
-                  (with-view-handle (handle view)
-                    (let ((unlock   nil))
-                      (unwind-protect
-                           (let ((*current-view* view)
-                                 (*current-font-view* (or font-view *current-font-view*))
-                                 (*current-font-codes* (copy-list *current-font-codes*)))
-                             (when (setf unlock [handle lockFocusIfCanDraw])
-                               (focus-view *current-view* *current-font-view*)
-                               (apply (function set-current-font-codes) (set-font *current-font-view*))
-                               (call-it)
-                               [[NSGraphicsContext currentContext] flushGraphics]))
-                        (when unlock
-                          (set-font *current-font-view*)
-                          [handle unlockFocus])
-                        (focus-view *current-view* *current-font-view*))))))))
-
-
 (defun get-at (at)
   (list (list (ccl::pref at #>CGAffineTransform.a)
               (ccl::pref at #>CGAffineTransform.b))
@@ -315,9 +237,8 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                  (unwind-protect
                       (call-it)
                    [wtrans set]))))
-      #-(and) (or (null font-view) (eq font-view old-font-view))
-      (if (eq *current-view* view)
-          (if (eq *current-font-view* font-view)
+      (if (eql *current-view* view)
+          (if (eql *current-font-view* font-view)
               (let ((*current-view* view)
                     (*current-font-view* font-view)
                     (*current-font-codes* (copy-list *current-font-codes*)))
@@ -328,20 +249,20 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                           (*current-font-codes* (set-font *current-font-view*))) ; change font
                      (call-it))
                 (set-font *current-font-view*))) ; revert font
-          (with-view-handle (handle view)
+          (with-view-handle (winh view)
             (let ((unlock   nil))
               (unwind-protect
                    (let ((*current-view* view)
                          (*current-font-view* (or font-view *current-font-view*))
                          (*current-font-codes* (copy-list *current-font-codes*)))
-                     (when (setf unlock [handle lockFocusIfCanDraw])
+                     (when (setf unlock [winh lockFocusIfCanDraw])
                        (focus-view *current-view* *current-font-view*)
                        (apply (function set-current-font-codes) (set-font *current-font-view*))
                        (call-it/trans)))
                 [[NSGraphicsContext currentContext] flushGraphics]
                 (when unlock
                   (set-font *current-font-view*)
-                  [handle unlockFocus])
+                  [winh unlockFocus])
                 (focus-view *current-view* *current-font-view*))))))))
 
 
@@ -385,7 +306,7 @@ DO:             The WITH-FOCUSED-VIEW macro executes BODY with the
 VIEW:           A view installed in a window, or NIL.  If NIL, the
                 current GrafPort is set to an invisible GrafPort.
 "
-  (let ((sym (if (and view (symbolp view) (eq view (macroexpand view env)))
+  (let ((sym (if (and view (symbolp view) (eql view (macroexpand view env)))
                  view
                  (gensym))))
     `(call-with-focused-view ,view
@@ -403,7 +324,7 @@ DO:             The macro with-font-focused-view focuses on the font
 VIEW:           A view installed in a window, or NIL.  If NIL, the
                 current GrafPort is set to an invisible GrafPort.
 "
-  (let ((sym (if (and view (symbolp view) (eq view (macroexpand view env)))
+  (let ((sym (if (and view (symbolp view) (eql view (macroexpand view env)))
                  view
                  (gensym)))
         (vview (gensym)))
@@ -416,7 +337,7 @@ VIEW:           A view installed in a window, or NIL.  If NIL, the
 
 
 (defun refocus-view (view)
-  (when (eq view *current-view*)
+  (when (eql view *current-view*)
     (setq *current-view* nil)
     (focus-view view *current-font-view*)))
 
@@ -439,7 +360,7 @@ VIEW:           A view or subview, but not a window. Instances of
 WINDOW:         A window.
 ")
   (:method :before ((view simple-view) window)
-    (assert (eq (view-window view) window)))
+    (assert (eql (view-window view) window)))
   (:method :before ((view view) window)
     (declare (ignore window))
     (setf (view-clip-region-slot view) (new-region)
@@ -480,7 +401,7 @@ VIEW:           A view or subview, but not a window.  Instances of
   (:documentation "
 DO:             Add the VIEW to container.
 
-POST:           (eq (view-container view) container)
+POST:           (eql (view-container view) container)
 
 RETURN:         VIEW.
 ")
@@ -522,10 +443,10 @@ NEW-CONTAINER:  The new container of the view.
     ;; Note: The dialog code depends on the fact that the view-container slot is
     ;; changed AFTER the WPTR is changed.
     (let ((old-container (view-container view)))
-      (unless (eq new-container old-container)    
+      (unless (eql new-container old-container)    
         (when new-container
           (check-type new-container view)
-          (when (or (eq new-container view)
+          (when (or (eql new-container view)
                     (view-contains-p view new-container))
             (error 'view-error :view view
                                :format-control "Attempt to make ~S contain itself."
@@ -536,25 +457,25 @@ NEW-CONTAINER:  The new container of the view.
                (current-font-view *current-font-view*))
           (when old-container
             (invalidate-view view t)
-            (when (eq view current-view)
+            (when (eql view current-view)
               (focus-view nil))
             ;; Note: remove-view-from-superview doesn't modify the
             ;;       view-container.  This is important because
             ;;       remove-view-from-window methods use
             ;;       view-container (eg. to focus-view).
             (remove-view-from-superview view)
-            (unless (eq new-window old-window)
+            (unless (eql new-window old-window)
               (remove-view-from-window view))
             (setf (slot-value view 'view-container) nil))
           ;; -
-          (when (and (null new-container) (eq *mouse-view* view))
+          (when (and (null new-container) (eql *mouse-view* view))
             (setf *mouse-view* nil))
           (when new-container
             (add-view-to-container view new-container)
-            (unless (eq new-window old-window)
+            (unless (eql new-window old-window)
               (install-view-in-window view new-window))
             (invalidate-view view)
-            (when (eq view current-view)
+            (when (eql view current-view)
               (focus-view view current-font-view))
             (if (and new-window (window-active-p new-window))
                 (view-activate-event-handler view)
@@ -608,7 +529,7 @@ SUBVIEWS:       A list of view or simple view, but not a window;
       :for container = (view-container contained-view)
         :then (view-container container)
       :while container 
-        :thereis (eq container view)))
+        :thereis (eql container view)))
   (:method ((view null) contained-view)
     (declare (ignore contained-view))
     nil))
@@ -682,13 +603,13 @@ RETURN:         The first subview of view whose nickname is name. The
                 added to view.
 
 NAME:           Any object, but usually a symbol.  Nicknames are
-                compared using EQ.
+                compared using EQL.
 
 VIEW:           A view.
 ")
   (:method (name (view simple-view))
     (dovector (subview (view-subviews view))
-      (if (eq name (view-nick-name subview))
+      (if (eql name (view-nick-name subview))
           (return subview)))))
 
 
@@ -706,7 +627,7 @@ DO:             Performs a search in view’s container and returns the
 VIEW:           A simple view.
 
 NAME:           Any object, but usually a symbol.  Nicknames are
-                compared using EQ.
+                compared using EQL.
 ")
   (:method ((view simple-view) name)
     (let ((container (view-container view)))
@@ -1361,6 +1282,20 @@ CONTAINER:      The container of the view.
 
 
 
+(defun %view-draw-contents-with-focused-view (view focused-view visrgn cliprgn)
+  (declare (ignore visrgn cliprgn)) ; for now ; we could compute a clip rect.
+  (let ((window (view-window view)))
+    (when window #-(and) (and window
+                              (with-handle (winh window)
+                                [winh isVisible]))
+          (with-focused-view focused-view
+            (view-draw-contents view))
+          #-(and) (with-temp-rgns (visrgn cliprgn)
+                    (get-window-visrgn wptr visrgn)
+                    (get-window-cliprgn wptr cliprgn)
+                    (when (regions-overlap-p visrgn cliprgn)
+                      (view-draw-contents view))))))
+
 (defgeneric view-focus-and-draw-contents (view &optional visrgn cliprgn)
   (:documentation "
 The generic function VIEW-FOCUS-AND-DRAW-CONTENTS is used whenever a
@@ -1374,19 +1309,10 @@ VIEW:           A simple view or view.
 VISRGN, CLIPRGN Region records from the view’s wptr.
 ")
   (:method ((view simple-view) &optional visrgn cliprgn)
-    (declare (ignore visrgn cliprgn)) ; for now ; we could compute a clip rect.
-    (with-focused-view (view-container view)
-      (view-draw-contents view)))
+    (%view-draw-contents-with-focused-view view (view-container view) visrgn cliprgn))
 
   (:method ((view view) &optional visrgn cliprgn)
-    (declare (ignore visrgn cliprgn)) ; for now ; we could compute a clip rect.
-    (with-focused-view view
-      (view-draw-contents view)
-      #-(and) (with-temp-rgns (visrgn cliprgn)
-                (get-window-visrgn wptr visrgn)
-                (get-window-cliprgn wptr cliprgn)
-                (when (regions-overlap-p visrgn cliprgn)
-                  (view-draw-contents view))))))
+    (%view-draw-contents-with-focused-view view view visrgn cliprgn)))
 
 
 (defmethod view-draw-contents :before ((view simple-view))
@@ -1395,6 +1321,9 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
                 :already-current (eql view *current-view*)
                 :view view
                 :current *current-view*))
+
+(defmethod view-draw-contents ((view simple-view))
+  (values))
 
 (defmethod view-draw-contents ((view view))
   ;; bug for bug compatibility :-(

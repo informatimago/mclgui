@@ -195,7 +195,7 @@ DRAW-MENUBAR-IF.  The menubar is not redrawn automatically.
   (:method ((mb menubar))
     ;; [[[NSApplication sharedApplication] mainMenu] removeAllItems]
     (dolist (menu (nreverse (menubar-menus mb)) mb)
-      (unless (eq *apple-menu* menu)
+      (unless (eql *apple-menu* menu)
         (menu-deinstall menu)))))
 
 
@@ -410,7 +410,7 @@ RETURN:         NIL.
 RETURN:         Whether the menu is installed.
 ")
   (:method ((menu menu))
-    (eq (menubar-menu *menubar*) (menu-owner menu))))
+    (eql (menubar-menu *menubar*) (menu-owner menu))))
 
 
 
@@ -460,7 +460,7 @@ You can specialize menu-update, but you normally do not need to call
 it. (It is called by the MCL run-time system.)
 ")
   (:method ((menu menu))
-    (format-trace 'menu-update menu) ; TODO: cf. NSMenuValidation
+    ;; TODO: cf. NSMenuValidation
     (let ((updater (menu-update-function menu)))
       (if updater
           (funcall updater menu)
@@ -663,7 +663,7 @@ RETURN:         NEW-MARK.
     (setq new-mark
           (cond ((characterp new-mark) new-mark)
                 ((integerp new-mark)   (code-char new-mark))
-                ((eq t new-mark)       *check-mark*)
+                ((eql t new-mark)       *check-mark*)
                 ((null new-mark)       nil)))
     (unless (eql new-mark (menu-item-check-mark item))
       (setf (slot-value item 'checkedp) new-mark)
@@ -776,7 +776,7 @@ RETURN:         NIL.
                                 (when (and (typep item 'menu)
                                            (menu-installed-p item)
                                            (menu-owner item)
-                                           (not (eq menu (menu-owner item))))
+                                           (not (eql menu (menu-owner item))))
                                   (error 'menu-already-installed-error :menu item))
                                 item)
                               menu-items)))
@@ -805,7 +805,7 @@ RETURN:         NIL.
     (dolist (item menu-items)
       (when item
         (let ((owner (menu-item-owner item)))
-          (when (and owner (eq owner menu))
+          (when (and owner (eql owner menu))
             (with-handle (nsmenu menu)
               (let ((nsitem (if (typep item 'menu)
                                 (handle-of-menu-item-of item)
@@ -961,7 +961,7 @@ This is the menu-item-update-function for the items in the Edit menu.
                         (rplaca new-items item)
                         (setf new-items (cdr new-items))
                         (incf nitems)
-                        (when (and order-ok (not (eq item (car items))))
+                        (when (and order-ok (not (eql item (car items))))
                           (setf order-ok nil))
                         (setf items (cdr items)))))))
               (when (or (not order-ok)
@@ -1256,8 +1256,15 @@ RETURN:         The list of MENUs collected.
 
 
 (defun edit-menu ()
-  (format-trace "edit-menu" "this is not correct")
-  (find-menu "Edit"))
+  (find-menu "Edit")
+  ;; TODO: see if we need something more sophisticated like:
+  #-(and) (let ((menus (cdr %menubar)))
+            (if (memq *edit-menu* menus)
+                *edit-menu*
+                (dolist (menu menus *edit-menu*)
+                  (dolist (item (slot-value menu 'item-list))
+                    (when (eq (command-key item) #\X)
+                      (return-from find-edit-menu menu)))))))
 
 ;; (let ((bar [[NSApplication sharedApplication]mainMenu]))
 ;;   (dotimes (i [bar numberOfItems])

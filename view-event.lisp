@@ -130,9 +130,9 @@
 (defmethod remove-key-handler ((item simple-view) &optional (dialog (view-window item)))
   (without-interrupts
     (when dialog
-      (when (eq item (%get-current-key-handler dialog))
+      (when (eql item (%get-current-key-handler dialog))
         (change-key-handler dialog)
-        (when (eq item (%get-current-key-handler dialog)) ;still current, so only one
+        (when (eql item (%get-current-key-handler dialog)) ;still current, so only one
           (set-current-key-handler dialog nil)))
       (setf (%get-key-handler-list dialog) (delete item (%get-key-handler-list dialog))))))
 

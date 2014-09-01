@@ -337,12 +337,6 @@ CLASS:          A class used to filter the result. The frontmost
   nil)
 
 
-
-
-(objc:define-objc-method ((:void do-close) mclgui-window)
-  (format-trace "-[MclguiWindow doClose]")
-  (objc:send-super 'close))
-
 (defgeneric window-close (window)
   (:documentation "
 The WINDOW-CLOSE generic function closes the window.  The associated
@@ -353,8 +347,8 @@ The MCL event system calls WINDOW-CLOSE when the user clicks a window’s
 close box or chooses Close from the File menu.
 ")
   (:method ((window window))
-    (with-handle (handle window)
-      [handle doClose])
+    (with-handle (winh window)
+      [winh doClose])
     (delete-from-list *window-list* window)
     (release window)
     (values)))
@@ -372,7 +366,7 @@ close box or chooses Close from the File menu.
       position
       (let ((pos-h (truncate (- *screen-width*  (point-h size)) 2))
             (pos-v (truncate (- *screen-height* (point-v size)) 2)))
-        (cond ((eq position :centered)
+        (cond ((eql position :centered)
                (make-point pos-h pos-v))
               ((atom position)
                (error 'simple-type-error
@@ -572,7 +566,7 @@ NEW-TITLE:      A string to be used as the new title.
         (when nswindow
           (on-main-thread [nswindow orderOut:nswindow])))
       (setf (slot-value window 'visiblep) nil)
-      (when (eq window *selected-window*)
+      (when (eql window *selected-window*)
         (window-select (front-window))))
     window))
 
@@ -732,13 +726,13 @@ INCLUDE-INVISIBLES:
     ;;               (let ((selected *selected-window*))
     ;;                 (if (set-window-layer-internal 
     ;;                      w (max *windoid-count* new-layer) include-invisibles)
-    ;;                     (when (eq w selected)
+    ;;                     (when (eql w selected)
     ;;                       (let ((new-selected (front-window)))
-    ;;                         (unless (eq w new-selected)
+    ;;                         (unless (eql w new-selected)
     ;;                           (view-deactivate-event-handler w)
     ;;                           (setq *selected-window* new-selected)
     ;;                           (view-activate-event-handler new-selected))))
-    ;;                     (unless (or (not visible?) (eq w selected))
+    ;;                     (unless (or (not visible?) (eql w selected))
     ;;                       (view-deactivate-event-handler selected)
     ;;                       (setq *selected-window* w)
     ;;                       (view-activate-event-handler w)))))))))
@@ -828,7 +822,7 @@ DO:             Bring WINDOW to the front, activate it, and show
 
   (:method ((window window))
     (setf *last-mouse-click-window* window)
-    (if (eq window *selected-window*)
+    (if (eql window *selected-window*)
         (unless (window-active-p window)
           (view-activate-event-handler window))
         (progn
@@ -1007,7 +1001,7 @@ DESCRIPTION:    The WINDOW-NEEDS-SAVING-P generic function determines
          (dolist (method methods)
            (when (and (null (method-qualifiers method))
                       (let ((spec (car (method-specializers method))))
-                        (and (not (eq spec window-class))
+                        (and (not (eql spec window-class))
                              (if (typep spec 'eql-specializer)
                                  (eql (eql-specializer-object spec) w)
                                  (member spec cpl)))))
@@ -1035,7 +1029,7 @@ RETURN:         A BOOLEAN value indicating whether view can perform
     ;; method other than the one that is specialized on the class
     ;; named window rather than just calling method-exists-p
     (cond
-      ((and (eq op 'undo)
+      ((and (eql op 'undo)
             (method-exists-p 'window-can-undo-p view))
        (funcall 'window-can-undo-p view))
       ((non-window-method-exists-p op view))                          
@@ -1184,13 +1178,16 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 
 
 (defmethod view-draw-contents ((window window))
-  (format-trace '(view-draw-contents window))
-  (with-focused-view window
-    (let ((bounds (view-bounds window)))
-      ;; TODO: originally, it seems MCL didn't erase it, but relied on MacOS visrg/cliprgn/etc.
-      #-(and) (erase-rect* (rect-left bounds) (rect-top bounds)
-                   (rect-width bounds) (rect-height bounds))
-      (call-next-method))))
+  (when (window-visiblep window)
+    (time/stdout
+     #+debug-view (format-trace '(view-draw-contents window))
+     (with-focused-view window
+       (call-next-method)
+       ;; TODO: originally, it seems MCL didn't erase it, but relied on MacOS visrg/cliprgn/etc.
+       #-(and) (let ((bounds (view-bounds window)))
+                 (erase-rect* (rect-left bounds) (rect-top bounds)
+                              (rect-width bounds) (rect-height bounds))
+                 (call-next-method))))))
 
 
 ;;;---------------------------------------------------------------------

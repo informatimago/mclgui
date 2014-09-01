@@ -40,7 +40,7 @@
 
 
 (defmethod view-key-event-handler ((dialog keystroke-action-dialog) char)
-  (if (or (eq char #\return) (eq char :enter) (EQ CHAR #\ESC))
+  (if (or (eql char #\return) (eql char :enter) (EQL CHAR #\ESC))
       (call-next-method)
       (let ((item (find char (dialog-items dialog 'dialog-item t)
                         :test (lambda (char item)

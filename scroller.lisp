@@ -267,7 +267,7 @@
  
 (defmethod scroll-bar-changed ((view scroller-mixin) scroll-bar)
   (let* ((new-value (scroll-bar-setting scroll-bar))
-         (horizontal-p (eq (scroll-bar-direction scroll-bar) :horizontal))
+         (horizontal-p (eql (scroll-bar-direction scroll-bar) :horizontal))
          (old-pos (view-scroll-position view)))
     (set-view-scroll-position 
      view

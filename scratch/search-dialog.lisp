@@ -80,9 +80,9 @@
 (defun do-search (w search-type)
   (let ((text (dialog-item-text (view-named 'search-text-item w)))
         (sw (target)))
-    (when (eq search-type :from-top)
+    (when (eql search-type :from-top)
       (window-top sw))
-    (window-search sw text (eq search-type :reverse)))
+    (window-search sw text (eql search-type :reverse)))
   (enable-replace w))
 
 (defun do-replace (w)

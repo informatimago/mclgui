@@ -140,10 +140,6 @@ NEW-SCROLLEE: The new scrollee of item.
 
 
 
-(defmethod update-handle ((view scroll-bar-dialog-item))
-  (call-next-method) ; for now
-  (handle view))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;initialize-instance
@@ -216,13 +212,13 @@ NEW-SCROLLEE: The new scrollee of item.
            (h (point-h size))
            (v (point-v size)))
       (setf (pane-splitter item) splitter)
-      (if (eq direction :vertical)
+      (if (eql direction :vertical)
           (progn
             (decf length v)
             (when view-position
               (let ((p-h (point-h view-position))
                     (p-v (point-v view-position)))
-                (if (eq pane-splitter :top)
+                (if (eql pane-splitter :top)
                     (progn
                       (set-view-position splitter view-position)
                       (setf view-position (make-point p-h (+ p-v v))))
@@ -233,7 +229,7 @@ NEW-SCROLLEE: The new scrollee of item.
             (when view-position
               (let ((p-h (point-h view-position))
                     (p-v (point-v view-position)))
-                (if (eq pane-splitter :left)
+                (if (eql pane-splitter :left)
                     (progn
                       (set-view-position splitter view-position)
                       (setf view-position (make-point (+ p-h h) p-v)))
@@ -499,7 +495,7 @@ NEW-SCROLLEE: The new scrollee of item.
 (defvar *scroll-bar-item* nil)
 
 (defmethod dialog-item-disable ((item scroll-bar-dialog-item))
-  (if (eq item *scroll-bar-item*)
+  (if (eql item *scroll-bar-item*)
       (setf (dialog-item-enabled-p item) nil)
       (call-next-method)))
 
@@ -522,7 +518,7 @@ NEW-SCROLLEE: The new scrollee of item.
   (let ((item *scroll-bar-item*))
     (track-scroll-bar
      item
-     (if (eq part #.#$kcontrolIndicatorPart)  ;; thumb
+     (if (eql part #.#$kcontrolIndicatorPart)  ;; thumb
          (outside-scroll-bar-setting item sb-handle)
          (scroll-bar-setting item))
      (case part
@@ -539,7 +535,7 @@ NEW-SCROLLEE: The new scrollee of item.
   (let* ((old-setting (scroll-bar-setting item))
          (min (scroll-bar-min item))
          (max (scroll-bar-max item))
-         (horizontal? (eq (scroll-bar-direction item) :horizontal))
+         (horizontal? (eql (scroll-bar-direction item) :horizontal))
          (position (view-position item))
          (last-mouse (event-where *current-event*))
          (size (view-size item))
@@ -619,7 +615,7 @@ NEW-SCROLLEE: The new scrollee of item.
   (let* ((sb-handle (dialog-item-handle item))
          (part (#_TestControl sb-handle where)))
     (with-timer      
-        (cond ((eq part #.#$kcontrolIndicatorPart)  ;; thumb
+        (cond ((eql part #.#$kcontrolIndicatorPart)  ;; thumb
                (if (scroll-bar-track-thumb-p item)
                    (track-scroll-bar-thumb item)
                    (progn
@@ -824,7 +820,7 @@ The SCROLL-BAR-LENGTH generic function returns the length of item.
     (let* ((size (view-size item))
            (splitter (pane-splitter item))
            (splitter-size (and splitter (view-size splitter))))
-      (if (eq (scroll-bar-direction item) :horizontal)
+      (if (eql (scroll-bar-direction item) :horizontal)
           (+ (point-h size) (if splitter (point-h splitter-size) 0))
           (+ (point-v size) (if splitter (point-v splitter-size) 0))))))
 
@@ -861,19 +857,19 @@ NEW-LENGTH:     The new length of item.
         (let ((size (view-size splitter)))
           (decf inner-length
                 (min inner-length
-                     (if (eq direction :horizontal) (point-h size) (point-v size))))))
-      (set-view-size item (if (eq direction :horizontal)
+                     (if (eql direction :horizontal) (point-h size) (point-v size))))))
+      (set-view-size item (if (eql direction :horizontal)
                               (make-point inner-length (scroll-bar-width item))
                               (make-point (scroll-bar-width item) inner-length)))
       (when splitter
         (let ((dir (scroll-bar-direction splitter))
               (pos (pane-splitter-position item))
               (bar-pos (view-position item)))
-          (cond ((and (eq dir :vertical) (member pos '(:bottom  t)))
+          (cond ((and (eql dir :vertical) (member pos '(:bottom  t)))
                  (set-view-position splitter  (make-point (point-h bar-pos)
                                                           (+ (point-v bar-pos)
                                                              inner-length))))
-                ((and (eq dir :horizontal) (member pos '(:right t)))
+                ((and (eql dir :horizontal) (member pos '(:right t)))
                  (set-view-position splitter (make-point (+ (point-h bar-pos)
                                                             inner-length)
                                                          (point-v bar-pos))))))))              
@@ -892,7 +888,7 @@ The scroll-bar-width generic function returns the width of item.
 ")
   (:method ((item scroll-bar-dialog-item))
     (let ((size (view-size item)))
-      (if (eq (scroll-bar-direction item) :horizontal)
+      (if (eql (scroll-bar-direction item) :horizontal)
           (point-v size)
           (point-h size)))))
 
@@ -925,13 +921,13 @@ NEW-VALUE:      The new width of item.
 ")
   (:method ((item scroll-bar-dialog-item) new-width)
     (let ((size (view-size item)))
-      (set-view-size item (if (eq (scroll-bar-direction item) :horizontal)
+      (set-view-size item (if (eql (scroll-bar-direction item) :horizontal)
                               (make-point (point-h size) new-width)
                               (make-point new-width (point-v size)))))
     (let ((splitter (pane-splitter item)))
       (if splitter
           (let ((size (view-size splitter)))
-            (set-view-size splitter (if (eq (scroll-bar-direction splitter) :horizontal)
+            (set-view-size splitter (if (eql (scroll-bar-direction splitter) :horizontal)
                                         (make-point (point-h size) new-width)
                                         (make-point new-width (point-v size)))))))
     new-width))
@@ -966,7 +962,7 @@ NEW-VALUE:      The new width of item.
     (when splitter
       (set-view-container splitter new-container))
     (call-next-method)
-    (when (and new-container (not (eq old-container new-container))) 
+    (when (and new-container (not (eql old-container new-container))) 
       (multiple-value-bind (tl br) (scroll-bar-and-splitter-corners item)
         (invalidate-corners new-container tl br)))))
 
@@ -979,12 +975,12 @@ NEW-VALUE:      The new width of item.
     (when splitter
       (let ((size (view-size item))
             (s-size (view-size splitter)))
-        (if (eq (scroll-bar-direction item) :horizontal)
-            (if (eq splitter-position :left)
+        (if (eql (scroll-bar-direction item) :horizontal)
+            (if (eql splitter-position :left)
                 (progn (set-view-position splitter pos)
                        (incf h (point-h s-size)))
                 (set-view-position splitter (+ h (point-h size)) v))
-            (if (eq splitter-position :top)
+            (if (eql splitter-position :top)
                 (progn (set-view-position splitter pos)
                        (incf v (point-v s-size)))
                 (set-view-position splitter h (+ v (point-v size)))))))
@@ -1032,7 +1028,7 @@ NEW-VALUE:      The new width of item.
 (defmethod initialize-instance ((item pane-splitter) &rest initargs
                                 &key (width 16) (length 5) (direction :vertical))
   (declare (dynamic-extent initargs))
-  (let ((size (if (eq direction :vertical)
+  (let ((size (if (eql direction :vertical)
                   (make-point width length)
                   (make-point length width))))
     (apply #'call-next-method
@@ -1110,7 +1106,7 @@ NEW-VALUE:      The new width of item.
         (let* ((direction (scroll-bar-direction item))
                (mouse-pos (convert-coordinates where (view-container item) container)) ;(view-mouse-position container))
                min max min-pos max-pos drawn pos-accessor line-direction delta pos)
-          (if (eq direction :vertical)
+          (if (eql direction :vertical)
               (setf min (1+ (point-h s-tl))
                     max (- (point-h s-br) 2)
                     min-pos (1+ (point-v s-tl))
@@ -1145,7 +1141,7 @@ NEW-VALUE:      The new width of item.
               (track-and-draw container #'draw-line pos direction delta min-pos max-pos)))
                                         ; Convert back to scrollee's coordinate system
           (setf pos (funcall pos-accessor (convert-coordinates 
-                                           (if (eq direction :horizontal)
+                                           (if (eql direction :horizontal)
                                                (make-point pos 0)
                                                (make-point 0 pos))
                                            container 
@@ -1169,7 +1165,7 @@ NEW-VALUE:      The new width of item.
     ;; (declare (ignore scrollee scroll-bar))
     (niy draw-pane-splitter-outline scrollee scroll-bar pos min max direction)
     #-(and)
-    (if (eq direction :horizontal)
+    (if (eql direction :horizontal)
       (progn (#_MoveTo min pos)
              (#_LineTo max pos))
       (progn (#_MoveTo pos min)
@@ -1182,7 +1178,7 @@ NEW-VALUE:      The new width of item.
     (let* ((window (view-window scrollee))
            (container (view-container scrollee)))
       (multiple-value-bind (tl br) (view-corners scrollee)
-        (when (and container (not (eq container window)))
+        (when (and container (not (eql container window)))
           (setf tl (convert-coordinates tl container window)
                 br (convert-coordinates br container window)))
         (values tl br)))))
@@ -1263,7 +1259,7 @@ NEW-VALUE:      The new width of item.
         (let ((scroll-bar (find-scroll-bar-controlling-point w direction window-pos)))
           (when scroll-bar
             (cond ((and (typep scroll-bar 'fred-v-scroll-bar) ; this is essential
-                        (eq direction :vertical))             ; but this may be redundant?
+                        (eql direction :vertical))             ; but this may be redundant?
                                         ; Don't use a loop on the commonest and most speed-sensitive cases
                    (let* ((view (scroll-bar-scrollee scroll-bar))
                           (frec (frec view)) ; meaningless for non fred-v-scroll-bars
@@ -1274,7 +1270,7 @@ NEW-VALUE:      The new width of item.
                       (frec-screen-line-start frec mark (- delta))
                       )))
                   ((and (typep scroll-bar 'fred-h-scroll-bar)
-                        (eq direction :horizontal))            ; ditto
+                        (eql direction :horizontal))            ; ditto
                    (let* ((view (scroll-bar-scrollee scroll-bar))
                           (hscroll (fred-hscroll view)))
                      (declare (fixnum hscroll))
@@ -1308,9 +1304,9 @@ NEW-VALUE:      The new width of item.
           (#_GetEventParameter eventref #$keventParamMouseWheelAxis #$typeMouseWheelAxis (%null-ptr) 2 (%null-ptr) axis)
           (let* ((the-axis (%get-word axis)))
             (setf direction
-                  (if (eq the-axis #$kEventMouseWheelAxisX)
+                  (if (eql the-axis #$kEventMouseWheelAxisX)
                       :horizontal
-                      (if (eq the-axis #$kEventMouseWheelAxisY)
+                      (if (eql the-axis #$kEventMouseWheelAxisY)
                           :vertical))))
           (when direction
                                         ;#+ignore ;; wherep not used?

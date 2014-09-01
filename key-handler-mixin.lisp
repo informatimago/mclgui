@@ -240,9 +240,9 @@ the editable-text dialog item.
 (defmethod dialog-item-disable :before ((item key-handler-mixin))
   (let ((my-dialog (view-window item)))
     (when my-dialog
-      (when (eq item (current-key-handler my-dialog))
+      (when (eql item (current-key-handler my-dialog))
         (change-key-handler my-dialog))
-      (when (eq item (current-key-handler my-dialog)) ;still current, so only one
+      (when (eql item (current-key-handler my-dialog)) ;still current, so only one
         (niy dialog-item-disable :before item)#-(and)
         (setf (%get-current-key-handler my-dialog) nil)))))
 
@@ -261,7 +261,7 @@ the editable-text dialog item.
 (defmethod view-cursor ((item key-handler-mixin) point)
   (declare (ignore point))
   (let ((w (view-window item)))
-    (if (and w (eq item (current-key-handler w))) 
+    (if (and w (eql item (current-key-handler w))) 
       *i-beam-cursor*
       *arrow-cursor*)))
 

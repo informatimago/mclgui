@@ -101,7 +101,7 @@
   ;;     (ccl::report-bad-arg cursor 'buffer-mark)))
   ;; (setf (fr.owner frec) owner)
   ;; (let ((rgn (fr.selrgn frec)))
-  ;;   (when (or (eq (ccl::%type-of rgn) 'dead-macptr)  ; may have been in a saved world
+  ;;   (when (or (eql (ccl::%type-of rgn) 'dead-macptr)  ; may have been in a saved world
   ;;             (%null-ptr-p rgn))
   ;;     (setf (fr.selrgn frec) (setq rgn (%new-rgn)))
   ;;     (setf (fr.sel-valid-p frec) nil))

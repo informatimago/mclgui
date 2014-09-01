@@ -466,7 +466,7 @@
          (let ()
            (with-focused-view w              
              (let* ((marker (char-code (fred-title-marker w))))  ;<<
-               (unless (eq marker 
+               (unless (eql marker 
                            (%hget-byte (%get-ptr wptr $wtitleHandle) 1))  ;; thou should be shot for this
                  (let* ((buffer (fred-buffer fred))
                         owner wptr
@@ -476,7 +476,7 @@
                                                  (setq owner (fr.owner frec)))
                                         (let ((w2 (view-window owner)))
                                           (when (typep w2 'fred-window)
-                                            (when (not (eq marker 
+                                            (when (not (eql marker 
                                                        (%hget-byte (%get-ptr (setq wptr (wptr w2))
                                                                              $wtitleHandle)
                                                                    1)))
@@ -511,8 +511,8 @@
         (without-interrupts 
            (with-focused-view w              
              (let* ((marker (fred-title-marker w)))  ;<<  what mark should be in the title               
-               (unless (eq marker (saved-title-marker w))  ;; whats in the title now
-                 (if (eq marker (modified-marker w))
+               (unless (eql marker (saved-title-marker w))  ;; whats in the title now
+                 (if (eql marker (modified-marker w))
                    (set-wptr-modified wptr t)
                    (set-wptr-modified wptr nil))
                  (set-saved-title-marker w marker)
@@ -522,10 +522,10 @@
                    (let* ((buffer (fred-buffer fred))
                           (mapper (lambda (win2)
                                       (let* ((buf2 (fred-buffer win2)))
-                                        (when (and (not (eq win2 w))
+                                        (when (and (not (eql win2 w))
                                                    (same-buffer-p buf2 buffer))
-                                          (when (not (eq marker (saved-title-marker win2)))
-                                            (if (eq marker (modified-marker win2))  ;; ??
+                                          (when (not (eql marker (saved-title-marker win2)))
+                                            (if (eql marker (modified-marker win2))  ;; ??
                                               (set-wptr-modified (wptr win2) t)
                                               (set-wptr-modified (wptr win2) nil))                                                
                                             (set-saved-title-marker win2 marker)
@@ -757,7 +757,7 @@
       (let* ((p (or (sneaky-window-package fred)
                     (let ((process (window-process w)))
                       (and process
-                           (not (eq process *current-process*))
+                           (not (eql process *current-process*))
                            (not (process-exhausted-p process))
                            (symbol-value-in-process '*package* process)))
                     *package*)))        
@@ -976,13 +976,13 @@
 (defmethod set-current-key-handler ((w fred-window) view &optional (all nil))
   (declare (ignore all))
   (let  ((old (current-key-handler w)))
-    (unless (eq old view)        
+    (unless (eql old view)        
       (call-next-method w view nil)
       (when view
         (let ()
           ;(view-activate-event-handler view)          
           (when (and old ; maybe nuke this??
-                     ;(eq (type-of old)(type-of view))  ; eschew mini-buffer
+                     ;(eql (type-of old)(type-of view))  ; eschew mini-buffer
                      (not (same-buffer-p (fred-buffer view)(fred-buffer old))))            
             (let ((file (window-filename view)))
               (when file (set-window-title w (application-pathname-to-window-title *application* w file)))))))
@@ -992,7 +992,7 @@
 #|
 ;(defun key-handler-hammer (view key)
   (dolist (v (key-handler-list (view-window view)))
-    (unless (eq v key)
+    (unless (eql v key)
       (view-deactivate-event-handler v))))
 |#
 
@@ -1176,7 +1176,7 @@
          (direction (scroll-bar-direction pane-splitter))
          (view-pos (view-position view))
          (view-size (view-size view))
-         (accessor (if (eq direction :vertical) #'point-v #'point-h))
+         (accessor (if (eql direction :vertical) #'point-v #'point-h))
          (pos (+ (funcall accessor view-pos) (round (funcall accessor view-size) 2))))
     ; Acount for size of new scroll bar
     (incf pos 8)
@@ -1197,14 +1197,14 @@
            (h-scroller (h-scroller view))
            (v-scroller (v-scroller view))
            poofed)
-      (when (or (and (eq direction :vertical)
+      (when (or (and (eql direction :vertical)
                      (or (< (- v pos)(point-v min-size))
                          (< (+ pos 1) (point-v min-size))))
-                (and (eq direction :horizontal) 
+                (and (eql direction :horizontal) 
                      (or (< (+ pos 1)(point-h min-size))
                          (< (- h pos) (point-h min-size)))))        
         (return-from split-pane nil))
-      (when (eq direction :horizontal)
+      (when (eql direction :horizontal)
                  (let ((mb (view-mini-buffer w)))
                    (when (and mb
                               (setq mb (view-container mb))
@@ -1222,7 +1222,7 @@
                 (file-modcnt (slot-value fred 'file-modcnt))
                 (new-container-pos old-pos)
                 (new-container (if (and (typep container 'split-view)
-                                        (eq (split-view-direction container) direction))
+                                        (eql (split-view-direction container) direction))
                                  container
                                  (make-instance 'split-view
                                    :view-size old-size
@@ -1231,16 +1231,16 @@
                                    ;:ordered-subviews (list view)
                                    :split-view-direction direction)))
                 new new-pos new-size new-new-size)
-           (unless (eq container new-container)
+           (unless (eql container new-container)
              (if (typep container 'split-view)
                (let ((ph (point-h old-pos))
                      (pv (point-v old-pos)))
-                 (setq old-pos (make-point (if (eq ph -1) 0 ph)(if (eq pv -1) 0 pv))))
+                 (setq old-pos (make-point (if (eql ph -1) 0 ph)(if (eql pv -1) 0 pv))))
                (setq old-pos #@(0 0))))
-           (if (eq direction :vertical) ; in the vertical bar we split horizontally
+           (if (eql direction :vertical) ; in the vertical bar we split horizontally
              (progn 
                (setq new-size (make-point h (- v pos ))
-                     new-pos (make-point (if (eq (point-h old-pos) -1) -1 0)
+                     new-pos (make-point (if (eql (point-h old-pos) -1) -1 0)
                                          (+ (point-v old-pos) pos)))
                (setq new-new-size (make-point h (+ pos 1))))
              (progn 
@@ -1253,7 +1253,7 @@
                    :buffer (make-mark buf)
                    ;:filename (window-filename fred) ; it reverts the buffer - yech
                    :view-size new-new-size  ; (add-points w-size #@(0 0)) ; huh
-                   :view-position (if (eq new-container container) old-pos #@(0 0))
+                   :view-position (if (eql new-container container) old-pos #@(0 0))
                    :fred-item-class (class-of fred)
                    :grow-box-p nil
                    :view-font (view-font view)
@@ -1269,7 +1269,7 @@
                      (fred-display-start-mark fred))
            #|(set-fred-display-start-mark (fred-item new) 
                                         (fred-display-start-mark fred) t)|#
-           (if (eq container new-container)
+           (if (eql container new-container)
              (progn 
                (set-view-size view new-size)
                (set-view-position view new-pos)
@@ -1288,7 +1288,7 @@
              (fred-update new)  ; get scroll bars right
              ) 
            (unless poofed
-             (validate-scroll-bar view (if (eq direction :vertical) :horizontal :vertical)))
+             (validate-scroll-bar view (if (eql direction :vertical) :horizontal :vertical)))
            ))))))
 
 (defun kill-erase-region (w)
@@ -1301,7 +1301,7 @@
   (do ((last nil l)
        (l (ordered-subviews container) (cdr l)))
       ((null l))
-    (when (eq (car l) before)
+    (when (eql (car l) before)
       (if last (rplacd last (cons new l))
           (setf (ordered-subviews container) (cons new l)))
       (return))))
@@ -1309,7 +1309,7 @@
 (defmethod replace-view-in-split-view ((container split-view) view new-container)
   (do ((l (ordered-subviews container)(cdr l)))
       ((null l))
-    (when (eq (car l) view)
+    (when (eql (car l) view)
       (rplaca l new-container)
       (call-next-method)
       (return))))
@@ -1485,7 +1485,7 @@
                    (setf (file-modcnt owner) -1)
                    ;(setf (slot-value owner 'my-file-name) new-name)
                    (let ((win (view-window owner)))
-                     (when (and win (not (eq win w)) (typep win 'fred-window))
+                     (when (and win (not (eql win w)) (typep win 'fred-window))
                        (setf (slot-value win 'real-file-name) new-name)
                        (set-window-title win title)))))))
         (declare (dynamic-extent mapper))
@@ -1593,7 +1593,7 @@
     (if (and key (neq key mini))
       key
       (dolist (x (key-handler-list w))
-        (unless (eq x mini)
+        (unless (eql x mini)
           (return x))))))
 
 (defun window-key-handler (w)
@@ -1654,12 +1654,12 @@
                (let* ((inc (cond ((> remainder 0) 1)
                                  ((< remainder 0) -1)
                                  (t 0)))
-                      (size-v (if (eq s mini)
+                      (size-v (if (eql s mini)
                                 (point-v (view-size s))
                                 (%i+ (point-v (view-size s)) delta inc))))
                  (declare (fixnum inc))
                  (setq remainder (- remainder inc))
-                 (if (and (eq s mini) (view-named 'poof s))
+                 (if (and (eql s mini) (view-named 'poof s))
                    (let ((size-v (point-v (view-size s)))
                          (h-scroller (h-scroller last)))
                      
@@ -1756,7 +1756,7 @@
                                          container)) 
                min  max min-pos max-pos drawn line-direction delta
                min-drag-pos max-drag-pos)
-          (if (eq direction :vertical)
+          (if (eql direction :vertical)
             (let* ()
               (setq min (point-h s-tl)     ; min and max are extent of line
                     max (- (point-h s-br) 2)
@@ -1927,8 +1927,8 @@
          (outer (view-container inner)))
     (loop
       (when (null outer)(return inner))
-      (unless (eq inner (car (last (ordered-subviews outer))))
-        (when (eq (split-view-direction outer) direction)
+      (unless (eql inner (car (last (ordered-subviews outer))))
+        (when (eql (split-view-direction outer) direction)
           (return inner)))
       (setq inner outer
             outer (view-container inner)))))
@@ -1940,13 +1940,13 @@
          (views (ordered-subviews container)))
     (do ((l views (cdr l)))
         ((null l))
-      (when (eq (car l) superior)
+      (when (eql (car l) superior)
         (return (cadr l))))))
 
 
 (defun draw-dragger-outline (scrollee dragger pos min max direction flag)
   (declare (ignore scrollee))
-  (if (eq direction :horizontal)
+  (if (eql direction :horizontal)
     (progn (#_MoveTo min pos)
            (#_LineTo max pos)
            (when (not flag)
@@ -1993,7 +1993,7 @@
   ;(declare (ignore dragger))
   (when drawn 
     (let* ((pos-two (view-position view-two))
-           (delta (- pos (if (eq direction :vertical)
+           (delta (- pos (if (eql direction :vertical)
                            (point-v pos-two)
                            (point-h pos-two))))
            (w (view-window view-one))
@@ -2013,7 +2013,7 @@
                    (set-view-size view-two  (- (point-h size2) delta) height)
                    (set-view-size view-one (+ (point-h size1) delta) height))))            
             (kill-erase-region w) ; hit it with a hammer
-            (validate-scroll-bar view-two (if (eq direction :vertical) :horizontal :vertical)))            
+            (validate-scroll-bar view-two (if (eql direction :vertical) :horizontal :vertical)))            
          (t
           (let ((container (view-container view-one))
                 (fudge #@(0 0))
@@ -2038,7 +2038,7 @@
               (when (key-handler-in-p view-one)
                 (set-current-key-handler w (find-a-key-handler view-two) nil))              
               (when (not (remove-ordered-subview view-one container)) ; when it did not get promoted
-                (when (eq (view-container view-two) w)
+                (when (eql (view-container view-two) w)
                   (setq fudge #@(1 1)))                
                 (set-view-position view-two 
                                    (subtract-points (view-position view-one)
@@ -2049,13 +2049,13 @@
               )))))))))
 
 (defun maybe-un-poof (view direction w)
-  (when (and (eq direction :horizontal) (view-mini-buffer w))
-    (when (and (eq (view-container view) w)(eq view (car (last (ordered-subviews w) 2 ))))  ;(typep (elt (ordered-subviews w) 0) 'split-view))
+  (when (and (eql direction :horizontal) (view-mini-buffer w))
+    (when (and (eql (view-container view) w)(eql view (car (last (ordered-subviews w) 2 ))))  ;(typep (elt (ordered-subviews w) 0) 'split-view))
       (un-poof view (view-container (view-mini-buffer w))))))
   
 
 (defmethod validate-scroll-bar ((view scrolling-fred-view) direction)
-  (let ((scroll (if (eq direction :vertical)(v-scroller view)(h-scroller view))))    
+  (let ((scroll (if (eql direction :vertical)(v-scroller view)(h-scroller view))))    
     (when scroll
       (validate-corners view 
                         (scroll-bar-and-splitter-corners scroll)
@@ -2067,7 +2067,7 @@
   ; and that they are standard width and full length
   (let ((size (view-size view)))    
     (validate-corners view 
-                      (if (eq direction :vertical)
+                      (if (eql direction :vertical)
                         (make-point (- (point-h size) 16) 0)
                         (make-point 0 (- (point-v size) 16)))
                       size)))
@@ -2077,8 +2077,8 @@
          (views (ordered-subviews c)))
     (do ((l  views (cdr l)))
         ((null l) nil)
-      (when (eq (car l) v1)
-        (return (eq (cadr l) v2))))))
+      (when (eql (car l) v1)
+        (return (eql (cadr l) v2))))))
 
 (defmethod dragger-direction ((view split-view))
   (dragger-direction (car (last (ordered-subviews view)))))
@@ -2128,7 +2128,7 @@
   (let* ((outer-subs (ordered-subviews container))
          direction)
     (if (and (typep new 'split-view)
-             (eq (setq direction (split-view-direction  new))
+             (eql (setq direction (split-view-direction  new))
                  (split-view-direction container)))
       ; replace old with subviews of new
       (let ((inner-subs (ordered-subviews new)))        
@@ -2149,7 +2149,7 @@
         (do ((last nil l)
              (l outer-subs (cdr l)))
             ((null l))
-          (when (eq old (car l))
+          (when (eql old (car l))
             (cond
              (last (rplacd last inner-subs)
                    (rplacd (last inner-subs)(cdr l)))
@@ -2228,7 +2228,7 @@
 (defmethod drag-split ((w fred-window) 
                        dragger pos direction drawn in-drag-range view-one view-two)
   (when drawn
-    (if (eq direction :horizontal) (error "asdf"))
+    (if (eql direction :horizontal) (error "asdf"))
     (let* ((delta (- pos (point-v (view-position view-two))))
            (subviews (ordered-subviews w))
            (size1 (view-size view-one))
@@ -2239,7 +2239,7 @@
           (let* ((width (point-h size1))
                  (mb (view-container (view-mini-buffer w)))
                  (v (- (point-v size2) delta)))
-            (when (eq view-two mb)
+            (when (eql view-two mb)
               (when (<= v 15)
                 (when (not (typep view-one 'split-view))
                   (un-poof  view-one view-two))
@@ -2247,7 +2247,7 @@
             (set-view-position view-two -1 pos)
             (set-view-size view-one width (+ (point-v size1) delta))
             (set-view-size view-two width v)
-            (if (eq view-two mb)
+            (if (eql view-two mb)
               (add-remove-scroll-bars mb)
               (progn 
                 (kill-erase-region (view-window view-one))
@@ -2255,7 +2255,7 @@
          (t (when (> (length subviews) 2)
               (cond
                ((> delta 0) ; lose inferior - unless last
-                (when (eq view-two (car (last subviews)))
+                (when (eql view-two (car (last subviews)))
                   (return-from drag-split nil))
                 (let* ((mb (view-mini-buffer w))
                        (mb-container (and mb (view-container mb)))
@@ -2299,7 +2299,7 @@
     (when (key-handler-in-p v)(return t))))
 
 (defmethod key-handler-in-p ((view scrolling-fred-view))
-  (eq (current-key-handler (view-window view)) (fred-item view)))
+  (eql (current-key-handler (view-window view)) (fred-item view)))
 
 
 
@@ -2336,7 +2336,7 @@
          (h-scroll (h-scroller container))
          (v-scroll (v-scroller container))
          (file (catch-cancel (choose-file-dialog :mac-file-type :text))))
-      (unless (eq file :cancel)        
+      (unless (eql file :cancel)        
         (set-view-container item nil) ; more to do here?????
         ; have to fix the scrollee of the pane-splitter
         ; and the scroll-bars
@@ -2369,7 +2369,7 @@
          ;(h-scroll (h-scroller container))
          ;(v-scroll (v-scroller container))
          (file (catch-cancel (choose-file-dialog :mac-file-type :text))))
-      (unless (eq file :cancel)
+      (unless (eql file :cancel)
         (let ((buf (fred-buffer item)))
           (buffer-delete buf 0 t)
           (buffer-insert-file buf file)
@@ -2501,7 +2501,7 @@
                   (when (< d distance)
                     (setq distance d
                           index i)
-                    (when (eq d 0) (return))))))))
+                    (when (eql d 0) (return))))))))
         index))))
 |#
 

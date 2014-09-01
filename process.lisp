@@ -57,7 +57,7 @@ RETURN: A form performing BODY on the main thread.
                ((keywordp message)
                 (oclo:lisp-to-objc-message (list message)))
                ((and (listp message)
-                     (eq 'quote (first message))
+                     (eql 'quote (first message))
                      (symbolp (second message)))
                 (oclo:lisp-to-objc-message (list (second message))))
                (t
@@ -85,7 +85,7 @@ RETURN: A form performing BODY on the main thread.
             (cond
               ((and (listp form)
                     (<= 3 (length form) 4)
-                    (eq 'objc:send (first form)))
+                    (eql 'objc:send (first form)))
                (destructuring-bind (send recipient message &optional argument) form
                  (declare (ignore send))
                  ;; TODO: eval once arguments!
@@ -95,7 +95,7 @@ RETURN: A form performing BODY on the main thread.
                                      waitUntilDone: ,wait])))
               ((and (listp form)
                     (<= 2 (length form) 3)
-                    (eq 'objc:objc-message-send-super (first form)))
+                    (eql 'objc:objc-message-send-super (first form)))
                (destructuring-bind (send message &optional argument) form
                  (declare (ignore send))
                  ;; TODO: eval once arguments!

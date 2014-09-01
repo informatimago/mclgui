@@ -118,7 +118,7 @@
           [path setLineCapStyle:#$NSSquareLineCapStyle]
           ;; stroke draws between the pixels, so we'll fill the line always.
           ;; (if (and (= #@(1 1) size)
-          ;;          (eq *black-pattern* (pen-state-pattern pen)))
+          ;;          (eql *black-pattern* (pen-state-pattern pen)))
           ;;     (progn
           ;;       [path moveToPoint:(ns:make-ns-point x1 y1)]
           ;;       [path lineToPoint:(ns:make-ns-point x2 y2)]
@@ -155,7 +155,7 @@
         (let* ((pen  (view-pen window))
                (size (pen-size pen)))
           (if (and nil (= #@(1 1) size)
-                   (eq *black-pattern* (pen-state-pattern pen)))
+                   (eql *black-pattern* (pen-state-pattern pen)))
             (#_NSFrameRect (ns:make-ns-rect x y w h))
             (let ((path [NSBezierPath bezierPath])
                   (sx (point-h size))
@@ -247,7 +247,7 @@
         (let* ((pen  (view-pen window))
                (size (pen-size pen)))
           (if (and (= #@(1 1) size)
-                   (eq *black-pattern* (pen-state-pattern pen)))
+                   (eql *black-pattern* (pen-state-pattern pen)))
             [[NSBezierPath bezierPathWithOvalInRect: (ns:make-ns-rect x y w h)] stroke]
             (let ((path [NSBezierPath bezierPath])
                   (sx (point-h size))

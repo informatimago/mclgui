@@ -82,12 +82,12 @@
   #-(and)
   (let ((dialog (view-window item)))
     (when dialog
-      (cond ((eq item (%get-default-button dialog))
+      (cond ((eql item (%get-default-button dialog))
              (setf (%get-default-button dialog) nil)
              ;; dunno if this matters
              (when (and (wptr dialog)(dialog-item-handle item))
                (#_setwindowdefaultbutton (wptr dialog) (%null-ptr))))
-            ((eq item (%get-cancel-button dialog))
+            ((eql item (%get-cancel-button dialog))
              (setf (%get-cancel-button dialog) nil))))))
 
 

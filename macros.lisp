@@ -83,6 +83,12 @@
           (ignore-errors (out *standard-output*))))
     (first arguments)))
 
+(defmacro time/stdout (&body body)
+  `(let ((trace-output *trace-output*))
+     (let ((*trace-output* *standard-output*))
+       (time (let ((*trace-output* trace-output))
+               ,@body)))))
+
 
 (define-modify-macro appendf (&rest args) 
   append "Append onto list")

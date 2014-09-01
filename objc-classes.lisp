@@ -567,7 +567,7 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(setFrame:(:<NSR>ect)rect)
   resultType:(:void)
   body:
-  (format-trace "-[NSWindow setFrame:]")
+  #+debug-objc (format-trace "-[NSWindow setFrame:]")
   [self setFrame:rect display:YES]]
 
 
@@ -576,7 +576,7 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(orderBelow:(:id)otherWindow)
   resultType:(:void)
   body:
-  (format-trace "-[NSWindow orderBelow:]")
+  #+debug-objc (format-trace "-[NSWindow orderBelow:]")
   [self orderWindow:#$NSWindowBelow relativeTo:[otherWindow windowNumber]]]
 
 
@@ -638,6 +638,10 @@ DO:             Evaluates the BODY in a lexical environment where
   [super close]]
 
 
+;; (objc:define-objc-method ((:void do-close) mclgui-window)
+;;   ;; (format-trace "-[MclguiWindow doClose]")
+;;   (objc:send-super 'close))
+
 
 @[MclguiWindow
   method:(close)
@@ -649,6 +653,8 @@ DO:             Evaluates the BODY in a lexical environment where
       (catch :cancel (window-close window))))]
 
 
+
+
 (defconstant inZoomIn  0)
 (defconstant inZoomOut 1)
 
@@ -658,8 +664,8 @@ DO:             Evaluates the BODY in a lexical environment where
   body:
   (declare (ignore nswindow))
   (let ((window (nswindow-window self)))
-    (format-trace "-[MclguiWindow windowShouldZoom:toFrame:]" window)
-    (when (eq (window-type window) :document-with-zoom)
+    #+debug-objc (format-trace "-[MclguiWindow windowShouldZoom:toFrame:]" window)
+    (when (eql (window-type window) :document-with-zoom)
       (window-zoom-event-handler
        window
        (if (< (multiple-value-bind (x y w h) (frame [self frame])
@@ -686,7 +692,7 @@ DO:             Evaluates the BODY in a lexical environment where
   body:
   [super zoom:sender]
   (let ((window (nswindow-window self)))
-    (format-trace "-[MclguiWindow zoom:]" window)
+    #+debug-objc (format-trace "-[MclguiWindow zoom:]" window)
     (when window
       (reporting-errors (window-do-zoom window))))]
 
@@ -738,18 +744,18 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(keyDown:(:id)event)
   resultType:(:void)
   body:
-  (format-trace '|-[MclguiWindow keyDown:]| self event)
+  #+debug-objc (format-trace '|-[MclguiWindow keyDown:]| self event)
   (post-event (nsevent-to-event event))]
 
 @[MclguiWindow
   method:(keyUp:(:id)event)
   resultType:(:void)
   body:
-  (format-trace '|-[MclguiWindow keyUp:]| self event)
+  #+debug-objc (format-trace '|-[MclguiWindow keyUp:]| self event)
   (post-event (nsevent-to-event event))]
 
 (defun needs-to-draw-rect (window rect)
-  #+debug-views
+  #+(and debug-objc debug-view)
   (format-trace 'needs-to-draw-rect :posi (point-to-list (rect-topleft rect)) :size (point-to-list (rect-size rect)) :win window)
   (with-handle (winh window)
     [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]
@@ -763,14 +769,14 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(mouseDown:(:id)event)
   resultType:(:void)
   body:
-  (format-trace '|-[MclguiWindow mouseDown:]| self event)
+  #+debug-objc (format-trace '|-[MclguiWindow mouseDown:]| self event)
   (post-event (nsevent-to-event event))]
 
 @[MclguiWindow
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
-  (format-trace '|-[MclguiWindow mouseUp:]| self event)
+  #+debug-objc (format-trace '|-[MclguiWindow mouseUp:]| self event)
   (post-event (nsevent-to-event event))]
 
 ;;;------------------------------------------------------------
@@ -800,7 +806,7 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(drawRect:(:<NSR>ect)rect)
   resultType:(:void)
   body:
-  (format-trace "-[MclguiView drawRect:]" (*nsrect-to-nsrect rect) self)
+  #+debug-objc (format-trace "-[MclguiView drawRect:]" (*nsrect-to-nsrect rect) self)
   (let ((view (nsview-view self)))
     (when view
       (view-draw-contents view)))]
@@ -810,14 +816,14 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(mouseDown:(:id)event)
   resultType:(:void)
   body:
-  (format-trace "-[MclguiView mouseDown:]" self event)
+  #+debug-objc (format-trace "-[MclguiView mouseDown:]" self event)
   (post-event (nsevent-to-event event))]
 
 @[MclguiView
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
-  (format-trace "-[MclguiView mouseUp:]" self event)
+  #+debug-objc (format-trace "-[MclguiView mouseUp:]" self event)
   (post-event (nsevent-to-event event))]
 
 
@@ -841,7 +847,7 @@ DO:             Evaluates the BODY in a lexical environment where
   (when (nsview-view self)
     (let ((*current-event* (nsevent-to-event event))
           (*multi-click-count* [event clickCount]))
-      (unfrequently 1/10 (format-trace "mouseDragged:" *current-event*))
+      #+debug-objc (unfrequently 1/10 (format-trace "mouseDragged:" *current-event*))
       (window-null-event-handler (view-window (nsview-view self)))))]
 
 
@@ -932,7 +938,7 @@ DO:             Evaluates the BODY in a lexical environment where
                     :for superclass = (#_class_getSuperclass subclass)
                       :then (#_class_getSuperclass superclass)
                     :while (and (not (nullp superclass))
-                                (eq superclass class))
+                                (eql superclass class))
                     :finally (return (if (nullp superclass)
                                          nil
                                          superclass)))
