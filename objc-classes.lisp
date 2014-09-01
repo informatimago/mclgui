@@ -637,6 +637,8 @@ DO:             Evaluates the BODY in a lexical environment where
   ;; (format-trace "-[MclguiWindow doClose]")
   [super close]]
 
+(defun close-nswindow (winh)
+ [winh doClose])
 
 ;; (objc:define-objc-method ((:void do-close) mclgui-window)
 ;;   ;; (format-trace "-[MclguiWindow doClose]")
@@ -806,6 +808,7 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(drawRect:(:<NSR>ect)rect)
   resultType:(:void)
   body:
+  (declare (ignore rect))
   #+debug-objc (format-trace "-[MclguiView drawRect:]" (*nsrect-to-nsrect rect) self)
   (let ((view (nsview-view self)))
     (when view

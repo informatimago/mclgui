@@ -346,9 +346,9 @@ When a window is closed, its state is lost and cannot be recovered.
 The MCL event system calls WINDOW-CLOSE when the user clicks a window’s
 close box or chooses Close from the File menu.
 ")
-  (:method ((window window))
+  (:method ((window window))    
     (with-handle (winh window)
-      [winh doClose])
+      (close-nswindow winh))
     (delete-from-list *window-list* window)
     (release window)
     (values)))
@@ -553,6 +553,7 @@ NEW-TITLE:      A string to be used as the new title.
 
 (defgeneric window-show (window)
   (:method ((window window))
+    (format-trace 'window-show window)
     (unless (window-visiblep window)
       (setf (slot-value window 'visiblep) t)
       (window-bring-to-front window))
@@ -749,6 +750,7 @@ DO:             Order the WINDOW above every other.
   (delete-from-list *window-list* window)
   (insert-into-list *window-list* 0 window)
   (setf (slot-value window 'visiblep) t)
+  (view-draw-contents window)
   (let ((handle (handle window)))
     (when handle
       (on-main-thread [handle makeKeyAndOrderFront:handle]))))
@@ -1201,7 +1203,8 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 (defclass hemlock-listener-frame (hemlock-frame)
   ())
 
-
+(defmethod view-draw-contents ((window hemlock-frame))
+  (values))
 
 (defmethod wrap ((nswindow ns:ns-window))
   ;; (format-trace 'wrap nswindow)

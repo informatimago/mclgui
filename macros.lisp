@@ -80,7 +80,9 @@
              t))
       (or (ignore-errors (out *mclgui-trace*))
           (ignore-errors (out *trace-output*))
-          (ignore-errors (out *standard-output*))))
+          (ignore-errors (out *standard-output*)))
+      ;; (hemlock::end-of-buffer-command nil)
+      )
     (first arguments)))
 
 (defmacro time/stdout (&body body)
