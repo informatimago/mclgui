@@ -18,6 +18,11 @@
 ;;;;    
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
 ;;;;    
+;;;;    Some code extracted from MCL (LGPL):
+;;;;    Copyright 1985-1988 Coral Software Corp.
+;;;;    Copyright 1989-1994 Apple Computer, Inc.
+;;;;    Copyright 1995-2000 Digitool, Inc.
+;;;;    
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
@@ -534,7 +539,7 @@ OLD-MS:         The old mode-size code. A mode-size code is a 32-bit
                      :reason :duplicate-color  :option item))
             (setf color (color->ff-index (second item))
                   color-mask 255))))
-        ((let ((temp (xfer-mode-arg item)))
+        ((let ((temp (xfer-mode-arg item :if-does-not-exist nil)))  
            (when temp
              (if mode
                  (unless (eql item :plain)

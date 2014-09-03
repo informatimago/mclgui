@@ -18,6 +18,11 @@
 ;;;;    
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
 ;;;;    
+;;;;    Some code extracted from MCL (LGPL):
+;;;;    Copyright 1985-1988 Coral Software Corp.
+;;;;    Copyright 1989-1994 Apple Computer, Inc.
+;;;;    Copyright 1995-2000 Digitool, Inc.
+;;;;    
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
@@ -42,7 +47,7 @@
   "Contains a list of the names of all the fonts installed in the
 current Macintosh Operating System, sorted alphabetically.")
 
-(defvar *default-font-spec* '("Monaco" 9 :plain))
+(defvar *default-font-spec* '("Monaco"    9 :plain :srcor))
 
 
 ;; Quickdraw:
@@ -122,11 +127,12 @@ a keyword) can be performed with the Common Lisp function ELT.")
     (make-array (length modes) :initial-contents modes)))
 
 
-(defun xfer-mode-arg (name &optional error-p)
+(defun xfer-mode-arg (name &key (if-does-not-exist 0)) ; :srcCopy by default.
   (or (and (keywordp name) (position name *transfer-modes*))
       (and (integerp name) (< -1 name (length *transfer-modes*)) name)
-      (when error-p (error 'invalid-transfer-mode-error :mode name))
-      0)) ; :srcCopy by default.
+      (if (eql if-does-not-exist :error)
+          (error 'invalid-transfer-mode-error :mode name)
+          if-does-not-exist))) 
 
 
 (defun xfer-mode-to-name (mode)

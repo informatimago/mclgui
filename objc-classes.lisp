@@ -372,7 +372,8 @@
                            pt
                            (nswindow-to-nsscreen-point winh pt)))
                      (get-nspoint [NSEvent mouseLocation])))
-     :modifiers (nsmodifier-to-macmodifier [nsevent modifierFlags]))))
+     :modifiers (nsmodifier-to-macmodifier [nsevent modifierFlags])
+     :nsevent [nsevent retain])))
 
 
 
@@ -741,20 +742,23 @@ DO:             Evaluates the BODY in a lexical environment where
           ;; (view-deactivate-event-handler window)
           (post-event event)))))]
 
+(defvar *current-ns-event* nil)
 
 @[MclguiWindow
   method:(keyDown:(:id)event)
   resultType:(:void)
   body:
-  #+debug-objc (format-trace '|-[MclguiWindow keyDown:]| self event)
-  (post-event (nsevent-to-event event))]
+  (let ((*current-ns-event* event))
+   #+debug-objc (format-trace '|-[MclguiWindow keyDown:]| self event)
+   (post-event (nsevent-to-event event)))]
 
 @[MclguiWindow
   method:(keyUp:(:id)event)
   resultType:(:void)
   body:
-  #+debug-objc (format-trace '|-[MclguiWindow keyUp:]| self event)
-  (post-event (nsevent-to-event event))]
+  (let ((*current-ns-event* event))
+    #+debug-objc (format-trace '|-[MclguiWindow keyUp:]| self event)
+    (post-event (nsevent-to-event event)))]
 
 (defun needs-to-draw-rect (window rect)
   #+(and debug-objc debug-view)
@@ -771,15 +775,17 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(mouseDown:(:id)event)
   resultType:(:void)
   body:
-  #+debug-objc (format-trace '|-[MclguiWindow mouseDown:]| self event)
-  (post-event (nsevent-to-event event))]
+  (let ((*current-ns-event* event))
+    #+debug-objc (format-trace '|-[MclguiWindow mouseDown:]| self event)
+    (post-event (nsevent-to-event event)))]
 
 @[MclguiWindow
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
-  #+debug-objc (format-trace '|-[MclguiWindow mouseUp:]| self event)
-  (post-event (nsevent-to-event event))]
+  (let ((*current-ns-event* event))
+    #+debug-objc (format-trace '|-[MclguiWindow mouseUp:]| self event)
+    (post-event (nsevent-to-event event)))]
 
 ;;;------------------------------------------------------------
 ;;; MclguiView
@@ -819,15 +825,17 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(mouseDown:(:id)event)
   resultType:(:void)
   body:
-  #+debug-objc (format-trace "-[MclguiView mouseDown:]" self event)
-  (post-event (nsevent-to-event event))]
+  (let ((*current-ns-event* event))
+   #+debug-objc (format-trace "-[MclguiView mouseDown:]" self event)
+   (post-event (nsevent-to-event event)))]
 
 @[MclguiView
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
-  #+debug-objc (format-trace "-[MclguiView mouseUp:]" self event)
-  (post-event (nsevent-to-event event))]
+  (let ((*current-ns-event* event))
+   #+debug-objc (format-trace "-[MclguiView mouseUp:]" self event)
+   (post-event (nsevent-to-event event)))]
 
 
 @[MclguiView
@@ -836,7 +844,8 @@ DO:             Evaluates the BODY in a lexical environment where
   body:
   ;; (format-trace "-[MclguiView mouseMoved:]" self (nsview-view self) event)
   (when (nsview-view self)
-    (let ((*current-event* (nsevent-to-event event))
+    (let ((*current-ns-event* event)
+          (*current-event* (nsevent-to-event event))
           (*multi-click-count* [event clickCount]))
       ;;(unfrequently 1/10 (format-trace '|mouseMoved:| *current-event*))
       (window-null-event-handler (view-window (nsview-view self)))))]
@@ -848,7 +857,8 @@ DO:             Evaluates the BODY in a lexical environment where
   body:
   ;; (format-trace "-[MclguiView mouseDragged]" self (nsview-view self) event)
   (when (nsview-view self)
-    (let ((*current-event* (nsevent-to-event event))
+    (let ((*current-ns-event* event)
+          (*current-event* (nsevent-to-event event))
           (*multi-click-count* [event clickCount]))
       #+debug-objc (unfrequently 1/10 (format-trace "mouseDragged:" *current-event*))
       (window-null-event-handler (view-window (nsview-view self)))))]

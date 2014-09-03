@@ -81,8 +81,13 @@
       (or (ignore-errors (out *mclgui-trace*))
           (ignore-errors (out *trace-output*))
           (ignore-errors (out *standard-output*)))
-      ;; (hemlock::end-of-buffer-command nil)
-      )
+      (let ((listeners (gui::active-listener-windows)))
+        (when listeners
+          (let ((hi::*current-buffer* (hi:hemlock-view-buffer
+                                       (gui::hemlock-view
+                                        (slot-value (first listeners)
+                                                    'gui::echo-area-view)))))
+            (hemlock::end-of-buffer-command nil)))))
     (first arguments)))
 
 (defmacro time/stdout (&body body)

@@ -19,6 +19,11 @@
 ;;;;    
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
 ;;;;    
+;;;;    Some code extracted from MCL (LGPL):
+;;;;    Copyright 1985-1988 Coral Software Corp.
+;;;;    Copyright 1989-1994 Apple Computer, Inc.
+;;;;    Copyright 1995-2000 Digitool, Inc.
+;;;;    
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
@@ -1296,5 +1301,13 @@ RETURN:         The list of MENUs collected.
   (:method ((item menu-item) &optional (*standard-output* *standard-output*) (level 0))
     (format t "~VA~A~%" (* 4 level) "" (menu-item-title item))))
 
+
+(defgeneric pop-up-context-menu (view menu event)
+  (:method ((view simple-view) (menu menu) (event event))
+    (when (and event (event-nsevent event))
+      (with-view-handle (winh view)
+        [NSMenu popUpContextMenu:(handle menu)
+                withEvent:(event-nsevent event)
+                forView:winh]))))
 
 ;;;; THE END ;;;;

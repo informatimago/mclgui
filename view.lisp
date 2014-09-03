@@ -17,6 +17,11 @@
 ;;;;    GPL3
 ;;;;    
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
+;;;;
+;;;;    Some code extracted from MCL (LGPL):
+;;;;    Copyright 1985-1988 Coral Software Corp.
+;;;;    Copyright 1989-1994 Apple Computer, Inc.
+;;;;    Copyright 1995-2000 Digitool, Inc.
 ;;;;    
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
@@ -38,7 +43,6 @@
 
 
 (defgeneric view-draw-contents (view))
-(defgeneric find-view-containing-point (view h &optional v direct-subviews-only))
 
 ;; (defun nsview-to-view-position (frame-nsrect size-point)
 ;;   "
@@ -83,8 +87,10 @@
   (unless (and (slot-boundp view 'view-size)
                (slot-value view 'view-size))
     (setf (%view-size view) (view-default-size view)))
-  (when (slot-boundp view 'view-container)
-    (set-view-container view (slot-value view 'view-container))))
+  (let ((container (slot-value view 'view-container)))
+    (when container
+      (setf (slot-value view 'view-container) nil)
+      (set-view-container view container))))
 
 
 (defmethod initialize-instance ((view view) &key view-font &allow-other-keys)
@@ -240,12 +246,12 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
       (if (eql *current-view* view)
           (if (eql *current-font-view* font-view)
               (let ((*current-view* view)
-                    (*current-font-view* font-view)
+                    (*current-font-view* (or font-view view))
                     (*current-font-codes* (copy-list *current-font-codes*)))
                 (call-it))
               (unwind-protect
                    (let* ((*current-view* view)
-                          (*current-font-view*  font-view)
+                          (*current-font-view*  (or font-view view))
                           (*current-font-codes* (set-font *current-font-view*))) ; change font
                      (call-it))
                 (set-font *current-font-view*))) ; revert font
@@ -253,7 +259,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
             (let ((unlock   nil))
               (unwind-protect
                    (let ((*current-view* view)
-                         (*current-font-view* (or font-view *current-font-view*))
+                         (*current-font-view* (or font-view *current-font-view* view))
                          (*current-font-codes* (copy-list *current-font-codes*)))
                      (when (setf unlock [winh lockFocusIfCanDraw])
                        (focus-view *current-view* *current-font-view*)
@@ -1148,25 +1154,6 @@ SOURCE-VIEW:    A view in whose coordinate system point is given.
                (add-points delta (rect-bottomright rect)))))
 
 
-#+pjb-debug
-(defmethod find-view-containing-point :around (view h &optional v direct-subviews-only)
-  (declare (ignorable view h v direct-subviews-only))
-  (let ((result (call-next-method)))
-    (format-trace 'find-view-containing-point result)
-    (with-focused-view result
-      (with-pen-state (:pattern *black-pattern* :mode :srcCopy)
-        (fill-rect* 0 0 (point-h (view-size result)) (point-v (view-size result)))))
-    result))
-
-(defmethod find-view-containing-point :around (view h &optional v direct-subviews-only)
-  (declare (ignorable view h v direct-subviews-only))
-  (let ((result (call-next-method)))
-    #+debug-views
-    (format-trace 'find-view-containing-point result
-                  (subviews result))
-    result))
-
-
 (defgeneric find-view-containing-point (view h &optional v direct-subviews-only)
   (:documentation "
 RETURN:         The view containing the point specified by H and
@@ -1223,6 +1210,27 @@ DIRECT-SUBVIEWS-ONLY:
                               (subtract-points point (view-position window)))))))
                    :include-windoids t)
       nil)))
+
+#+pjb-debug
+(defmethod find-view-containing-point :around (view h &optional v direct-subviews-only)
+  (declare (ignorable view h v direct-subviews-only))
+  (let ((result (call-next-method)))
+    (format-trace 'find-view-containing-point result)
+    (with-focused-view result
+      (with-pen-state (:pattern *black-pattern* :mode :srcCopy)
+        (fill-rect* 0 0 (point-h (view-size result)) (point-v (view-size result)))))
+    result))
+
+(defmethod find-view-containing-point :around (view h &optional v direct-subviews-only)
+  (declare (ignorable view h v direct-subviews-only))
+  (let ((result (call-next-method)))
+    #+debug-views
+    (format-trace 'find-view-containing-point result
+                  (subviews result))
+    result))
+
+
+
 
 
 (defgeneric point-in-click-region-p (view where)

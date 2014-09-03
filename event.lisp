@@ -18,6 +18,11 @@
 ;;;;    
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
 ;;;;    
+;;;;    Some code extracted from MCL (LGPL):
+;;;;    Copyright 1985-1988 Coral Software Corp.
+;;;;    Copyright 1989-1994 Apple Computer, Inc.
+;;;;    Copyright 1995-2000 Digitool, Inc.
+;;;;    
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
@@ -792,12 +797,16 @@ IDLE:           An argument representing whether the main Lisp process
 "
   (let ((*current-event* (get-next-event idle event-mask)))
     (when *current-event*
-      #+debug-event
-      (unless (= null-event (event-what *current-event*))
-        (format-trace 'event-dispatch *current-event*))
-      (unless (dispatch-eventhook)
-        (when (= null-event (process-event *current-event*))
-          (receive-appleevent))))))
+      (unwind-protect
+           (progn
+             #+debug-event
+             (unless (= null-event (event-what *current-event*))
+               (format-trace 'event-dispatch *current-event*))
+             (unless (dispatch-eventhook)
+               (when (= null-event (process-event *current-event*))
+                 (receive-appleevent))))
+        (when (event-nsevent *current-event*)
+          [(event-nsevent *current-event*) release])))))
 
 
 

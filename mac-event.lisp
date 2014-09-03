@@ -32,6 +32,7 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
+(objcl:enable-objcl-reader-macros)
 
 
 ;; event what:
@@ -102,12 +103,19 @@
 
 
 
-(defstruct event
+(defstruct (event (:copier %copy-event))
   (what      0 :type integer)
   (message   0)
   (when      0 :type integer)
   (where     0 :type point)
-  (modifiers 0 :type integer))
+  (modifiers 0 :type integer)
+  (nsevent   nil))
+
+(defun copy-event (event)
+  (let ((copy (%copy-event event)))
+    (when (event-nsevent copy)
+      [(event-nsevent copy) retain])
+    copy))
 
 #|
 Event type         event-message
@@ -127,7 +135,8 @@ application        used defined.
   (format stream " :message ~S" (event-message event))
   (format stream " :when ~S" (event-when event))
   (format stream " :where #@(~A ~A)" (point-h (event-where event)) (point-v (event-where event)))
-  (format stream " :modifiers ~D ~S"  (event-modifiers event) (event-modifiers-label (event-modifiers event)))
+  (format stream " :modifiers (~D ~S)"  (event-modifiers event) (event-modifiers-label (event-modifiers event)))
+  (format stream " :nsevent ~S"  (event-nsevent event))
   (format stream ")")
   event)
 
@@ -211,7 +220,7 @@ NOTE: should be called insinde (with-mutex (queue-mutex *event-queue*) …)."
 (defun %extract-event (event)
   "Remove the event from the *EVENT-QUEUE*.
 Return event when removed, NIL if not found in the queue.
-NOTE: should be called insinde (with-mutex (queue-mutex *event-queue*) …)"
+NOTE: should be called inside (with-mutex (queue-mutex *event-queue*) …)"
   (let ((events (queue-head *event-queue*)))
     (if (eql event (car events))
         (%dequeue-event)
