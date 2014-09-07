@@ -44,22 +44,15 @@
 (defclass default-button-mixin ()
   ())
 
-
-(defgeneric dont-throb (button))
-
+(defmacro %get-default-button (window)
+  `(view-get ,window '%default-button))
 
 (defgeneric button-props-to-window (item window)
   (:method ((item default-button-mixin) window)
-    (niy button-props-to-window item window)
-    ;; (cond ((view-get item 'default-button-p)
-    ;;        (setf (%get-default-button window) item)
-    ;;        (when (dialog-item-handle item) ;; might be a 3d-button
-    ;;          (if (dont-throb item)
-    ;;              nil
-    ;;              (#_setwindowdefaultbutton (wptr window) (dialog-item-handle item)))))
-    ;;       ((view-get item 'cancel-button-p)
-    ;;        (setf (%get-cancel-button window) item)))
-    ))
+    (cond ((view-get item 'default-button-p)
+           (setf (%get-default-button window) item))
+          ((view-get item 'cancel-button-p)
+           (setf (%get-cancel-button window) item)))))
 
 
 (defmethod initialize-instance :after ((item default-button-mixin) &key default-button cancel-button view-container)  
@@ -83,21 +76,12 @@
       (button-props-to-window item window))))
 
 (defmethod remove-view-from-window :before ((item default-button-mixin))
-  (niy remove-view-from-window item)
-  #-(and)
   (let ((dialog (view-window item)))
     (when dialog
       (cond ((eql item (%get-default-button dialog))
-             (setf (%get-default-button dialog) nil)
-             ;; dunno if this matters
-             (when (and (wptr dialog)(dialog-item-handle item))
-               (#_setwindowdefaultbutton (wptr dialog) (%null-ptr))))
+             (setf (%get-default-button dialog) nil))
             ((eql item (%get-cancel-button dialog))
              (setf (%get-cancel-button dialog) nil))))))
-
-
-(defmacro %get-default-button (window)
-  `(view-get ,window '%default-button))
 
 
 (defgeneric default-button (window)
@@ -114,6 +98,28 @@ they are sent to that item rather than to the default button.
     (%get-default-button window)))
 
 
+(defgeneric set-default-button (window new-button)
+  (:documentation "
+
+The SET-DEFAULT-BUTTON generic function changes the default button
+according to the value of new-button and returns new-button.  If
+carriage returns are allowed in the current editable-text item, they
+are sent to that item rather than to the default button.
+
+WINDOW:         A window.
+
+NEW-BUTTON:     The button that should be made the default button, or
+                NIL, indicating that there should be no default button.
+")
+  (:method ((dialog window) new-button)
+    (let ((default-button (%get-default-button dialog)))
+      (unless (eql default-button new-button)
+        (when default-button
+          (invalidate-view-border default-button t))
+        (setf (%get-default-button dialog) new-button)
+        (when new-button
+          (invalidate-view-border new-button))))
+    new-button))
 
 
 ;;;; THE END ;;;;

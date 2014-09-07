@@ -49,7 +49,20 @@
 
 (defgeneric window-frame-from-nswindow-frame (window))
 (defgeneric nswindow-frame-from-window-frame (window))
-(defgeneric window-event (window))
+
+(defgeneric window-event (window)
+  (:documentation "
+The WINDOW-EVENT generic function is called by EVENT-DISPATCH to get a
+window to handle an event.  This function is called only when the
+event system determines the appropriate window.  The method of
+WINDOW-EVENT for WINDOW checks the type of the event and calls the
+appropriate event handler.  The WINDOW-EVENT function should be
+specialized in windows that need to do something in addition to or
+different from the default behavior for many types of events.
+
+WINDOW:         A window.
+"))
+
 
 (defmethod window-frame-from-nswindow-frame ((frame nsrect))
   "
@@ -470,27 +483,42 @@ V:              The vertical coordinate of the new position, or NIL if
 
 (defmethod set-view-size ((window window) h &optional v)
   (let ((siz      (make-point h v))
+        (frame    (window-frame-from-nswindow-frame window))
         (mswindow (handle window)))
+    (format-trace '(set-view-size window) (point-to-list siz))
     (setf (%view-size window) siz)
-    (when (and (not *window-growing*) mswindow)
-      (if [mswindow isVisible]
-          (application-eval-enqueue
-           *application*
-           (lambda ()
-             [mswindow setFrame:(unwrap (nswindow-frame-from-window-frame window))]
-             [mswindow invalidateShadow]
-             (let ((frame  (window-frame-from-nswindow-frame window)))
-               (setf (%view-position window) (rect-topleft frame)
-                     (%view-size     window) (rect-size frame)))))
-          (progn
-            [mswindow setFrame:(unwrap (nswindow-frame-from-window-frame window)) display:NO]
-            [mswindow invalidateShadow]
-            (let ((frame  (window-frame-from-nswindow-frame window)))
-              (setf (%view-position window) (rect-topleft frame)
-                    (%view-size     window) (rect-size frame))))))
+    (if (and mswindow (/= siz (rect-size frame)))
+        (flet ((resize (redisplay)
+                 (let ((*window-growing* t))
+                   [mswindow setFrame:(unwrap (nswindow-frame-from-window-frame window)) display:redisplay]
+                   [mswindow invalidateShadow])
+                 (let ((frame  (window-frame-from-nswindow-frame window)))
+                   (setf (%view-position window) (rect-topleft frame)
+                         (%view-size     window) (rect-size frame)))
+                 (window-size-parts window)))
+          (if [mswindow isVisible]
+              (application-eval-enqueue *application* (resize YES))
+              (resize NO)))
+        (window-size-parts window))
     (refocus-view window)
     (%view-size window)))
 
+(defgeneric window-minimum-size (window)
+  (:method ((window window))
+    (view-get window 'window-minimum-size #@(0 0))))
+(defgeneric window-maximum-size (window)
+  (:method ((window window))
+    (view-get window 'window-maximum-size (rect-size (main-screen-frame)))))
+(defgeneric (setf window-minimum-size) (new-min-size window)
+  (:method (new-min-size (window window))
+    (view-put window 'window-minimum-size new-min-size)
+    (with-handle (winh window)
+      [winh setContentMinSize:(nssize new-min-size)])))
+(defgeneric (setf window-maximum-size) (new-max-size window)
+  (:method (new-max-size (window window))
+    (view-put window 'window-maximum-size new-max-size)
+    (with-handle (winh window)
+      [winh setContentMaxSize:(nssize new-max-size)])))
 
 (defgeneric window-size-parts (w)
   (:documentation "
@@ -1160,6 +1188,15 @@ RETURN:         A BOOLEAN value indicating whether view can perform
          (window-update-event-handler window))))))
 
 ;;;---------------------------------------------------------------------
+;;; Fonts
+
+(defmethod set-view-font-codes ((w window) ff ms &optional ff-mask ms-mask)
+  (declare (ignorable ff ms ff-mask ms-mask))
+  (format-trace '(set-view-font-codes window) :ff ff :ms ms :ff-mask ff-mask :ms-mask ms-mask)
+  (call-next-method)
+  (values-list (set-font w)))
+
+;;;---------------------------------------------------------------------
 ;;; Colors
 
 ;; TODO: use get-fore-color when drawing in the window…
@@ -1185,16 +1222,17 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 
 
 (defmethod view-draw-contents ((window window))
-  (when (window-visiblep window)
-    (time/stdout
-     #+debug-view (format-trace '(view-draw-contents window))
-     (with-focused-view window
-       (call-next-method)
-       ;; TODO: originally, it seems MCL didn't erase it, but relied on MacOS visrg/cliprgn/etc.
-       #-(and) (let ((bounds (view-bounds window)))
-                 (erase-rect* (rect-left bounds) (rect-top bounds)
-                              (rect-width bounds) (rect-height bounds))
-                 (call-next-method))))))
+  (unless  *deferred-drawing*
+    (when (window-visiblep window)
+      ;; time/stdout
+      #+debug-view (format-trace '(view-draw-contents window))
+      (with-focused-view window
+        (call-next-method)
+        ;; TODO: originally, it seems MCL didn't erase it, but relied on MacOS visrg/cliprgn/etc.
+        #-(and) (let ((bounds (view-bounds window)))
+                  (erase-rect* (rect-left bounds) (rect-top bounds)
+                               (rect-width bounds) (rect-height bounds))
+                  (call-next-method))))))
 
 
 ;;;---------------------------------------------------------------------

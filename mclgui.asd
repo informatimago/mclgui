@@ -382,6 +382,13 @@
                 :depends-on ("package" "application"))
 
 
+               ;; ;; Extensions
+               ;; (:file "layout"
+               ;;  :depends-on ("package" "view-classes"))
+               ;; 
+               ;; (:file "debugger-dialog"
+               ;;  :depends-on ("package" "dialog" "layout"))
+               
                ;; MCLGUI:
                
                (:file "mclgui"

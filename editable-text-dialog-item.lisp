@@ -86,7 +86,7 @@
 
 
 (defmethod view-draw-contents ((item basic-editable-text-dialog-item))
-  (with-focused-view item
+  (with-focused-dialog-item (item)
    (let* ((frame (view-frame item))
           (x (rect-left   frame))
           (y (rect-top    frame))
@@ -100,7 +100,8 @@
      ;; (with-fore-color *red-color*
      ;;   (fill-rect* x y w h))
      (erase-rect* x y w h)
-     (draw-text x y w h (dialog-item-text item))))
+     (draw-text x y w h (dialog-item-text item))
+     (draw-rect* (1- x) (1- y) (+ 2 w) (+ 2 h))))
   
   ;; We shouldn't have to do anything really
   #-(and)

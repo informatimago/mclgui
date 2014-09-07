@@ -157,31 +157,37 @@ Called by -[MclguiWindow zoom:] which is called from WINDOW-ZOOM-EVENT-HANDLER."
 
 (defmethod window-grow-event-handler ((window window) where)
   (declare (ignore where))
-  (let ((*window-growing* t))
-    (with-handle (handle  window)
-      (multiple-value-bind (x y w h) (frame [[handle contentView] bounds])
-        (declare (ignore x y))
-        (set-view-size window (make-point (round w) (round h)))))))
+  (if *window-growing*
+      (window-size-parts window)
+      (let ((*window-growing* t))
+        (with-handle (handle  window)
+          (multiple-value-bind (x y w h) (frame [[handle contentView] bounds])
+            (declare (ignore x y))
+            (set-view-size window (make-point (round w) (round h))))))))
 
 
 (defgeneric window-size-event-handler (window new-size)
   (:method ((window window) new-size)
-    (let ((*window-growing* t))
-      (set-view-size window new-size))))
+    (if *window-growing*
+        (window-size-parts window)
+        (let ((*window-growing* t))
+          (set-view-size window new-size)))))
 
 ;;; --- window moving ----
 
 (defgeneric window-move-event-handler (window new-position)
   (:method ((window window) new-position)
-    (let ((*window-moving* t))
-      (set-view-position window new-position))))
+    (unless *window-moving*
+      (let ((*window-moving* t))
+        (set-view-position window new-position)))))
 
 
 ;;; --- window update ----
 
 (defmethod window-update-event-handler ((window window))
-  (with-focused-view window
-    (view-draw-contents window)))
+  (unless *deferred-drawing*
+    (with-focused-view window
+      (view-draw-contents window))))
 
 ;;; --- window select ----
 

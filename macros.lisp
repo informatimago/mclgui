@@ -78,6 +78,7 @@
              (format stream "~&(~40A ~{~S~^ ~})~%" method arguments)
              (force-output stream)
              t))
+      ;; (patchwork.builder::print-streams)
       (or (ignore-errors (out *mclgui-trace*))
           (ignore-errors (out *trace-output*))
           (ignore-errors (out *standard-output*)))

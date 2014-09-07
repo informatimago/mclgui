@@ -123,8 +123,93 @@
     (add-subviews *w* red)
     (add-subviews *w* green)))
 
+
+(defmethod set-view-size :after ((view sdi-window) h &optional v)
+  (declare (ignorable h v))
+  (adjust-layout-to-parent (aref (view-subviews view) 0)))
+
+(defun test-layout ()
+  (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
+
+  (let* ((red (make-instance
+               'color-box 
+               :color *red-color*
+               :view-position (make-point 20 10)
+               :view-size     (make-point 100 20)
+               :view-nick-name "red"))
+         (blue (make-instance
+                'color-box 
+                :color *blue-color*
+                :view-position (make-point 2 2)
+                :view-size     (make-point 12 12)
+                :view-nick-name "blue"))
+         (green (make-instance
+                 'color-box 
+                 :color *green-color*
+                 :view-position (make-point 2 2)
+                 :view-size     (make-point 72 30)
+                 :view-nick-name "green"))
+         (vlayout (make-instance 'linear-layout
+                                :left-margin 10 :right-margin 10
+                                :top-margin 20 :bottom-margin 20
+                                :orientation :vertical
+                                :direction :bottom-up
+                                :vertical-alignment :full
+                                :horizontal-alignment :center
+                                :spacing 20
+                                :subviews (list red green blue)))
+         (layout (make-instance 'linear-layout
+                                :left-margin 10 :right-margin 10
+                                :top-margin 20 :bottom-margin 20
+                                :orientation :horizontal
+                                :direction :right-to-left
+                                :vertical-alignment :bottom
+                                :horizontal-alignment :right
+                                :spacing 20
+                                :subviews (list red green blue))))
+    (add-subviews *w* layout)
+    (adjust-layout-to-parent layout)))
+
+(defun test-flow-layout ()
+  (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
+  (let ((layout (make-instance 'flow-layout
+                               :view-size (make-point 300 150)
+                               :spacing 10
+                               :orientation :horizontal
+                               :subviews (loop :for n :below 32
+                                               :collect (make-instance 'color-box 
+                                                                       :color *green-color*
+                                                                       :view-size (make-point (+ 30 (random 10))
+                                                                                              (+ 10 (random 10)))
+                                                                       :view-nick-name (format nil "~3,'0D" n))))))
+    (add-subviews *w* layout)
+    (adjust-layout-to-parent layout)))
+
+
 #-(and) (progn
 
+          (let ((layout  (aref (view-subviews *w*) 0)))
+            (setf (layout-spacing layout) 5
+                  (layout-line-spacing layout) 10
+                  (layout-left-margin layout) 10
+                  (layout-right-margin layout) 30
+                  (layout-top-margin layout)    20
+                  (layout-bottom-margin layout) 20
+                  (layout-justification layout) :anterior
+                  (layout-alignment layout) :center
+                  (layout-orientation layout) :horizontal
+                  (layout-horizontal-direction layout) :right-to-left
+                  (layout-vertical-direction layout) :bottom-up)
+            (adjust-layout layout))
+          
+          (test-flow-layout)
+
+          (rect-to-list (view-bounds (aref (view-subviews *w*) 0)))
+          (:topleft (0 0) :size (311 262))
+          (rect-to-list (layout-box (aref (view-subviews *w*) 0)))
+          (:topleft (10 20) :size (291 222))
+
+          (test-layout)
           (test-color-box)
           
           (let ((red (make-instance

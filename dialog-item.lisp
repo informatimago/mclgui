@@ -111,26 +111,6 @@ dialog items. It is built on SIMPLE-VIEW.
 
 
 
-(defmacro reference-method (generic-function (&rest classes))
-  `(niy reference-method ',generic-function ',classes))
-
-
-(defgeneric dialog-item-action-p (item)
-  (:method ((item dialog-item))
-    (or (dialog-item-action-function item)
-        (not (eql (find-1st-arg-combined-method (function dialog-item-action) item)
-                  (method-function (reference-method dialog-item-action (dialog-item))))))))
-
-
-(defmacro do-dialog-items ((item-var dialog &optional (item-class ''dialog-item) must-be-enabled)
-                           &body body)
-  (let* ((enabled-var (gensym)))
-    `(let ((,enabled-var ,must-be-enabled))
-       (do-subviews (,item-var ,dialog ,item-class)
-         (when (or (not ,enabled-var) (dialog-item-enabled-p ,item-var))
-           ,@body)))))
-
-
 (defgeneric call-with-focused-dialog-item (item fn &optional container)
   (:method (item fn &optional container)
     (call-with-focused-view (or container (view-container item))
@@ -159,6 +139,48 @@ CONTAINER:      The view focused on whose coordinate system body will
                                       (declare (ignorable ,item-var))
                                       ,@body)
                                     ,@(when container `(,container)))))
+
+(defmethod view-draw-contents ((item dialog-item))
+  (with-focused-dialog-item (item)
+    (let* ((frame (view-frame item))
+           (x (rect-left   frame))
+           (y (rect-top    frame))
+           (w (rect-width  frame))
+           (h (rect-height frame)))
+      #+debug-view
+      (progn (format *mclgui-trace* "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
+             (format *mclgui-trace* "~&  text    = ~S~%" (dialog-item-text item))
+             (format *mclgui-trace* "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
+             (format *mclgui-trace* "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
+             (finish-output *mclgui-trace*))
+      ;;(erase-rect* x y w h)
+      ;; #+debug-view-colors
+      (with-fore-color *light-gray-color*
+        (fill-rect* x y w h))
+      (draw-text x y w h (dialog-item-text item)))))
+
+
+(defmacro reference-method (generic-function (&rest classes))
+  `(niy reference-method ',generic-function ',classes))
+
+
+(defgeneric dialog-item-action-p (item)
+  (:method ((item dialog-item))
+    (or (dialog-item-action-function item)
+        (not (eql (find-1st-arg-combined-method (function dialog-item-action) item)
+                  (method-function (reference-method dialog-item-action (dialog-item))))))))
+
+
+(defmacro do-dialog-items ((item-var dialog &optional (item-class ''dialog-item) must-be-enabled)
+                           &body body)
+  (let* ((enabled-var (gensym)))
+    `(let ((,enabled-var ,must-be-enabled))
+       (do-subviews (,item-var ,dialog ,item-class)
+         (when (or (not ,enabled-var) (dialog-item-enabled-p ,item-var))
+           ,@body)))))
+
+
+
 
 
 
@@ -283,8 +305,9 @@ VISRGN:         Region records from the view’s wptr.  They are ignored.
 CLIPRGN:        Region records from the view’s wptr.  They are ignored.
 "
   (declare (ignore visrgn cliprgn))
-  (with-focused-dialog-item (item) 
-    (view-draw-contents item))
+  (unless *deferred-drawing*
+   (with-focused-dialog-item (item) 
+     (view-draw-contents item)))
   #-(and) (with-temp-rgns (visrgn cliprgn)
             (get-window-visrgn  (wptr item) visrgn)
             (get-window-cliprgn (wptr item) cliprgn)      
@@ -312,14 +335,16 @@ changes the size of the dialog item to the width and height
 represented by h and v, and returns the new size.
 "
   (let ((new-size (make-point h v)))
-    (unless (eql new-size (view-size item))
-      (with-focused-dialog-item (item)
-        (without-interrupts
-            (let ((window (view-window item)))
-              (when window
-                (invalidate-view item t))
-              (call-next-method)
-              (invalidate-view item t)))))
+    (if (view-container item)
+        (unless (eql new-size (view-size item))
+          (with-focused-dialog-item (item)
+            (without-interrupts
+              (let ((window (view-window item)))
+                (when window
+                  (invalidate-view item t))
+                (call-next-method)
+                (invalidate-view item t)))))
+        (call-next-method))
     new-size))
 
 
@@ -470,13 +495,14 @@ are not given an explicit size.  The DIALOG-ITEM method of
 VIEW-DEFAULT-SIZE calculates a size according to the font and text of
 the dialog item and the width correction associated with the class of
 the dialog item. (See the documentation of
-dialog-item-width-correction.)
+DIALOG-ITEM-WIDTH-CORRECTION).
 "
   (multiple-value-bind (ff ms) (view-font-codes item)
-    (let* ((text (dialog-item-text item)))
+    (let ((text (dialog-item-text item)))
       (multiple-value-bind (string-width nlines)  (font-codes-string-width-with-eol text ff ms)
         (make-point (+ (dialog-item-width-correction item) string-width)
                     (* nlines (font-codes-line-height ff ms)))))))
+
 
 
 (defgeneric set-default-size-and-position (view &optional container)

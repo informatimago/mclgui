@@ -49,9 +49,8 @@
 (defmethod view-default-font ((view dialog))
   (sys-font-spec))
 
-(defmethod view-default-size ((dialog dialog)) #@(300 200))
 (defmethod view-default-position ((dialog dialog)) '(:top 100))
-
+(defmethod view-default-size ((dialog dialog)) #@(300 200))
 
 
 
@@ -92,23 +91,21 @@
 
 (defvar *first-menustate* nil)
 
+(defvar *results-from-modal-dialog* '())
+(defun save-results-from-modal-dialog (results)
+  (push results *results-from-modal-dialog*))
+(defun results-from-modal-dialog ()
+  (values-list (pop *results-from-modal-dialog*)))
 
 (defun %return-from-modal-dialog (&rest values)
-  (niy %return-from-modal-dialog values)
-  #-(and)
-  (when *modal-dialog-on-top* ; << maybe its gone or not set yet
-    (let ((process (modal-dialog-process (car *modal-dialog-on-top*))))
-      (when process
-        (apply (function process-interrupt)
-               process
-               (lambda (&rest values)
-                 (throw '%modal-dialog (apply #'values values)))
-               values)))))
+  (save-results-from-modal-dialog values)
+  (if (equal values '(:cancel))
+      [(handle *application*) abortModal]
+      [(handle *application*) stopModal]))
 
 
 (defmacro return-from-modal-dialog (form)
   "
-
 The macro RETURN-FROM-MODAL-DIALOG causes one or more values to be
 returned from the most recent call to MODAL-DIALOG. 
 
@@ -132,9 +129,8 @@ VALUES:         Any values.  The following two values have special
                                 called returning :CANCEL.  The
                                 function MODAL-DIALOG then performs a
                                 THROW-CANCEL. 
-
 "
-  `(multiple-value-call '%return-from-modal-dialog ,form))
+  `(multiple-value-call (function %return-from-modal-dialog) ,form))
 
 
 
@@ -177,7 +173,7 @@ CLOSE-ON-EXIT:  An argument determining whether the window should be
                 closed.  If it is false, the window is hidden but not
                 closed.  The default is T. 
 
-EVENTHOOK:       A hook.  The function modal-dialog binds *EVENTHOOK*
+EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
                 in order to intercept all event processing; this hook
                 is provided so that you can perform any special event
                 processing while the modal dialog is on the screen.
@@ -194,106 +190,117 @@ EVENTHOOK:       A hook.  The function modal-dialog binds *EVENTHOOK*
                 NIL. 
 
 ")
-  (:method ((dialog window) &optional (close-on-exit t) eventhook )
-    (niy modal-dialog dialog close-on-exit eventhook)
-    #-(and)
-    (#_FlushEvents #xfff7 0)
-    #-(and)
-    (let ((ret)
-          (eventhook
-           (lambda (&aux (event *current-event*)
-                         (what (rref event eventrecord.what)))
-               (when (and *modal-dialog-on-top* (eql dialog (caar *modal-dialog-on-top*)))
-                 (unless (wptr dialog) ; this does nothing if *modal-dialog-on-top* is nil
-                   (return-from-modal-dialog :cancel))
-                 (when (wptr dialog)              ; it may be gone
-                   (when (not *in-foreign-window*) ;; added 05/24/05
-                     (unless (eql (window-layer dialog) 0)
-                       (set-window-layer dialog 0)))
-                   (if (and eventhook
-                            (if (listp eventhook)
-                              (dolist (f eventhook)
-                                (when (funcall f) (return t)))
-                              (funcall eventhook)))
-                     t                   
-                     (if (eql #$mouseDown what)
-                       (%stack-block ((wp 4))
-                                     (let* ((code (#_FindWindow (rref event eventrecord.where) wp)))
-                                       (cond 
-                                         ((eql code #$inMenubar) nil)
-                                         ((%ptr-eql (wptr dialog) (%get-ptr wp))
-                                          nil)                          
-                                         (t  (#_Sysbeep 5) t))))
-                       (if nil ; (or (eql what #$keyDown) (eql what #$autoKey))
-                         (when (menukey-modifiers-p (rref event eventrecord.modifiers))
-                           (ed-beep)
-                           t))))))))
-          (*interrupt-level* 0)
-          (old-modal-dialog *modal-dialog-on-top*)
-          #+REMOVE (old-window-process (window-process dialog))
-          )
-      (declare (dynamic-extent eventhook))
-      (progn                  ;let-globally ()        
-                                        ;(declare (special *processing-events*))
-      
-        (setf *processing-events* nil)
-        (let ()
+  (:method ((dialog window) &optional (close-on-exit t) eventhook)
+    (let ((old-eventhook *eventhook*))
+      ;; We set *eventhook* instead of using let, because
+      ;; events may be processed in a different thread.
+      #-(and) (unless *modal-dialog-on-top*
+        (update-menus :disable))
+      (unwind-protect
+           (with-handle (winh dialog)
+             (window-show dialog)
+             (setf *eventhook* eventhook)
+             (push (list dialog eventhook) *modal-dialog-on-top*)
+             [(unwrap *application*) runModalForWindow:winh])
+        (deletef *modal-dialog-on-top* dialog :key (function car))
+        #-(and) (unless *modal-dialog-on-top*
+                  (update-menus :enable *first-menustate*))
+        (setf *eventhook* old-eventhook)
+        (if close-on-exit
+            (window-close dialog)
+            (window-hide dialog)))
+      (results-from-modal-dialog))))
+
+
+#-(and) (let ((ret)
+              (eventhook (lambda ()
+                           (let* ((event *current-event*)
+                                  (what (event-what event)))
+                             (when (and *modal-dialog-on-top* (eql dialog (caar *modal-dialog-on-top*)))
+                               (unless (wptr dialog) ; this does nothing if *modal-dialog-on-top* is nil
+                                 (return-from-modal-dialog :cancel))
+                               (when (wptr dialog) ; it may be gone
+                                 (when (not *in-foreign-window*) ;; added 05/24/05
+                                   (unless (eql (window-layer dialog) 0)
+                                     (set-window-layer dialog 0)))
+                                 (if (and eventhook
+                                          (if (listp eventhook)
+                                              (dolist (f eventhook)
+                                                (when (funcall f) (return t)))
+                                              (funcall eventhook)))
+                                     t
+                                     (if (eql #$mouseDown what)
+                                         (%stack-block ((wp 4))
+                                           (let* ((code (#_FindWindow (rref event eventrecord.where) wp)))
+                                             (cond 
+                                               ((eql code #$inMenubar) nil)
+                                               ((%ptr-eql (wptr dialog) (%get-ptr wp))
+                                                nil)                          
+                                               (t  (#_Sysbeep 5) t))))
+                                         (if nil ; (or (eql what #$keyDown) (eql what #$autoKey))
+                                             (when (menukey-modifiers-p (rref event eventrecord.modifiers))
+                                               (ed-beep)
+                                               t)))))))))
+              (*interrupt-level* 0)
+              (old-modal-dialog *modal-dialog-on-top*))
+          (declare (dynamic-extent eventhook))
+          (setf *processing-events* nil)
           (unwind-protect
-              (with-focused-view nil
-                (with-cursor 'cursorhook 
-                  (setf ret (multiple-value-list
-                             (restart-case
-                                 (catch '%modal-dialog
-                                   (progn ; (let-globally (*modal-dialog-process* *current-process*))
-                                     #+carbon-compat
-                                     (let ((wptr (wptr dialog))) ;; make it modal now
-                                       (when wptr (#_changewindowattributes wptr 0 #$kWindowCollapseBoxAttribute)) ;; lose collapse box
-                                       (when (and wptr) ; (wptr-dialog-p wptr)) ;(FIND-CLASS 'DRAG-RECEIVER-DIALOG NIL)(typep dialog 'drag-receiver-dialog)) ;; ??
+               (with-focused-view nil
+                 (with-cursor 'cursorhook 
+                   (setf ret (multiple-value-list
+                              (restart-case
+                                  (catch '%modal-dialog
+                                    (progn ; (let-globally (*modal-dialog-process* *current-process*))
+                                      #+carbon-compat
+                                      (let ((wptr (wptr dialog))) ;; make it modal now
+                                        (when wptr (#_changewindowattributes wptr 0 #$kWindowCollapseBoxAttribute)) ;; lose collapse box
+                                        (when (and wptr) ; (wptr-dialog-p wptr)) ;(FIND-CLASS 'DRAG-RECEIVER-DIALOG NIL)(typep dialog 'drag-receiver-dialog)) ;; ??
                                         ;(PUSH (LIST 'ONE (GETWINDOWCLASS WPTR)(WINDOW-LAYER DIALOG) DIALOG) barf)
-                                         (#_setwindowclass wptr #$kMovableModalWindowClass) ; CHANGES WINDOW-LAYER
-                                         (setwindowmodality wptr #$kWindowModalityAppModal)
+                                          (#_setwindowclass wptr #$kMovableModalWindowClass) ; CHANGES WINDOW-LAYER
+                                          (setwindowmodality wptr #$kWindowModalityAppModal)
                                         ;(PUSH (LIST 'TWO (GETWINDOWCLASS WPTR) (WINDOW-LAYER DIALOG) DIALOG) barf)
-                                         ))
-                                     (set-window-layer dialog 0)
+                                          ))
+                                      (set-window-layer dialog 0)
                                         ;(#_hidefloatingwindows)
-                                    
-                                     #+REMOVE (setf (window-process dialog) *current-process*) ; do this first
-                                     (setf *modal-dialog-on-top* (cons (list dialog *current-process* eventhook) *modal-dialog-on-top*)
+                                      
+                                      #+REMOVE (setf (window-process dialog) *current-process*) ; do this first
+                                      (setf *modal-dialog-on-top* (cons (list dialog *current-process* eventhook) *modal-dialog-on-top*)
                                         ;*eventhook* eventhook
-                                           )
-                                     (when (not old-modal-dialog)
-                                       (setf *first-menustate* (update-menus :disable))
-                                       )
-                                    
-                                     (window-show dialog)
+                                            )
+                                      (when (not old-modal-dialog)
+                                        (setf *first-menustate* (update-menus :disable))
+                                        )
+                                      
+                                      (window-show dialog)
                                         ;(setf ms (update-menus :disable))
-                                     (loop
-                                       (when t ;(eql *current-process* *event-processor*)  ;; 05/24/05
-                                         (process-wait "Event-poll" #'event-available-p))
-                                       (event-dispatch))))
-                               (abort () :cancel)
-                               (abort-break () :cancel))))
-                  (if (eql (car ret) :cancel)
-                    (throw-cancel :cancel)
-                    (apply #'values ret))))
-            (without-interrupts     ; << maybe this helps - not really
-                (without-event-processing ; delay events until the window-close is over
-                    #+REMOVE (setf (window-process dialog) old-window-process)
+                                      (loop
+                                        (when t ;(eql *current-process* *event-processor*)  ;; 05/24/05
+                                          (process-wait "Event-poll" #'event-available-p))
+                                        (event-dispatch))))
+                                (abort () :cancel)
+                                (abort-break () :cancel))))
+                   (if (eql (car ret) :cancel)
+                       (throw-cancel :cancel)
+                       (apply #'values ret))))
+            (without-interrupts ; << maybe this helps - not really
+              (without-event-processing ; delay events until the window-close is over
+                #+REMOVE (setf (window-process dialog) old-window-process)
                                         ; if this one is still on top reset to nil, else leave alone
-                    (setf *modal-dialog-on-top* (nremove (assq dialog *modal-dialog-on-top*) *modal-dialog-on-top*))
-                    (let ((mdot *modal-dialog-on-top*))
-                      (when mdot
-                        (when (not (wptr (caar mdot)))
-                          (setf *modal-dialog-on-top* (cdr *modal-dialog-on-top*)))))
+                (setf *modal-dialog-on-top* (nremove (assq dialog *modal-dialog-on-top*) *modal-dialog-on-top*))
+                (let ((mdot *modal-dialog-on-top*))
+                  (when mdot
+                    (when (not (wptr (caar mdot)))
+                      (setf *modal-dialog-on-top* (cdr *modal-dialog-on-top*)))))
                                         ;(setf *eventhook* nil)  ; kill the same bug 2 ways.             
                                         ; moved update-menus back to after window-close - fixes do-about-dialog when carbon (weird)
-                    (if close-on-exit
-                      (window-close dialog)
-                      (progn (window-hide dialog)
-                             (set-window-layer dialog 9999)))
-                    (when (not *modal-dialog-on-top*)(update-menus :enable *first-menustate*)
+                (if close-on-exit
+                    (window-close dialog)
+                    (progn (window-hide dialog)
+                           (set-window-layer dialog 9999)))
+                (when (not *modal-dialog-on-top*)(update-menus :enable *first-menustate*)
                                         ;(#_showfloatingwindows)
-                          )))))))))
+                      )))))
 
 
 
@@ -457,22 +464,14 @@ STRING:         A string against which to compare the text of the
 
 (defgeneric clip-inside-view (item &optional h v)
   (:method ((item simple-view) &optional (h #@(1 1)) v)
-    (let* ((p (make-point h v))
-           (ul (view-position item))
+    (let* ((p    (make-point h v))
+           (ul   (view-position item))
            (size (view-size item))
-           lr)
-      (declare (ignorable lr))
+           (lr))
       (when (and ul size)
         (psetf ul (add-points ul p)
                lr (subtract-points (add-points ul size) p))
-        (niy clip-inside-view item h v)
-        #-(and)
-        (rlet ((rect :rect :topleft ul :bottomright lr))
-              (#_ClipRect rect))))))
-
-
-
-
+        (clip-rect item ul lr)))))
 
 
 
@@ -546,13 +545,5 @@ STRING:         A string against which to compare the text of the
                                                                         foo)))
                                      (#_DrawThemetextbox cfstr #$kThemeCurrentPortFont #$Kthemestateactive t rect text-justification (%null-ptr)))
                                 (#_cfrelease cfstr))))))))))
-
-
-
-
-
-
-
-
 
 ;;;; THE END ;;;;

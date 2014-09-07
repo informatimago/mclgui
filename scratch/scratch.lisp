@@ -250,3 +250,28 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
 #<ns-font "LucidaGrande 12.00 pt. P [] (0x5c2e50) fobj=0x11a8a40, spc=3.80" (#x5C2E50)>
 |#
 
+
+(in-package :ui)
+
+(defparameter *d* (get-string-from-user "Please, edit a very new name:" 
+                                            :window-title "Rename it"
+                                            :size (make-point 200 85) 
+                                            :position :centered
+                                            :initial-string "hello"
+                                            :modeless t))
+
+
+(let ((item (find-subview-of-type (front-window) 'static-text-dialog-item)))
+  (values (view-font-codes item)
+          (multiple-value-bind (ff ms) (view-font-codes item)
+            (list ff ms
+                  (font-codes-string-width-with-eol (dialog-item-text item) ff ms)))
+          (point-to-list (view-default-size item))
+          (dialog-item-text item)))
+
+(set-view-font (front-window) (sys-font-spec))
+(view-font-codes (front-window))
+(font-codes (sys-font-spec) nil nil)
+(view-font (front-window))
+(view-font-codes (front-window))
+(set-view-font (front-window) *default-font-spec*)

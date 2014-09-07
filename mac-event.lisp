@@ -102,7 +102,6 @@
           :collect (or (second (assoc (expt 2 i) *event-modifier-labels)) i)))
 
 
-
 (defstruct (event (:copier %copy-event))
   (what      0 :type integer)
   (message   0)
@@ -121,13 +120,23 @@
 Event type         event-message
 keyboard           four bytes: not-used, not-used, key-code, character-code
 activate, update   window
-disk inserted      two half-words: file manager ersult code, drive number
+disk inserted      two half-words: file manager result code, drive number
 mouse              undefined -- for the event forwared from a -[NSResponder mouseDown:], the window.
 null               undefined 
 network            parameter block
 driver             cf. driver chapter
 application        used defined.
 |#
+
+
+(defun event-key-code (event)
+  (nth-value 0 (decode-key-message (event-message event))))
+
+(defun event-character (event)
+  (nth-value 1 (decode-key-message (event-message event))))
+
+(defun event-modifierp (event modifier-key)
+  (plusp (logand (event-modifiers event) modifier-key)))
 
 (defmethod print-object ((event event) stream)
   (format stream "#S(~S" 'event)

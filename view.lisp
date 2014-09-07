@@ -42,7 +42,27 @@
 
 
 
-(defgeneric view-draw-contents (view))
+(defgeneric view-draw-contents (view)
+  (:documentation "
+The generic function VIEW-DRAW-CONTENTS is called whenever a view
+needs to redraw any portion of its contents.  The VIEW method for
+VIEW-DRAW-CONTENTS erases the area in the window’s erase region (for
+new windows, this is the entire content area) and then calls
+VIEW-DRAW-CONTENTS on each subview.  You can specialize this function
+so that a user-defined view can be redrawn when portions of it are
+covered and uncovered.
+
+When VIEW-DRAW-CONTENTS is called by the event system, the view’s clip
+region is set so that drawing occurs only in the portions that need to
+be updated.  This normally includes areas that have been covered by
+other windows and then uncovered.
+
+VIEW:           A simple view.
+")
+  (:method (view)
+    (declare (ignore view))
+    nil))
+
 
 ;; (defun nsview-to-view-position (frame-nsrect size-point)
 ;;   "
@@ -78,7 +98,7 @@
 ;;                      (point-h size)
 ;;                      (point-v size))))
 
-(defmethod initialize-instance ((view simple-view) &key &allow-other-keys)
+(defmethod initialize-instance ((view simple-view) &key view-font &allow-other-keys)
   (declare (stepper trace))
   (call-next-method)
   (unless (and (slot-boundp view 'view-position)
@@ -90,14 +110,14 @@
   (let ((container (slot-value view 'view-container)))
     (when container
       (setf (slot-value view 'view-container) nil)
-      (set-view-container view container))))
+      (set-view-container view container)))
+  (when view-font
+    (set-initial-view-font view view-font)))
 
 
-(defmethod initialize-instance ((view view) &key view-font &allow-other-keys)
+(defmethod initialize-instance ((view view) &key &allow-other-keys)
   (declare (stepper trace))
   (call-next-method)
-  (when view-font
-    (set-initial-view-font view view-font))
   (setf (slot-value view 'view-subviews) #())
   view)
 
@@ -110,10 +130,6 @@
           (make-array (length subviews) :adjustable t :fill-pointer 0))
     (apply (function add-subviews) view (coerce subviews 'list)))
   view)
-
-
-;; (remove-method (function initialize-instance)
-;;                (find-method (function initialize-instance) '(:after) '(view)))
 
 
 
@@ -193,11 +209,9 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                                  (view-font-codes font-view))
     (let ((ff (or ff 65536)) ; application-font
           (ms (or ms 0)))
-      ;; (format-trace "set-font" :ff ff :ms ms)
       (multiple-value-bind (font mode) (font-from-codes ff ms)
         (declare (ignorable mode))
         ;; TODO: manage mode (:srcOr …)
-        ;; (format-trace "set-font" font mode)
         [font set])
       (list ff ms))))
 
@@ -205,20 +219,25 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 
 
 (defun get-at (at)
-  (list (list (ccl::pref at #>CGAffineTransform.a)
-              (ccl::pref at #>CGAffineTransform.b))
-        (list (ccl::pref at #>CGAffineTransform.c)
-              (ccl::pref at #>CGAffineTransform.d))
-        (list (ccl::pref at #>CGAffineTransform.tx)
-              (ccl::pref at #>CGAffineTransform.ty))))
+  #-ccl (error "~S is not implemented on ~A" 'get-at (lisp-implementation-type))
+  #+ccl (list (list (ccl::pref at #>CGAffineTransform.a)
+                    (ccl::pref at #>CGAffineTransform.b))
+              (list (ccl::pref at #>CGAffineTransform.c)
+                    (ccl::pref at #>CGAffineTransform.d))
+              (list (ccl::pref at #>CGAffineTransform.tx)
+                    (ccl::pref at #>CGAffineTransform.ty))))
 
 (defun get-ctm (window)
   (get-at (cg:context-get-ctm  [[(handle window) graphicsContext] graphicsPort])))
 
+(defun graphics-flush ()
+  [[NSGraphicsContext currentContext] flushGraphics])
+(declaim (inline get-ctm graphics-flush))
+
 
 (defgeneric call-with-focused-view (view function &optional font-view)
   ;; Note: be careful to return the FUNCTION results in all cases.
-  (:method ((view simple-view) function &optional font-view)
+  (:method ((view simple-view) function &optional (font-view *current-font-view*))
     (labels ((call-it ()
                (call-with-pen-state (lambda () (funcall function view))
                                     (view-pen view)))
@@ -234,42 +253,43 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                  [vtrans concat]
                  [vtrans release]
                  ;; (setf *trace-output* cl-user::*to*)
-                 #+debug-views
-                 (format-trace 'call-with-focused-view (list (class-name (class-of view))
-                                                             :origin (point-to-list origin)
-                                                             :frame (rect-to-list (view-frame view))
-                                                             :bounds (rect-to-list (view-bounds view)))
-                               :ctm (get-ctm window))
+                 #+debug-views (format-trace 'call-with-focused-view (list (class-name (class-of view))
+                                                                           :origin (point-to-list origin)
+                                                                           :frame (rect-to-list (view-frame view))
+                                                                           :bounds (rect-to-list (view-bounds view)))
+                                             :ctm (get-ctm window))
                  (unwind-protect
                       (call-it)
                    [wtrans set]))))
-      (if (eql *current-view* view)
-          (if (eql *current-font-view* font-view)
-              (let ((*current-view* view)
-                    (*current-font-view* (or font-view view))
-                    (*current-font-codes* (copy-list *current-font-codes*)))
-                (call-it))
-              (unwind-protect
-                   (let* ((*current-view* view)
-                          (*current-font-view*  (or font-view view))
-                          (*current-font-codes* (set-font *current-font-view*))) ; change font
-                     (call-it))
-                (set-font *current-font-view*))) ; revert font
-          (with-view-handle (winh view)
-            (let ((unlock   nil))
-              (unwind-protect
-                   (let ((*current-view* view)
-                         (*current-font-view* (or font-view *current-font-view* view))
-                         (*current-font-codes* (copy-list *current-font-codes*)))
-                     (when (setf unlock [winh lockFocusIfCanDraw])
-                       (focus-view *current-view* *current-font-view*)
-                       (apply (function set-current-font-codes) (set-font *current-font-view*))
-                       (call-it/trans)))
-                [[NSGraphicsContext currentContext] flushGraphics]
-                (when unlock
-                  (set-font *current-font-view*)
-                  [winh unlockFocus])
-                (focus-view *current-view* *current-font-view*))))))))
+      (declare (inline call-it call-it/trans))
+      (let ((same-font (eql *current-font-view* font-view)))
+        (if (eql *current-view* view)
+            (if same-font
+                (let ((*current-view*       view)
+                      (*current-font-view*  font-view)
+                      (*current-font-codes* (copy-list *current-font-codes*)))
+                  (call-it))
+                (unwind-protect
+                     (let ((*current-view*       view)
+                           (*current-font-view*  font-view)
+                           (*current-font-codes* (set-font font-view))) ; change font
+                       (call-it))
+                  (set-font *current-font-view*))) ; revert font
+            (with-view-handle (winh view)
+              (let ((unlock   nil))
+                (unwind-protect
+                     (let ((*current-view*      view)
+                           (*current-font-view* font-view)
+                           (*current-font-codes* (copy-list *current-font-codes*)))
+                       (when (setf unlock [winh lockFocusIfCanDraw])
+                         (focus-view *current-view* *current-font-view*)
+                         (unless same-font (apply (function set-current-font-codes) (set-font *current-font-view*)))
+                         (call-it/trans)))
+                  (graphics-flush)
+                  (when unlock
+                    (unless same-font (set-font *current-font-view*))
+                    [winh unlockFocus])
+                  (focus-view *current-view* *current-font-view*)))))))))
 
 
 
@@ -508,6 +528,7 @@ SUBVIEWS:       A list of view or simple view, but not a window;
   (:method ((view view) &rest subviews)
     (unless (find view subviews :test (function view-contains-p))
       (dolist (subview subviews)
+        (check-type subview simple-view)
         (set-view-container subview view)))))
 
 
@@ -524,6 +545,7 @@ SUBVIEWS:       A list of view or simple view, but not a window;
   (:method ((view view) &rest subviews)
     (unless (find view subviews :test (complement (function view-contains-p)))
       (dolist (subview subviews)
+        (check-type subview simple-view)
         (set-view-container subview nil)))))
 
 
@@ -531,11 +553,12 @@ SUBVIEWS:       A list of view or simple view, but not a window;
 (defgeneric view-contains-p (view contained-view)
   (:documentation "Whether CONTAINED-VIEW is a sub+view of VIEW.")
   (:method ((view simple-view) contained-view)
-    (loop
-      :for container = (view-container contained-view)
-        :then (view-container container)
-      :while container 
-        :thereis (eql container view)))
+    (when contained-view
+      (loop
+        :for container = (view-container contained-view)
+          :then (view-container container)
+        :while container 
+          :thereis (eql container view))))
   (:method ((view null) contained-view)
     (declare (ignore contained-view))
     nil))
@@ -1292,17 +1315,18 @@ CONTAINER:      The container of the view.
 
 (defun %view-draw-contents-with-focused-view (view focused-view visrgn cliprgn)
   (declare (ignore visrgn cliprgn)) ; for now ; we could compute a clip rect.
-  (let ((window (view-window view)))
-    (when window #-(and) (and window
-                              (with-handle (winh window)
-                                [winh isVisible]))
-          (with-focused-view focused-view
-            (view-draw-contents view))
-          #-(and) (with-temp-rgns (visrgn cliprgn)
-                    (get-window-visrgn wptr visrgn)
-                    (get-window-cliprgn wptr cliprgn)
-                    (when (regions-overlap-p visrgn cliprgn)
-                      (view-draw-contents view))))))
+  (unless *deferred-drawing*
+   (let ((window (view-window view)))
+     (when window #-(and) (and window
+                               (with-handle (winh window)
+                                 [winh isVisible]))
+           (with-focused-view focused-view
+             (view-draw-contents view))
+           #-(and) (with-temp-rgns (visrgn cliprgn)
+                     (get-window-visrgn wptr visrgn)
+                     (get-window-cliprgn wptr cliprgn)
+                     (when (regions-overlap-p visrgn cliprgn)
+                       (view-draw-contents view)))))))
 
 (defgeneric view-focus-and-draw-contents (view &optional visrgn cliprgn)
   (:documentation "

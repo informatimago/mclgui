@@ -42,11 +42,14 @@
 
 (defclass control-dialog-item (dialog-item) 
   ((procid :allocation :class
-           :reader control-dialog-item-procid)))
+           :reader control-dialog-item-procid)
+   (hilite-state :initarg :hilite-state
+                 :initform 0
+                 :accessor control-hilite-state)))
 
 (defmethod view-cursor ((item control-dialog-item) where)
   (declare (ignore where))
-  *arrow-cursor*)
+   *arrow-cursor*)
 (defmethod installed-item-p ((item control-dialog-item))
   (let ((dialog (view-container item)))
     (and dialog
@@ -65,21 +68,6 @@
           (set-dialog-item-text button text))))))
 
 
-(defgeneric fix-osx-dialog-item-font (button)
-  (:method ((button control-dialog-item))
-    (niy fix-osx-dialog-item-font button)
-    #-(and)
-    (when (dialog-item-handle button)
-      (multiple-value-bind (ff ms) (view-font-codes button) ;; dont bother if eql sys-font?
-        (rlet ((fsrec :controlfontstylerec))
-              (setf (pref fsrec :controlfontstylerec.flags) (logior #$kControlUseFontMask #$kControlUseFaceMask
-                                                                    #$kControlUseSizeMask #$kControlUseModeMask)
-                    (pref fsrec :controlfontstylerec.font) (ash ff -16)
-                    (pref fsrec :controlfontstylerec.size) (logand ms #xffff)
-                    (pref fsrec :controlfontstylerec.style) (ash (logand ff #xffff) -8)
-                    (pref fsrec :controlfontstylerec.mode) (ash ms -16))
-              (#_SetControlFontStyle (dialog-item-handle button) fsrec))))))
-
 
 (defmethod set-view-font-codes :after ((button control-dialog-item) ff ms &optional m1 m2)
   ;; (declare (ignore ff ms m1 m2))
@@ -87,8 +75,8 @@
   #-(and)
   (when (and (not (typep button 'scroll-bar-dialog-item))
              (dialog-item-handle button))  ;; it's a reset
-    ;(set-dialog-item-text button (dialog-item-text button))
-    (fix-osx-dialog-item-font button)))
+    ;;(set-dialog-item-text button (dialog-item-text button))
+    ))
  
 
 
@@ -223,8 +211,9 @@
     (niy view-activate-event-handler item)
     #-(and)
     (#_activatecontrol (dialog-item-handle item))
-    (when  (part-color item :frame)
-      (view-draw-contents item))))
+    (unless *deferred-drawing*
+     (when (part-color item :frame)
+       (view-draw-contents item)))))
 
 
 (defmethod view-deactivate-event-handler ((item control-dialog-item))
@@ -235,11 +224,12 @@
 
 (defmethod view-draw-contents ((item control-dialog-item))
   (when (installed-item-p item)
-    (niy view-draw-contents item)
-    #-(and)
-    (if (#_iscontrolvisible handle)
-        (#_Draw1Control handle)
-        (#_ShowControl handle))))
+    (call-next-method)
+    ;; #-(and)
+    ;; (if (#_iscontrolvisible handle)
+    ;;     (#_Draw1Control handle)
+    ;;     (#_ShowControl handle))
+    ))
 
 
 (defmethod view-click-event-handler ((item control-dialog-item) where)
@@ -306,6 +296,40 @@
       (multiple-value-bind (string-width nlines)  (font-codes-string-width-with-eol-for-control text ff ms)
         (make-point (+ (dialog-item-width-correction item) string-width)
                     (* nlines (font-codes-line-height ff ms)))))))
+
+(defgeneric hilite-control (control-item state))
+
+(defmethod hilite-control ((item control-dialog-item) state)
+  (format-trace 'hilite-control :state state :item item)
+  (setf (control-hilite-state item) state)
+  (unless *deferred-drawing*
+    (with-focused-dialog-item (item)
+      (view-draw-contents item))
+    (graphics-flush)))
+
+
+(defmethod view-click-event-handler ((item control-dialog-item) where)
+  (declare (ignore where))
+  (format-trace '(view-click-event-handler control-dialog-item) "start")
+  (loop
+    :with frame = (view-frame item)
+    :with state = 1
+    :while (wait-mouse-up)
+    :for mouse = (get-mouse)
+    :initially (hilite-control item state)
+    :do (if (zerop state)
+            (when (point-in-rect-p frame mouse)
+              (format-trace "entering" :frame (rect-to-list frame) :mouse (point-to-list mouse))
+              (hilite-control item (setf state 1)))
+            (unless (point-in-rect-p frame mouse)
+              (format-trace "exiting"  :frame (rect-to-list frame) :mouse (point-to-list mouse))
+              (hilite-control item (setf state 0))))
+    :finally (unless (zerop state)
+               (format-trace "acting")
+               (unwind-protect
+                    (dialog-item-action item)
+                 (hilite-control item 0))))
+  (format-trace '(view-click-event-handler control-dialog-item) "stop"))
 
 
 ;;;; THE END ;;;;

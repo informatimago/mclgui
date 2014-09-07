@@ -217,6 +217,12 @@
     `(oclo:slet ((,vframe ,call)) (wrap ,vframe))))
 
 
+(defun <nsr>ect-to-nsrect (rect)
+  #-ccl (error "~S is not implemented on ~A" '<nsr>ect-to-nsrect (lisp-implementation-type))
+  #+ccl (make-nsrect :x (ccl::pref rect #>NSRect.origin.x)
+                     :y (ccl::pref rect #>NSRect.origin.y)
+                     :width  (ccl::pref rect #>NSRect.size.width)
+                     :height (ccl::pref rect #>NSRect.size.height)))
 
 ;;;------------------------------------------------------------
 
@@ -666,17 +672,19 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:<BOOL>)
   body:
   (declare (ignore nswindow))
+  (break)
   (let ((window (nswindow-window self)))
     #+debug-objc (format-trace "-[MclguiWindow windowShouldZoom:toFrame:]" window)
     (when (eql (window-type window) :document-with-zoom)
       (window-zoom-event-handler
        window
-       (if (< (multiple-value-bind (x y w h) (frame [self frame])
-                (declare (ignore x y))
-                (* w h))
-              (let ((frame (wrap newFrame)))
-                (* (nsrect-width frame)
-                   (nsrect-height frame))))
+       (if (< (format-trace '(self frame) (multiple-value-bind (x y w h) (frame [self frame])
+                 (declare (ignore x y))
+                 (* w h)))
+              (format-trace 'newframe
+               (let ((frame (<nsr>ect-to-nsrect newFrame)))
+                 (* (nsrect-width frame)
+                    (nsrect-height frame)))))
            inZoomOut
            inZoomIn))
       t))]

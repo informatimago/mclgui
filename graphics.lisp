@@ -151,6 +151,9 @@
             [path closePath]
             [path fill]))))))
 
+;;;--------------------------------------------------------------------
+;;; rect
+;;;--------------------------------------------------------------------
 
 (defun draw-rect* (x y w h)
   ;; (format-trace "draw-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
@@ -243,6 +246,68 @@
 ;;     (with-fore-color *blue-color*
 ;;       (draw-ellipse 20 20 200 100))))
 
+
+
+;;;--------------------------------------------------------------------
+;;; round-rect
+;;;--------------------------------------------------------------------
+
+(defun average (a b) (round (+ a b) 2))
+
+(defun draw-round-rect* (oval-width oval-height x y w h)
+  ;; (format-trace "draw-round-rect*" oval-width oval-height x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  (when *current-view*
+    (let ((window  (view-window *current-view*)))
+      (when window
+        (let* ((pen  (view-pen window))
+               (size (pen-size pen)))
+          [NSBezierPath setDefaultLineWidth:(cgfloat (average (point-h size) (point-v size)))]
+          [[NSBezierPath bezierPathWithRoundedRect:(ns:make-ns-rect x y w h)
+                         xRadius:(cgfloat (/ oval-width  2.0))
+                         yRadius:(cgfloat (/ oval-height 2.0))] stroke])))))
+
+
+(defun fill-round-rect* (oval-width oval-height x y w h)
+  ;; (format-trace "fill-round-rect*" oval-width oval-height x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  (when *current-view*
+    (let ((window  (view-window *current-view*)))
+      (when window
+        (let* ((pen  (view-pen window))
+               (size (pen-size pen)))
+          [NSBezierPath setDefaultLineWidth:(cgfloat 0.0)]
+          [[NSBezierPath bezierPathWithRoundedRect:(ns:make-ns-rect x y w h)
+                         xRadius:(cgfloat (/ oval-width  2.0))
+                         yRadius:(cgfloat (/ oval-height 2.0))] fill])))))
+
+
+(defun erase-round-rect* (oval-width oval-height x y w h)
+  ;; (format-trace "erase-round-rect*" oval-width oval-height x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  (when *current-view*
+    (let ((window  (view-window *current-view*)))
+      (when window
+        (let* ((pen  (view-pen window))
+               (size (pen-size pen))
+               (color (unwrap (or (and *current-view*
+                                       (view-window *current-view*)
+                                       (slot-value (view-window *current-view*) 'back-color))
+                                  *background-color*))))
+          [NSBezierPath setDefaultLineWidth:(cgfloat 0.0)]
+          [NSGraphicsContext saveGraphicsState]
+          (unwind-protect
+               (progn
+                 [color setFill]
+                 [[NSBezierPath bezierPathWithRoundedRect:(ns:make-ns-rect x y w h)
+                                xRadius:(cgfloat (/ oval-width  2.0))
+                                yRadius:(cgfloat (/ oval-height 2.0))] fill])
+            [NSGraphicsContext restoreGraphicsState]))))))
+
+
+(defun draw-round-rect (oval-width oval-height rect)
+  (draw-round-rect* oval-width oval-height (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect)))
+
+;;;--------------------------------------------------------------------
+;;; ellipse
+;;;--------------------------------------------------------------------
 
 (defun draw-ellipse (x y w h)
   ;; (format-trace "draw-ellipse-rect" x y w h *current-view* (when *current-view* (view-window *current-view*)))

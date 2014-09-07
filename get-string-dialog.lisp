@@ -49,21 +49,6 @@
 
 
 
-(defmethod set-view-size ((dialog get-string-dialog) h &optional v)
-  (declare (ignore h v))
-  (let* ((old-size (view-size dialog)))
-    (call-next-method)
-    (let* ((new-size (view-size dialog))
-           (hdelta (make-point (- (point-h old-size)(point-h new-size)) 0))
-           (subs (view-subviews dialog))
-           (len (length subs)))
-      (dotimes (i len)
-        (let ((sub (elt subs i)))
-          (if (typep sub 'button-dialog-item)
-            (set-view-position sub (subtract-points (view-position sub) hdelta))
-            (if (typep sub 'editable-text-dialog-item)
-              (set-view-size sub (subtract-points (view-size sub) hdelta)))))))))
-
 
 ;; for dialogs which require non-empty strings to enable the default-button.
 ;; used by apropos, get-string-from-user and search-files
@@ -90,86 +75,133 @@
                 (dialog-item-disable debutton)))))))))
 
 
-
-
+(defgeneric view-line-height (view)
+  (:method ((view simple-view))
+    (multiple-value-bind (ff ms) (view-font-codes view)
+      (font-codes-line-height ff ms))))
 
 (defun get-string-from-user (message 
                              &key
-                             (initial-string "")
-                             (size #@(365 100))
-                             (position '(:bottom 140))
-                             (ok-text "OK")
-                             (cancel-text "Cancel")
-                             (modeless nil)
-                             (window-title "")
-                             (window-type :document-with-grow)
-                             (back-color *tool-back-color*)
-                             (allow-empty-strings nil)
-                             (action-function #'identity)
-                             (cancel-function nil)
-                             (theme-background t))
-  (let ((dialog)
-        (delta 20)
-        (message-item)
-        (message-len 0))
-    (when message 
-      (setf message-item (make-instance 'static-text-dialog-item
-                           :text-truncation :end
-                           :view-position (make-point 6 (- (point-v size) 54 delta))
-                           :dialog-item-text message))
-      (let* ((msize (view-default-size message-item))
-             (mh    (min (point-h msize) (- (point-h size) 100)))) 
-        (set-view-size message-item (make-point mh (point-v msize))))
-      (setf message-len (+ 6 (point-h (view-size message-item)))))
+                               (initial-string "")
+                               (size #@(365 100))
+                               (position '(:bottom 140))
+                               (ok-text "OK")
+                               (cancel-text "Cancel")
+                               (modeless nil)
+                               (window-title "")
+                               (window-type :document-with-grow)
+                               (back-color *tool-back-color*)
+                               (allow-empty-strings nil)
+                               (action-function #'identity)
+                               (cancel-function nil)
+                               (theme-background t))
+  (when message 
     (flet ((act-on-text (item)
              (let ((e-item (find-subview-of-type (view-container item)
                                                  'editable-text-dialog-item)))
                (funcall action-function (dialog-item-text e-item)))))
-      (setf dialog (make-instance 'get-string-dialog
-                      :view-position position
-                     :view-size size
-                     :close-box-p (if modeless t nil)
-                     :grow-box-p t
-                     :window-type window-type
-                     :window-title window-title
-                     :window-show nil
-                     :back-color back-color
-                     :theme-background theme-background
-                     :allow-empty-strings allow-empty-strings
-                     :view-subviews
-                     (list
-                      (make-dialog-item 'default-button-dialog-item
-                                        (make-point (- (point-h size) 74)
-                                                    (- (point-v size) 20 delta))
-                                        #@(62 20)
-                                        ok-text
-                                        (if (not modeless)
-                                          (lambda (item)
-                                                (return-from-modal-dialog (act-on-text item)))
-                                          #'act-on-text))                     
-                      (make-dialog-item 'button-dialog-item
-                                        (make-point (- (point-h size) 154)
-                                                    (- (point-v size) 20 delta))
-                                        #@(62 20)
-                                        cancel-text
-                                        (or cancel-function
-                                            (lambda (item)
-                                                  (if (not modeless) 
-                                                    (return-from-modal-dialog :cancel)
-                                                    (window-close (view-window item)))))
-                                        :cancel-button t)
-                      (make-dialog-item 'editable-text-dialog-item
-                                        (make-point (+ 6 message-len) (- (point-v size) 54 delta))
-                                        (make-point (- (point-h size) delta message-len) 16)
-                                        initial-string))))
-      (when message
-        (add-subviews dialog message-item))
-      (update-default-button dialog)
-      (cond ((not modeless)         
-             (modal-dialog dialog))
-            (t (window-show dialog)
-               dialog)))))
+      (let* ((dialog           (make-instance 'get-string-dialog
+                                              :view-position position
+                                              :view-size size
+                                              :close-box-p (if modeless t nil)
+                                              :grow-box-p t
+                                              :window-type window-type
+                                              :window-title window-title
+                                              :window-show nil
+                                              :back-color back-color
+                                              :theme-background theme-background
+                                              :allow-empty-strings allow-empty-strings))
+             (top-margin       12)
+             (left-margin       6)
+             (right-margin      6)
+             (bottom-margin    12)
+             (interline        12)
+             (button-height    (+ 6 (view-line-height dialog)))
+             (input-height     (+ 2 (view-line-height dialog)))
+             (input-min-width  300)
+             (message-item     (make-instance 'static-text-dialog-item
+                                              :text-truncation :end
+                                              :view-position (make-point left-margin top-margin)
+                                              :dialog-item-text message))
+             (message-size     (view-default-size message-item))
+             (min-width        (+ left-margin input-min-width right-margin))
+             (mh               (max input-min-width
+                                    (point-h message-size)
+                                    (- (point-h size) left-margin right-margin)))
+             (wh               (+ left-margin mh right-margin))
+             (edit-top         (+ top-margin (point-v message-size) interline))
+             (edit-item        (make-dialog-item 'editable-text-dialog-item 
+                                                 (make-point left-margin edit-top)
+                                                 (make-point mh input-height) 
+                                                 initial-string))
+             (button-top       (+ edit-top input-height interline))
+             (ok-item          (make-dialog-item 'default-button-dialog-item
+                                                 (make-point (- wh right-margin 62) button-top)
+                                                 (make-point 62 button-height)
+                                                 ok-text
+                                                 (if modeless
+                                                     (function act-on-text)
+                                                     (lambda (item)
+                                                       (return-from-modal-dialog (act-on-text item))))))
+             (cancel-item      (make-dialog-item 'button-dialog-item
+                                                 (make-point (- wh right-margin 62 interline 62) button-top)
+                                                 (make-point 62 button-height)
+                                                 cancel-text
+                                                 (or cancel-function
+                                                     (lambda (item)
+                                                       (if modeless 
+                                                           (window-close (view-window item))
+                                                           (return-from-modal-dialog :cancel))))
+                                                 :cancel-button t))
+             (ok-size          (view-default-size ok-item))
+             (cancel-size      (view-default-size cancel-item))
+             (min-height       (+ button-top button-height bottom-margin))
+             (wsize            (make-point wh (max min-height (point-v size)))))
+        (setf (window-minimum-size dialog) (make-point min-width min-height))
+        (set-view-size dialog wsize)
+        (set-view-size ok-item ok-size)
+        (set-view-size cancel-item cancel-size)
+        (view-put dialog 'size-part (lambda ()
+                                      (set-view-size edit-item (- (point-h (view-size dialog))
+                                                                  left-margin right-margin)
+                                                     input-height)
+                                      (set-view-position ok-item (- (point-h (view-size dialog))
+                                                                    (* 2 right-margin) (point-h ok-size))
+                                                         button-top)
+                                      (set-view-position cancel-item (- (point-h (view-position ok-item))
+                                                                        interline (point-h cancel-size))
+                                                         button-top)))
+        (funcall (view-get dialog 'size-part))
+        ;; subviews:
+        (add-subviews dialog message-item edit-item cancel-item ok-item)
+        (update-default-button dialog)
+        (cond (modeless
+               (window-show dialog)
+               dialog)
+              (t             
+               (modal-dialog dialog)))))))
 
+(defmethod window-size-parts ((dialog get-string-dialog))
+  (funcall (view-get dialog 'size-part (lambda ()))))
+
+
+;; (defmethod set-view-size ((dialog get-string-dialog) h &optional v)
+;;   (let ((subviews   (view-subviews dialog))
+;;         (new-size   (make-point h v))
+;;         (old-size   (view-size dialog))
+;;         (min-width  (view-get dialog 'min-width  0))
+;;         (min-height (view-get dialog 'min-height 0)))
+;;     (call-next-method dialog (max min-width (point-h new-size)) (max min-height (point-v new-size)))
+;;     (when subviews
+;;       (let* ((new-size (view-size dialog))
+;;              (hdelta   (make-point (- (point-h new-size) (point-h old-size)) 0)))
+;;         (loop
+;;           :for item :across subviews
+;;           :do (typecase item
+;;                 (button-dialog-item
+;;                  (set-view-position item (add-points (view-position item) hdelta)))
+;;                 (editable-text-dialog-item
+;;                  (set-view-size item (add-points (view-size item) hdelta)))))))))
 
 
 ;;;; THE END ;;;;

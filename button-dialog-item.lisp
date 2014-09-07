@@ -11,6 +11,7 @@
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
+;;;;    2014-09-04 <PJB> Implemented.
 ;;;;    2012-05-19 <PJB> Created.
 ;;;;BUGS
 ;;;;LEGAL
@@ -44,19 +45,20 @@
 (defclass button-dialog-item (default-button-mixin control-dialog-item)
   ((procid           :allocation :class
                      :initarg  :procid
-                     :initform 0 ; #$PushButProc
-                     )
+                     :initform 0) ; #$PushButProc
    (width-correction :allocation :class
                      :initform 10))
   (:documentation "
-This is the class used to  make buttons. Clicking a button usually has
-an  immediate  result. Buttons  are  generally  given  a function  for
+This is the class used to make buttons.  Clicking a button usually has
+an immediate result.  Buttons are generally given a function for
 DIALOG-ITEM-ACTION-FUNCTION via the :dialog-item-action initialization
 argument.
 "))
 
 
-(defmethod initialize-instance ((item button-dialog-item) &key (border-p t))
+(defmethod initialize-instance ((item button-dialog-item) &key
+                                                            (border-p t)
+                                                            (view-font (view-default-font item)))
   (call-next-method)
   (unless border-p
     (setf (view-get item 'no-border) t)))
@@ -67,8 +69,8 @@ argument.
   ()
   (:default-initargs
    :dialog-item-text "OK"
-    :default-button  t
-    :cancel-button   nil)
+   :default-button t
+   :cancel-button   nil)
   (:documentation "
 Default buttons are a convenient subclass of button dialog items; they
 serve as the default button. A dialog may have one default button. This
@@ -77,36 +79,6 @@ keystrokes Return or Enter.
 "))
 
 
-(defgeneric set-default-button (window new-button)
-  (:documentation "
-
-The SET-DEFAULT-BUTTON generic function changes the default button
-according to the value of new-button and returns new-button.  If
-carriage returns are allowed in the current editable-text item, they
-are sent to that item rather than to the default button.
-
-WINDOW:         A window.
-
-NEW-BUTTON:     The button that should be made the default button, or
-                NIL, indicating that there should be no default button.
-")
-  (:method ((dialog window) new-button)
-    (let ((default-button (%get-default-button dialog)))
-      (unless (eql default-button new-button)
-        (without-interrupts
-            (when default-button
-              (invalidate-view-border default-button t)
-              (niy set-default-button dialog new-button) #-(and)
-              (#_setwindowdefaultbutton (wptr dialog) (%null-ptr)))
-          (setf (%get-default-button dialog) new-button)
-          (when new-button
-            (niy set-default-button dialog new-button) #-(and)
-            (when (dialog-item-handle new-button)
-              (if (dont-throb new-button) ;(and (osx-p) (neq (view-container new-button)(view-window new-button)))
-                  nil  ;; so we act like a default button but dont look like one
-                  (#_setwindowdefaultbutton (wptr dialog) (dialog-item-handle new-button))))
-            (invalidate-view-border new-button)))))
-    new-button))
 
 
 (defgeneric default-button-p (item)
@@ -123,7 +95,6 @@ default button in the view-window of ITEM.  Otherwise it returns NIL.
 (defmethod view-corners ((item button-dialog-item))
   (multiple-value-call (function inset-corners) #@(-1 -1) (call-next-method)))
 
-
  
 (defmethod view-default-size ((button button-dialog-item))
   (let ((size (call-next-method)))
@@ -133,27 +104,6 @@ default button in the view-window of ITEM.  Otherwise it returns NIL.
 
 (defmethod view-default-font ((button button-dialog-item))
   (sys-font-spec))
-
-
-
-(defmethod dont-throb ((item button-dialog-item))
-  (or
-   ;; (not (eql (view-window item)(view-container item)))
-   (part-color item :text)
-   (part-color item :body)        
-   #+ignore ;; font seems to work - oops no it doesn't
-   (and (default-button-p item)
-        (or (not (eql (view-window item)(view-container item)))
-            #+ignore
-            (multiple-value-bind (ff ms)(view-font-codes item)
-              (declare (ignorable ms))
-              (multiple-value-bind (sys-ff sys-ms)(sys-font-codes)
-                (declare (ignorable sys-ms))
-                (or (not (eql ff sys-ff))
-                    #+ignore
-                    (not (eql ms sys-ms)))))))
-   ))
-
 
 
 (defmethod call-with-focused-dialog-item ((item button-dialog-item) fn &optional container)
@@ -173,16 +123,12 @@ The press-button generic function highlights button, then calls the
 dialog-item-action method for button.
 ")
   (:method ((button button-dialog-item))
-    (with-focused-dialog-item (button)
-      (niy  press-button button)
-      ;; (let ((handle (dialog-item-handle button)))
-      ;;   (#_deactivatecontrol handle) ;(#_HiliteControl handle 1)
-      ;;   (let ((time (%tick-sum 3 (tick-count))))
-      ;;     (while (< (%tick-difference (tick-count) time) 0)))
-      ;;   (when (setq handle (dialog-item-handle button))   ; window may have closed
-      ;;     (#_activatecontrol handle)) ;(#_HiliteControl handle 0))
-      ;;   (dialog-item-action button))
-      (dialog-item-action button))))
+    (hilite-control button 1)
+    (sleep 0.05)
+    (hilite-control button 0)
+    (dialog-item-action button)))
+
+
 
 
 (defmethod validate-control-dialog-item ((item button-dialog-item))
@@ -224,61 +170,20 @@ dialog-item-action method for button.
   p)
 
 
-
-
-
-(defmethod view-draw-contents :before ((item button-dialog-item))
-  (when (and (default-button-p item)
-             (not (eql (view-window item) (view-container item))))
-    (niy view-draw-contents item)
-    ;; (let ((topLeft (convert-coordinates (view-position item) (view-container item) (view-window item)))
-    ;;       (control-rect-position (get-control-bounds item)))
-    ;;   (unless (eql control-rect-position topleft)         
-    ;;     (#_MoveControl handle (point-h topLeft) (point-v topLeft))))
-    ))
-
-
-
-;; (defun get-control-bounds (x)
-;;   (rlet ((rect :rect))
-;;     (#_getcontrolbounds (dialog-item-handle x) rect)
-;;     (values (pref rect :rect.topleft)
-;;             (pref rect :rect.botright))))
-
-
-(defmethod view-draw-contents ((item button-dialog-item))
-  (let ((no-border (view-get item 'no-border)))
-    (if no-border
-        (niy view-draw-contents item) #-(and)
-        (with-item-rect (rect item)
-          ;; (#_eraserect rect)
-          (clip-inside-view item 2 2)
-          (call-next-method))
-        (progn
-          (call-next-method)
-          (maybe-draw-default-button-outline item)))))
-
-
 (defgeneric draw-default-button-outline (item)
   (:method ((item button-dialog-item))
     (when (installed-item-p item)
       (with-focused-dialog-item (item)
-        (let ((grayp (not (dialog-item-enabled-p item))))
-          (declare (ignore grayp))
+        (let* ((rect (view-frame item))
+               (grayp (not (dialog-item-enabled-p item))))
+          (inset-rect rect -4 -4)
           (with-slots (color-list) item
-            (with-fore-color (or (getf color-list :frame nil)  *light-blue-color*) ;; how do we tell if user changed to "graphite"?
-              (without-interrupts
-                  (niy draw-default-button-outline item)
-                ;; (with-item-rect (rect item)
-                ;;   (#_insetRect rect -4 -4)
-                ;;   (rlet ((ps :penstate))
-                ;;         (#_GetPenState ps)
-                ;;         (#_PenSize 3 3)
-                ;;         (when grayp
-                ;;           (#_PenPat *gray-pattern*))
-                ;;         (#_FrameRoundRect rect 16 16)
-                ;;         (#_SetPenState ps)))
-                ))))))))
+            (with-fore-color (or (getf color-list :frame nil) *light-blue-color*)
+              (with-pen-state (:size #@(3 3)
+                               :pattern (if grayp
+                                            *gray-pattern*
+                                            *black-pattern*))
+                (draw-round-rect 16 16 rect)))))))))
 
 
 (defun maybe-draw-default-button-outline (button)
@@ -289,18 +194,40 @@ dialog-item-action method for button.
       (draw-default-button-outline button))))
 
 
-
-;; (defun theme-color ()  ;; here is how - what a lousy interface
-;;   (rlet ((what :ptr))
-;;     (errchk (#_copythemeidentifier what))
-;;     (let* ((cfstr-ptr (%get-ptr what))
-;;            (str (get-cfstr cfstr-ptr)))
-;;       (#_cfrelease cfstr-ptr) ; ??
-;;       (if (or (string= str "com.apple.theme.appearance.platinum") ;; os-9
-;;               (string= str "com.apple.theme.appearance.aqua.graphite")) ;; os-x
-;;         :platinum
-;;         :blue))))
-
+(defmethod view-draw-contents ((item button-dialog-item))
+  (let ((no-border (view-get item 'no-border)))
+    (if no-border
+        (let ((rect (view-frame item)))
+          (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
+          (clip-inside-view item 2 2)
+          (call-next-method))
+        (with-focused-dialog-item (item)
+          (let* ((frame (view-frame item))
+                 (x (rect-left   frame))
+                 (y (rect-top    frame))
+                 (w (rect-width  frame))
+                 (h (rect-height frame))
+                 (grayp (not (dialog-item-enabled-p item)))
+                 (state (control-hilite-state item)))
+            (with-slots (color-list) item
+              (with-fore-color (if (zerop state)
+                                   (or (getf color-list :body  nil) *white-color*)
+                                   (or (getf color-list :frame nil) *gray-color*))
+                  (fill-round-rect* 12 12 x y w h))
+              (with-fore-color (if (zerop state)
+                                     (or (getf color-list :frame nil) *black-color*)
+                                     (or (getf color-list :body  nil) *white-color*))
+                (with-back-color (if (zerop state)
+                                     (or (getf color-list :body  nil) *white-color*)
+                                     (or (getf color-list :frame nil) *black-color*))
+                  (with-pen-state (:size #@(1 1)
+                                   :pattern (if grayp
+                                                *gray-pattern*
+                                                *black-pattern*))
+                    (draw-round-rect*  12 12 x y w h)
+                    (let ((text (dialog-item-text item)))
+                      (draw-text (+ x (truncate  (- w (string-width text)) 2)) (+ y 2) w h text)))))))
+          (maybe-draw-default-button-outline item)))))
 
 
 ;;;; THE END ;;;;

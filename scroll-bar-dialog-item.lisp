@@ -435,12 +435,13 @@ NEW-SCROLLEE: The new scrollee of item.
   (let ((handle (dialog-item-handle item))
         (container (view-container item)))
     (when handle
-      (with-focused-view container
-        (unless (window-active-p (view-window item))
-          (let ((splitter (pane-splitter item)))
-            (when splitter
-              (view-draw-contents splitter))))            
-        (#_deactivatecontrol handle)))))
+      (unless *deferred-drawing*
+        (with-focused-view container
+          (unless (window-active-p (view-window item))
+            (let ((splitter (pane-splitter item)))
+              (when splitter
+                (view-draw-contents splitter))))))
+      (#_deactivatecontrol handle))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -471,8 +472,9 @@ NEW-SCROLLEE: The new scrollee of item.
           (if (dialog-item-enabled-p item)
               (#_activatecontrol handle)
               (#_deactivatecontrol handle))
-          (let ((splitter (pane-splitter item)))
-            (when splitter (view-draw-contents splitter))))))))
+          (unless *deferred-drawing*
+           (let ((splitter (pane-splitter item)))
+             (when splitter (view-draw-contents splitter)))))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

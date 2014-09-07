@@ -176,20 +176,6 @@ VIEW:           A simple view.
 ;;; window event handlers
 ;;;---------------------------------------------------------------------
 
-(defgeneric window-event (window)
-  (:documentation "
-The WINDOW-EVENT generic function is called by EVENT-DISPATCH to get a
-window to handle an event.  This function is called only when the
-event system determines the appropriate window.  The method of
-WINDOW-EVENT for WINDOW checks the type of the event and calls the
-appropriate event handler.  The WINDOW-EVENT function should be
-specialized in windows that need to do something in addition to or
-different from the default behavior for many types of events.
-
-WINDOW:         A window.
-"))
-
-
 (defgeneric window-null-event-handler (window)
   (:documentation "
 The generic function WINDOW-NULL-EVENT-HANDLER is called on the top
@@ -422,28 +408,6 @@ WINDOW:         A window.
 ;;;---------------------------------------------------------------------
 ;;; event functions
 ;;;---------------------------------------------------------------------
-
-(defgeneric view-draw-contents (view)
-  (:documentation "
-The generic function VIEW-DRAW-CONTENTS is called whenever a view
-needs to redraw any portion of its contents.  The VIEW method for
-VIEW-DRAW-CONTENTS erases the area in the window’s erase region (for
-new windows, this is the entire content area) and then calls
-VIEW-DRAW-CONTENTS on each subview.  You can specialize this function
-so that a user-defined view can be redrawn when portions of it are
-covered and uncovered.
-
-When VIEW-DRAW-CONTENTS is called by the event system, the view’s clip
-region is set so that drawing occurs only in the portions that need to
-be updated.  This normally includes areas that have been covered by
-other windows and then uncovered.
-
-VIEW:           A simple view.
-")
-  (:method (view)
-    (declare (ignore view))
-    nil))
-
 
 (defgeneric view-mouse-position (view)
   (:documentation "
@@ -711,6 +675,36 @@ RETURN:         If called during event processing, return true if
     (setq *last-mouse-down-time* when)))
 
 
+(defun read-integer-code ()
+  (loop
+    :do (format *query-io* "Enter an integer code: ")
+        (let ((value (read *query-io*)))
+          (when (typep value '(signed-byte 32))
+            (return-from read-integer-code (list value))))))
+
+
+(define-condition user-interrupt (error)
+  ()
+  (:report "User Interruption"))
+
+
+(defun invoke-debugger-with-restarts (condition)
+  (restart-case
+      (invoke-debugger condition)
+    (continue ()
+      :report "Continue")
+    (abort-run-modal ()
+      :report "Abort Run Modal"
+      [(handle *application*) abortModal])
+    (stop-run-modal ()
+      :report "Stop Run Modal"
+      [(handle *application*) stopModal])
+    (stop-run-modal-with-code (code)
+      :report "Stop Run Modal With Code"
+      :interactive read-integer-code
+      [(handle *application*) stopModalWithCode:code])))
+
+
 (defun process-event (event)
   ;; Note: we don't dispatch on menu events (menu key or menu select),
   ;; since those events are handled by Cocoa. 
@@ -730,9 +724,13 @@ RETURN:         If called during event processing, return true if
        (when (typep message 'window)
          (window-event message)))
       ((#.key-down #.auto-key #.key-up)
-       (if window
-           (window-event window)
-           (view-key-event-handler *application* (nth-value 1 (decode-key-message message)))))
+       (if (and (= what key-down)
+                (event-modifierp event cmd-key)
+                (char= #\, (event-character event)))
+           (invoke-debugger-with-restarts (make-condition 'user-interrupt))
+           (if window
+               (window-event window)
+               (view-key-event-handler *application* (nth-value 1 (decode-key-message message))))))
       ((#.activate-evt #.update-evt)
        (window-event message))
       ((#.disk-evt)     #|nop|#)
@@ -753,6 +751,7 @@ RETURN:         If called during event processing, return true if
 
 (defun receive-appleevent ()
   (values))
+
 
 
 (defvar *eventhooks-in-progress* nil)
