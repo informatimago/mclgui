@@ -246,6 +246,9 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                       (wtrans (window-affine-transform window))
                       (vtrans (make-affine-transform))
                       (origin (convert-coordinates #@(0 0) view window)))
+                 (unless wtrans
+                   (warn "(window-affine-transform window) is nil :window ~S" window)
+                   (return-from call-it/trans (values)))
                  [wtrans set]
                  [vtrans translateXBy:(cgfloat 0.0) yBy:(cgfloat (point-v (view-size (view-window view))))]
                  [vtrans scaleXBy:(cgfloat 1.0) yBy:(cgfloat -1.0)]

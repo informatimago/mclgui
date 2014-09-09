@@ -376,6 +376,11 @@
                 :depends-on ("package" "macros" "variables" "point"
                                        "objc-classes" "view-classes"
                                        "pattern" "rect" "region" "pen"))
+
+               ;; Managers:
+               
+               (:file "text-edit"
+                :depends-on ("package" "window" "pen" "font" "point" "rect" "region"))
                
                #+has-appleevent
                (:file "apple-event"
@@ -388,6 +393,7 @@
                ;; 
                ;; (:file "debugger-dialog"
                ;;  :depends-on ("package" "dialog" "layout"))
+
                
                ;; MCLGUI:
                

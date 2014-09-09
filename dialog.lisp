@@ -95,7 +95,7 @@
 (defun save-results-from-modal-dialog (results)
   (push results *results-from-modal-dialog*))
 (defun results-from-modal-dialog ()
-  (values-list (pop *results-from-modal-dialog*)))
+  (values-list  (pop *results-from-modal-dialog*)))
 
 (defun %return-from-modal-dialog (&rest values)
   (save-results-from-modal-dialog values)

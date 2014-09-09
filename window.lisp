@@ -364,7 +364,8 @@ When a window is closed, its state is lost and cannot be recovered.
 The MCL event system calls WINDOW-CLOSE when the user clicks a window’s
 close box or chooses Close from the File menu.
 ")
-  (:method ((window window))    
+  (:method ((window window))
+    (window-hide window)
     (with-handle (winh window)
       (close-nswindow winh))
     (delete-from-list *window-list* window)

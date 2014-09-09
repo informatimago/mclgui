@@ -45,19 +45,27 @@
   ((width-correction   :allocation :class :initform 4)
    (text-justification :allocation :class :initform 0)))
 
-(defmethod update-handle ((item basic-editable-text-dialog-item))
-  (setf (handle item) (make-text-item item :selectable t :editable t :bordered t)))
+;;;---- key-handler-mixin
 
-(defmethod unwrap ((item basic-editable-text-dialog-item))
-  (unwrapping item
-    (or (handle item) (update-handle item))))
+(defmethod selection-range ((item basic-editable-text-dialog-item))
+  (with-slots (selection-start selection-end) item
+    (values selection-start selection-end)))
 
+
+(defmethod set-selection-range (item &optional start end)
+  (with-slots (selection-start selection-end) item
+    (unless (and (= selection-start start) (= selection-end end))
+      (setf selection-start start
+            selection-end end)
+      (view-draw-contents item))))
+
+
+;;;----
 
 (defmethod view-default-size ((item basic-editable-text-dialog-item))
   (let* ((pt    (call-next-method))
          (width (point-h pt)))
     (make-point (- (ash width 1) (ash width -1)) (point-v pt))))
-
 
 (defmethod dialog-item-disable :before ((item basic-editable-text-dialog-item))
   (let ((window (view-window item)))

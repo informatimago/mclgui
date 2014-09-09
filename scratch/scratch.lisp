@@ -275,3 +275,57 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
 (view-font (front-window))
 (view-font-codes (front-window))
 (set-view-font (front-window) *default-font-spec*)
+
+
+
+(let ((win (front-window)))
+  (time
+   (with-focused-view win
+     (loop with text = "(patchwork::c-pw-window :title \"PW1\" :view-position (50 44) :view-size (500 300) \"#x30200553C09D\")"
+           for i from 0 to (length text)
+           for x =  (+ 6 (string-width (subseq text 0 i)))
+           do (erase-rect* 6 4 600 20)
+              (draw-string 6 20 text)
+              (draw-line x 4 x 20)
+              (graphics-flush)
+           finally (return (length text))))))
+
+;; 98
+;; 
+;; visible:
+;; 
+;; took 1,645,489 microseconds (1.645489 seconds) to run.
+;;          2,378 microseconds (0.002378 seconds, 0.14%) of which was spent in GC.
+;; During that period, and with 4 available CPU cores,
+;;        140,660 microseconds (0.140660 seconds) were spent in user mode
+;;         28,833 microseconds (0.028833 seconds) were spent in system mode
+;;  704,800 bytes of memory allocated.
+;;  18 minor page faults, 0 major page faults, 0 swaps.
+;; 
+;; not visible:
+;; 
+;; took 64,703 microseconds (0.064703 seconds) to run.
+;; During that period, and with 4 available CPU cores,
+;;      53,366 microseconds (0.053366 seconds) were spent in user mode
+;;       6,566 microseconds (0.006566 seconds) were spent in system mode
+;;  704,800 bytes of memory allocated.
+;;  42 minor page faults, 0 major page faults, 0 swaps.
+
+
+
+(let ((win (front-window)))
+  (time
+   (with-focused-view win
+     (loop with text = "(patchwork::c-pw-window :title \"PW1\" :view-position (50 44) :view-size (500 300) \"#x30200553C09D\")"
+           with lh = (view-line-height win)
+           with y = 50
+           for i from 0 to (length text)
+           for x =  (+ 6 (string-width (subseq text 0 i)))
+           do (erase-rect* 6 (- y lh) 600 y)
+              (draw-string 6 y (subseq text 0 i))
+              (draw-string x y (subseq text i))
+              (draw-line x (- y lh) x y)
+              (graphics-flush)
+              (sleep 1)
+           finally (return (length text))))))
+

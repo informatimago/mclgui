@@ -151,8 +151,7 @@ DIALOG:         An argument allowing a dialog to be specified. In
    (allow-tabs    :initarg :allow-tabs    :initform nil :accessor allow-tabs-p))
   (:documentation "
 The class key-handler-mixin should be mixed into any class that
-handles key events. The class fred-dialog-item includes keyhandler-
-mixin.
+handles key events. The class fred-dialog-item includes key-handler-mixin.
 "))
 
 

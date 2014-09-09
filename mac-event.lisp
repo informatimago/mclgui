@@ -165,6 +165,8 @@ RETURN:         DST.
 
 (defstruct queue (mutex (make-mutex)) head tail)
 (defvar *event-queue* (make-queue :mutex (make-mutex "event-queue")))
+(defun event-queue-length ()
+  (length (queue-head *event-queue*)))
 
 (defun post-event (event)
   (check-type event event)

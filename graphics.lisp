@@ -42,6 +42,10 @@
 (enable-sharp-at-reader-macro)
 
 
+(defun clip-rect* (x y w h)
+  [NSBezierPath clipRect: (nsrect x y w h)])
+
+
 (defun draw-char (x y cn)
   (draw-string x y (string cn)))
 

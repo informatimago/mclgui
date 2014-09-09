@@ -303,16 +303,16 @@
 
 (defun encode-key-message (kcode characters)
   (let ((kcode  (ldb (byte 8 0) kcode)))
-   (case (length characters)
-     ((0) (dpb kcode (byte 8 8) 0))
-     ((1) (let ((ccode (char-code (aref characters 0))))
-            (if (<= 0 ccode 255)
-                (dpb kcode (byte 8 8) ccode)
-                (dpb 1 (byte 1 31)
-                     (dpb kcode (byte 8 22)
-                          ccode)))))
-     (otherwise
-      (list kcode characters)))))
+    (case (length characters)
+      ((0) (dpb kcode (byte 8 8) 0))
+      ((1) (let ((ccode (char-code (aref characters 0))))
+             (if (<= 0 ccode 255)
+                 (dpb kcode (byte 8 8) ccode)
+                 (dpb 1 (byte 1 31)
+                      (dpb kcode (byte 8 22)
+                           ccode)))))
+      (otherwise
+       (list kcode characters)))))
 
 (defun decode-key-message (message)
   (if (listp message)
@@ -539,9 +539,9 @@ DO:             Evaluates the BODY in a lexical environment where
   "Whether any mouse button is pressed."
   #-cocoa-10.6 (loop
                  :for button :below 2
-                 :thereis (not (zerop (#_CGEventSourceButtonState
-                                       #$kCGEventSourceStateCombinedSessionState
-                                       button))))
+                   :thereis (not (zerop (#_CGEventSourceButtonState
+                                         #$kCGEventSourceStateCombinedSessionState
+                                         button))))
   #+cocoa-10.6 (not (zerop [NSEvent pressedMouseButtons])))
 
 
@@ -561,10 +561,10 @@ DO:             Evaluates the BODY in a lexical environment where
   body:
   (declare (ignore sender))
   (block nil
-   (catch :cancel
-     (mapc (function funcall) *application-should-terminate-functions*)
-     (return #$NSTerminateNow))
-   #$NSTerminateCancel)]
+    (catch :cancel
+      (mapc (function funcall) *application-should-terminate-functions*)
+      (return #$NSTerminateNow))
+    #$NSTerminateCancel)]
 
 
 ;;;------------------------------------------------------------
@@ -645,7 +645,7 @@ DO:             Evaluates the BODY in a lexical environment where
   [super close]]
 
 (defun close-nswindow (winh)
- [winh doClose])
+  [winh doClose])
 
 ;; (objc:define-objc-method ((:void do-close) mclgui-window)
 ;;   ;; (format-trace "-[MclguiWindow doClose]")
@@ -679,12 +679,12 @@ DO:             Evaluates the BODY in a lexical environment where
       (window-zoom-event-handler
        window
        (if (< (format-trace '(self frame) (multiple-value-bind (x y w h) (frame [self frame])
-                 (declare (ignore x y))
-                 (* w h)))
+                                            (declare (ignore x y))
+                                            (* w h)))
               (format-trace 'newframe
-               (let ((frame (<nsr>ect-to-nsrect newFrame)))
-                 (* (nsrect-width frame)
-                    (nsrect-height frame)))))
+                            (let ((frame (<nsr>ect-to-nsrect newFrame)))
+                              (* (nsrect-width frame)
+                                 (nsrect-height frame)))))
            inZoomOut
            inZoomIn))
       t))]
@@ -757,8 +757,8 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (let ((*current-ns-event* event))
-   #+debug-objc (format-trace '|-[MclguiWindow keyDown:]| self event)
-   (post-event (nsevent-to-event event)))]
+    #+debug-objc (format-trace '|-[MclguiWindow keyDown:]| self event)
+    (post-event (nsevent-to-event event)))]
 
 @[MclguiWindow
   method:(keyUp:(:id)event)
@@ -834,16 +834,16 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (let ((*current-ns-event* event))
-   #+debug-objc (format-trace "-[MclguiView mouseDown:]" self event)
-   (post-event (nsevent-to-event event)))]
+    #+debug-objc (format-trace "-[MclguiView mouseDown:]" self event)
+    (post-event (nsevent-to-event event)))]
 
 @[MclguiView
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
   (let ((*current-ns-event* event))
-   #+debug-objc (format-trace "-[MclguiView mouseUp:]" self event)
-   (post-event (nsevent-to-event event)))]
+    #+debug-objc (format-trace "-[MclguiView mouseUp:]" self event)
+    (post-event (nsevent-to-event event)))]
 
 
 @[MclguiView

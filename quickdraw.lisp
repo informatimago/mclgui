@@ -129,186 +129,179 @@ body is evaluated with VAR bound to that rectangle."
     )
   new-region)
 
-(defgeneric clip-rect (view left &optional top right bot))
-(defmethod clip-rect ((view simple-view) left &optional top right bot)
-  (niy clip-rect view left top right bot)
-  (with-rectangle-arg (r left top right bot)
+(defgeneric clip-rect (view left &optional top right bottom))
+(defmethod clip-rect ((view simple-view) left &optional top right bottom)
+  (with-rectangle-arg (r left top right bottom)
     (with-focused-view view
-      ;;(#_ClipRect r)
-      ))
+      [NSBezierPath clipRect: (unwrap r)]))
   nil)
 
 ;;;---------------------------------------------------------------------
 ;;; Drawing Rectangles
 ;;;---------------------------------------------------------------------
 
-(defgeneric frame-rect (view left &optional top right bot))
-(defmethod frame-rect ((view simple-view) left &optional top right bot)
-  (niy frame-rect view left top right bot)
+(defgeneric frame-rect (view left &optional top right bottom))
+(defmethod frame-rect ((view simple-view) left &optional top right bottom)
+  (niy frame-rect view left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
-      ;; (#_FrameRect r)
-      )))
+    (with-rectangle-arg (r left top right bottom)
+      (draw-rect* (rect-left r) (rect-top r) (rect-right r) (rect-bottom r)))))
 
-(defgeneric paint-rect (view left &optional top right bot))
-(defmethod paint-rect ((view simple-view) left &optional top right bot)
-  (niy paint-rect view left top right bot)
+(defgeneric paint-rect (view left &optional top right bottom))
+(defmethod paint-rect ((view simple-view) left &optional top right bottom)
+  (niy paint-rect view left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
-      ;; (#_PaintRect r)
-      )))
+    (with-rectangle-arg (r left top right bottom)
+      (fill-rect* (rect-left r) (rect-top r) (rect-right r) (rect-bottom r)))))
 
-(defgeneric erase-rect (view left &optional top right bot))
-(defmethod erase-rect ((view simple-view) left &optional top right bot)
-  (niy erase-rect view left top right bot)
+(defgeneric erase-rect (view left &optional top right bottom))
+(defmethod erase-rect ((view simple-view) left &optional top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
-      ;; (#_EraseRect r)
-      )))
+    (with-rectangle-arg (r left top right bottom)
+      (erase-rect* (rect-left r) (rect-top r) (rect-right r) (rect-bottom r)))))
 
-(defgeneric invert-rect (view left &optional top right bot))
-(defmethod invert-rect ((view simple-view) left &optional top right bot)
-  (niy invert-rect view left top right bot)
+(defgeneric invert-rect (view left &optional top right bottom))
+(defmethod invert-rect ((view simple-view) left &optional top right bottom)
+  (niy invert-rect view left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_InvertRect r)
       )))
 
-(defgeneric fill-rect (view pattern left &optional top right bot))
-(defmethod fill-rect ((view simple-view) pattern left &optional top right bot)
-  (niy fill-rect view  pattern left top right bot)
+(defgeneric fill-rect (view pattern left &optional top right bottom))
+(defmethod fill-rect ((view simple-view) pattern left &optional top right bottom)
+  (niy fill-rect view  pattern left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
-      ;; (#_FillRect r pattern)
-      )))
+    (with-rectangle-arg (r left top right bottom)
+      (fill-rect* (rect-left r) (rect-top r) (rect-right r) (rect-bottom r)))))
 
-(defgeneric frame-oval (view left &optional top right bot))
-(defmethod frame-oval ((view simple-view) left &optional top right bot)
-  (niy frame-oval view left top right bot)
+(defgeneric frame-oval (view left &optional top right bottom))
+(defmethod frame-oval ((view simple-view) left &optional top right bottom)
+  (niy frame-oval view left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_FrameOval r)
       )))
 
-(defgeneric paint-oval (view left &optional top right bot))
-(defmethod paint-oval ((view simple-view) left &optional top right bot)
-  (niy paint-oval view left top right bot)
+(defgeneric paint-oval (view left &optional top right bottom))
+(defmethod paint-oval ((view simple-view) left &optional top right bottom)
+  (niy paint-oval view left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_PaintOval r)
       )))
 
-(defgeneric erase-oval (view left &optional top right bot))
-(defmethod erase-oval ((view simple-view) left &optional top right bot)
-  (niy erase-oval view left top right bot)
+(defgeneric erase-oval (view left &optional top right bottom))
+(defmethod erase-oval ((view simple-view) left &optional top right bottom)
+  (niy erase-oval view left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_EraseOval r)
       )))
 
-(defgeneric invert-oval (view left &optional top right bot))
-(defmethod invert-oval ((view simple-view) left &optional top right bot)
-  (niy invert-oval view left top right bot)
+(defgeneric invert-oval (view left &optional top right bottom))
+(defmethod invert-oval ((view simple-view) left &optional top right bottom)
+  (niy invert-oval view left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_InvertOval r)
       )))
 
-(defgeneric fill-oval (view pattern left &optional top right bot))
-(defmethod fill-oval ((view simple-view) pattern left &optional top right bot)
-  (niy fill-oval view pattern left top right bot)
+(defgeneric fill-oval (view pattern left &optional top right bottom))
+(defmethod fill-oval ((view simple-view) pattern left &optional top right bottom)
+  (niy fill-oval view pattern left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_FillOval r pattern)
       )))
 
-(defgeneric frame-round-rect (view oval-width oval-height left &optional top right bot))
+(defgeneric frame-round-rect (view oval-width oval-height left &optional top right bottom))
 (defmethod frame-round-rect ((view simple-view) oval-width oval-height 
-                             left &optional top right bot)
-  (niy frame-round-rect view oval-width oval-height left top right bot)
+                             left &optional top right bottom)
+  (niy frame-round-rect view oval-width oval-height left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_FrameRoundRect r oval-width oval-height)
       )))
 
-(defgeneric paint-round-rect (view oval-width oval-height left &optional top right bot))
+(defgeneric paint-round-rect (view oval-width oval-height left &optional top right bottom))
 (defmethod paint-round-rect ((view simple-view) oval-width oval-height 
-                             left &optional top right bot)
-  (niy paint-round-rect view oval-width oval-height left top right bot)
+                             left &optional top right bottom)
+  (niy paint-round-rect view oval-width oval-height left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_PaintRoundRect r oval-width oval-height)
       )))
 
-(defgeneric erase-round-rect (view oval-width oval-height left &optional top right bot))
+(defgeneric erase-round-rect (view oval-width oval-height left &optional top right bottom))
 (defmethod erase-round-rect ((view simple-view) oval-width oval-height 
-                             left &optional top right bot)
-  (niy erase-round-rect view oval-width oval-height left top right bot)
+                             left &optional top right bottom)
+  (niy erase-round-rect view oval-width oval-height left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_EraseRoundRect r oval-width oval-height)
       )))
 
-(defgeneric invert-round-rect (view oval-width oval-height left &optional top right bot))
+(defgeneric invert-round-rect (view oval-width oval-height left &optional top right bottom))
 (defmethod invert-round-rect ((view simple-view) oval-width oval-height 
-                              left &optional top right bot)
-  (niy invert-round-rect view oval-width oval-height left top right bot)
+                              left &optional top right bottom)
+  (niy invert-round-rect view oval-width oval-height left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_InvertRoundRect r oval-width oval-height)
       )))
 
-(defgeneric fill-round-rect (view pattern oval-width oval-height left &optional top right bot))
+(defgeneric fill-round-rect (view pattern oval-width oval-height left &optional top right bottom))
 (defmethod fill-round-rect ((view simple-view) pattern oval-width oval-height 
-                            left &optional top right bot)
-  (niy fill-round-rect view pattern oval-width oval-height left top right bot)
+                            left &optional top right bottom)
+  (niy fill-round-rect view pattern oval-width oval-height left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_FillRoundRect r oval-width oval-height pattern)
       )))
 
-(defgeneric frame-arc (view start-angle arc-angle left &optional top right bot))
+(defgeneric frame-arc (view start-angle arc-angle left &optional top right bottom))
 (defmethod frame-arc ((view simple-view) start-angle arc-angle 
-                      left &optional top right bot)
-  (niy frame-arc view start-angle arc-angle left top right bot)
+                      left &optional top right bottom)
+  (niy frame-arc view start-angle arc-angle left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_FrameArc r start-angle arc-angle)
       )))
 
-(defgeneric paint-arc (view start-angle arc-angle left &optional top right bot))
+(defgeneric paint-arc (view start-angle arc-angle left &optional top right bottom))
 (defmethod paint-arc ((view simple-view) start-angle arc-angle 
-                      left &optional top right bot)
-  (niy paint-arc view start-angle arc-angle left top right bot)
+                      left &optional top right bottom)
+  (niy paint-arc view start-angle arc-angle left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_PaintArc r start-angle arc-angle)
       )))
 
-(defgeneric erase-arc (view start-angle arc-angle left &optional top right bot))
+(defgeneric erase-arc (view start-angle arc-angle left &optional top right bottom))
 (defmethod erase-arc ((view simple-view) start-angle arc-angle 
-                      left &optional top right bot)
-  (niy erase-arc view start-angle arc-angle left top right bot)
+                      left &optional top right bottom)
+  (niy erase-arc view start-angle arc-angle left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_EraseArc r start-angle arc-angle)
       )))
 
-(defgeneric invert-arc (view start-angle arc-angle left &optional top right bot))
+(defgeneric invert-arc (view start-angle arc-angle left &optional top right bottom))
 (defmethod invert-arc ((view simple-view) start-angle arc-angle 
-                       left &optional top right bot)
-  (niy invert-arc view start-angle arc-angle left top right bot)
+                       left &optional top right bottom)
+  (niy invert-arc view start-angle arc-angle left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_InvertArc r start-angle arc-angle)
       )))
 
-(defgeneric fill-arc (view pattern start-angle arc-angle left &optional top right bot))
+(defgeneric fill-arc (view pattern start-angle arc-angle left &optional top right bottom))
 (defmethod fill-arc ((view simple-view) pattern start-angle arc-angle
-                     left &optional top right bot)
-  (niy fill-arc view pattern start-angle arc-angle left top right bot)
+                     left &optional top right bottom)
+  (niy fill-arc view pattern start-angle arc-angle left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bot)
+    (with-rectangle-arg (r left top right bottom)
       ;; (#_FillArc r start-angle arc-angle pattern)
       )))
 
