@@ -380,7 +380,7 @@
                ;; Managers:
                
                (:file "text-edit"
-                :depends-on ("package" "window" "pen" "font" "point" "rect" "region"))
+                :depends-on ("package" "window" "pen" "font" "point" "rect" "region" "color"))
                
                #+has-appleevent
                (:file "apple-event"
