@@ -11,6 +11,7 @@
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
+;;;;    2014-09-11 <PJB> Implemented with NSPasteboard.
 ;;;;    2012-05-18 <PJB> Created.
 ;;;;BUGS
 ;;;;LEGAL
@@ -38,6 +39,13 @@
 ;;;;**************************************************************************
 
 (in-package "MCLGUI")
+(objcl:enable-objcl-reader-macros)
+
+(defclass scrap-handler ()
+  ((pasteboard :initarg :pasteboard :reader pasteboard)))
+
+(defvar *scrap-handler* nil)
+(defvar *nspasteboardtypestring* nil)
 
 (defun get-scrap (scrap-type)
   "
@@ -57,7 +65,15 @@ SCRAP-TYPE:     A scrap type. In the initial MCL environment, the
                 :LISP.  The file pict-scrap.lisp in your Examples
                 folder adds the :PICT type.
 "
-  (niy get-scrap scrap-type))
+  (check-type scrap-type (member :text :fred :lisp))
+  (get-internal-scrap *scrap-handler*))
+
+
+(defun zero-scrap ()
+  "
+DO:     clear previous contents of desk scrap.
+"
+  [(pasteboard *scrap-handler*) clearContents])
 
 
 (defun put-scrap (scrap-type scrap-value &optional (overwrite-p t))
@@ -88,11 +104,11 @@ OVERWRITE-P:    A Boolean variable indicating whether scrap values of
                 other types should be cleared. The default value is
                 true, which clears all other types from the scrap.
 "
-  (niy put-scrap scrap-type scrap-value overwrite-p))
-
-
-(defclass scrap-handler ()
-  ())
+  (check-type scrap-type (member :text :fred :lisp))
+  (check-type scrap-value string)
+  (when overwrite-p
+    (zero-scrap))
+  (set-internal-scrap *scrap-handler* scrap-value))
 
 
 (defgeneric get-internal-scrap (handler)
@@ -101,7 +117,7 @@ RETURN:         the value of the scrap of a given type. This function
                 is called by get-scrap.
 ")
   (:method ((handler scrap-handler))
-    (niy get-internal-scrap handler)))
+    (objcl:lisp-string [(pasteboard handler) stringForType:*nspasteboardtypestring*])))
 
 
 (defgeneric set-internal-scrap (handler value)
@@ -110,7 +126,8 @@ DO:             Set the value of the scrap of a given type.  This
                 function is called by put-scrap.
 ")
   (:method ((handler scrap-handler) value)
-    (niy set-internal-scrap handler value)))
+    [(pasteboard handler) setString: (objcl:objc-string value) forType:*nspasteboardtypestring*]
+    value))
 
 
 (defgeneric internalize-scrap (handler)
@@ -123,7 +140,7 @@ heap using the appropriate system calls and then calls
 SET-INTERNAL-SCRAP on the result.
 ")
   (:method ((handler scrap-handler))
-    (niy internalize-scrap handler)))
+    (values)))
 
 
 (defgeneric externalize-scrap (handler)
@@ -139,10 +156,15 @@ SCRAP-HANDLER does nothing.
     (values)))
 
 
-
-
 (defun initialize/scrap ()
-  (niy initialize/scrap))
+  (setf *nspasteboardtypestring* #$NSPasteboardTypeString
+        *scrap-handler* (make-instance 'scrap-handler
+                                       :pasteboard  [NSPasteboard generalPasteboard])))
 
 
- ;;;; THE END ;;;;
+#-(and) (
+         (get-scrap :text)
+         (put-scrap :text "Hello World")
+         )
+
+;;;; THE END ;;;;
