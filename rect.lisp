@@ -285,6 +285,64 @@ DEST-RECT:      A rectangle structure used to hold the intersection of
     dest-rect))
 
 
+(defun rect-difference (rect1 rect2)
+  "
+RETURN:         A (possibly empty when (equal-rect rect1 rect2)) list
+                of rectangles whose union is the area in RECT1 that is
+                not in RECT2.
+
+RECT1:          A rectangle.
+
+RECT2:          A rectangle.
+"
+  (let ((inter (make-rect 0 0)))
+    (intersect-rect rect1 rect2 inter)
+    (cond
+      ((equal-rect inter rect1) '())
+      ((empty-rect-p inter)     (list rect1))
+      (t (let* ((l1 (rect-left   rect1))
+                (t1 (rect-top    rect1))
+                (r1 (rect-right  rect1))
+                (b1 (rect-bottom rect1))
+                (li (rect-left   inter))
+                (ti (rect-top    inter))
+                (ri (rect-right  inter))
+                (bi (rect-bottom inter))
+                (rtop (make-rect l1 t1 r1 ti))
+                (rlef (make-rect l1 ti li bi))
+                (rrig (make-rect ri ti r1 bi))
+                (rbot (make-rect l1 bi r1 b1))
+                (result '()))
+           (unless (empty-rect-p rbot) (push rbot result))
+           (unless (empty-rect-p rrig) (push rrig result))
+           (unless (empty-rect-p rlef) (push rlef result))
+           (unless (empty-rect-p rtop) (push rtop result))
+           result)))))
+
+
+(defun test/rect-difference ()
+  (let ((r1 (make-rect 0 0 200 100))
+        (r2 (make-rect 1000 0 200 100))
+        (r3 (make-rect 0 50 200 150))
+        (r4 (make-rect 100 50 300 150))
+        (r5 (make-rect 20 50 160 200))
+        (r6 (make-rect 20 20 160 60))
+        (colors (list *red-color* *green-color* *blue-color* *yellow-color*)))
+    (loop :with view = (front-window)
+          :for or :in (list r1 r2 r3 r4 r5 r6)
+          :for diffs  = (rect-difference r1 or)
+          :do (with-focused-view view
+                (view-draw-contents view)
+                (loop
+                  :for r :in diffs
+                  :for c :in colors
+                  :do (with-fore-color c
+                        (fill-rect* (rect-left r) (rect-top r) (rect-width r) (rect-height r))))
+                (draw-rect* (rect-left r1) (rect-top r1) (rect-width r1) (rect-height r1))
+                (draw-rect* (rect-left or) (rect-top or) (rect-width or) (rect-height or)))
+              (sleep 3))))
+
+
 (defun point-in-rect-p (rect h &optional v)
   "
 
