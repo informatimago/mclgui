@@ -31,11 +31,16 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-;;;;    
+
 (ql:quickload :mclgui)
 (in-package :ui)
 (initialize)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (load (print (merge-pathnames "../layout.lisp" (or *compile-file-pathname* *load-pathname* #P"")))))
 
+
+;;;---------------------------------------------------------------------
+;;; The window
 
 (defclass sdi-window (window)
   ((position-item :initform '() :accessor position-item)))
@@ -48,8 +53,25 @@
                                          (point-to-list pos)
                                          (point-to-list (view-position win)))))))
 
+(defmethod set-view-size :after ((view sdi-window) h &optional v)
+  (declare (ignorable h v))
+  (dovector (subview (view-subviews view))
+    (typecase subview
+      (layout     (adjust-layout-to-parent subview))
+      (image-box  (progn
+                    (set-view-size subview h v)
+                    (view-draw-contents subview))))))
+
+
 (defvar *w* (make-instance 'sdi-window :window-title "Test"))
 
+
+(defgeneric first-responder (w)
+  (:method   ((w window))
+    (with-handle (winh w)
+      [winh firstResponder])))
+
+;;;---------------------------------------------------------------------
 
 (defgeneric draw-view-bounds (view)
   (:method   ((view simple-view))
@@ -79,6 +101,33 @@
            (h (rect-height frame)))
       (draw-rect* x y w h))))
 
+
+
+;;;---------------------------------------------------------------------
+;;; An image view:
+
+(defclass image-box (view)
+  ((image :initarg :image :accessor image)
+   (src-rect :initarg :src-rect :initform nil :accessor image-src-rect)
+   (mode  :initarg :mode :initform :srccopy :accessor image-mode)))
+
+(defmethod initialize-instance :after ((self image-box) &key image &allow-other-keys)
+  (typecase image
+    ((or string pathname) (setf (image self) (load-image (image self))))))
+
+(defmethod view-draw-contents ((view image-box))
+  (with-focused-view view
+    (draw-image (image view) (view-bounds view) :src-rect (image-src-rect view) :mode (image-mode view))))
+
+(defun test-image-box ()
+  (let ((image (make-instance 'image-box
+                              :view-position #@(0 0)
+                              :view-size (view-size *w*)
+                              :image #P"~/Pictures/blue-eyes-baby.jpg")))
+    (add-subviews *w* image)))
+
+
+;;;---------------------------------------------------------------------
 
 (defclass color-box (view)
   ((color :initarg :color :initform *black-color*  :accessor color)))
@@ -124,9 +173,9 @@
     (add-subviews *w* green)))
 
 
-(defmethod set-view-size :after ((view sdi-window) h &optional v)
-  (declare (ignorable h v))
-  (adjust-layout-to-parent (aref (view-subviews view) 0)))
+
+;;;---------------------------------------------------------------------
+;;; Layout view tests:
 
 (defun test-layout ()
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
@@ -150,14 +199,14 @@
                  :view-size     (make-point 72 30)
                  :view-nick-name "green"))
          (vlayout (make-instance 'linear-layout
-                                :left-margin 10 :right-margin 10
-                                :top-margin 20 :bottom-margin 20
-                                :orientation :vertical
-                                :direction :bottom-up
-                                :vertical-alignment :full
-                                :horizontal-alignment :center
-                                :spacing 20
-                                :subviews (list red green blue)))
+                                 :left-margin 10 :right-margin 10
+                                 :top-margin 20 :bottom-margin 20
+                                 :orientation :vertical
+                                 :direction :bottom-up
+                                 :vertical-alignment :full
+                                 :horizontal-alignment :center
+                                 :spacing 20
+                                 :subviews (list red green blue)))
          (layout (make-instance 'linear-layout
                                 :left-margin 10 :right-margin 10
                                 :top-margin 20 :bottom-margin 20
@@ -186,135 +235,12 @@
     (adjust-layout-to-parent layout)))
 
 
-#-(and) (progn
+;;;---------------------------------------------------------------------
 
-          (let ((layout  (aref (view-subviews *w*) 0)))
-            (setf (layout-spacing layout) 5
-                  (layout-line-spacing layout) 10
-                  (layout-left-margin layout) 10
-                  (layout-right-margin layout) 30
-                  (layout-top-margin layout)    20
-                  (layout-bottom-margin layout) 20
-                  (layout-justification layout) :anterior
-                  (layout-alignment layout) :center
-                  (layout-orientation layout) :horizontal
-                  (layout-horizontal-direction layout) :right-to-left
-                  (layout-vertical-direction layout) :bottom-up)
-            (adjust-layout layout))
-          
-          (test-flow-layout)
-
-          (rect-to-list (view-bounds (aref (view-subviews *w*) 0)))
-          (:topleft (0 0) :size (311 262))
-          (rect-to-list (layout-box (aref (view-subviews *w*) 0)))
-          (:topleft (10 20) :size (291 222))
-
-          (test-layout)
-          (test-color-box)
-          
-          (let ((red (make-instance
-                      'color-box 
-                      :color *red-color*
-                      :view-position (make-point 40 40)
-                      :view-size     (make-point 80 80)
-                      :view-nick-name "red"))
-                (blue (make-instance
-                       'color-box 
-                       :color *blue-color*
-                       :view-position (make-point 10 10)
-                       :view-size     (make-point 60 60)
-                       :view-nick-name "blue"))
-                (green (make-instance
-                        'color-box 
-                        :color *green-color*
-                        :view-position (make-point 10 10)
-                        :view-size     (make-point 40 40)
-                        :view-nick-name "green"))
-                (yellow (make-instance
-                         'color-box 
-                         :color *yellow-color*
-                         :view-position (make-point 10 10)
-                         :view-size     (make-point 20 20)
-                         :view-nick-name "yellow")))
-            (add-subviews red blue)
-            (add-subviews blue green)
-            (add-subviews green yellow)
-            (add-subviews *w* red))
-
-
-
-          (with-focused-view (front-window)
-            (draw-rect* 2 2 12 12)
-            (draw-rect* 20 10 100 20))
-
-          (view-draw-contents  (front-window))
-          
-          (let ((view (aref (view-subviews (front-window)) 0)))
-            (view-draw-contents view))
-
-          (let ((view (aref (view-subviews (front-window)) 0)))
-            (with-focused-view view
-              (view-draw-contents view)))
-
-          (let ((v1 (aref (view-subviews (front-window)) 0))
-                (v2 (aref (view-subviews (front-window)) 1)))
-            (with-focused-view v1
-              (view-draw-contents v1)
-              (draw-rect* 0 0 100 20)
-              (with-focused-view v2
-                (view-draw-contents v2)
-                (draw-rect* 0 0 12 12))))
-
-          (let ((v (aref (view-subviews *w*) 0)))
-            (list
-             (rect-to-list (convert-rectangle (view-bounds v) v *w*))
-             (point-to-list (set-view-position v 50 10))
-             (rect-to-list (convert-rectangle (view-bounds v) v *w*))))
-
-
-          (let* ((v1 (aref (view-subviews *w*) 0))
-                 (v2 (aref (view-subviews v1) 0)))
-            (loop for i from 10 to 50
-                  do (set-view-position v1 (- 60 i) (+ 10 i))
-                     (set-view-position v2 (+ 2 i) 2)))
-
-          (let* ((v1 (aref (view-subviews *w*) 0))
-                 (v2 (aref (view-subviews v1) 0)))
-            (set-view-position v2 50 4))
-
-          (point-to-list (view-scroll-position *w*))
-          (set-view-scroll-position *w* -10 0)
-          (view-draw-contents *w*)
-          (mapcar (function point-to-list)
-                  (list
-                   (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 0) *w*)
-                   (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 1) *w*)
-                   (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 0) (aref (view-subviews *w*) 1))))
-          ((20 40) (2 2) (18 38))
-          
-          (pprint (dump *w*))
-
-          
-
-          (import '(com.informatimago.common-lisp.cesarum.utility:/apply
-                    com.informatimago.common-lisp.cesarum.utility:compose))
-
-          (map 'list (/apply (compose point-to-list view-origin)
-                             (compose point-to-list view-position)
-                             (compose point-to-list view-scroll-position))
-            (view-subviews *w*))
-
-
-          (defparameter *w* (make-instance 'window :view-size (make-point 200 100) :view-position (make-point 200 100)))
-
-          (add-subviews *w* (make-))
-          (with-focused-view *w*
-            (draw-rect* 10 10 80 50))
-
-          )
 
 
 ;;;--------------------------------------------------------------------
+;;; boxed-static-text-dialog-item tests:
 
 (defclass boxed-static-text-dialog-item (static-text-dialog-item)
   ())
@@ -398,62 +324,193 @@
   (invalidate-view *w*))
 
 
-(defgeneric first-responder (w)
-  (:method   ((w window))
-    (with-handle (winh w)
-      [winh firstResponder])))
-
-#-(and)(progn
+;;;--------------------------------------------------------------------
 
 
-         (identify-streams)
-          
-         (invalidate-view *w*)
-         (test-text-box)
-         (position-item *w*)
-         (set-view-position (front-window) 0 180)
-
-         (map 'list (lambda (view) (list (point-to-list (convert-coordinates #@(0 0) view (view-window view)))
-                                         (point-to-list (view-position view))))
-           (view-subviews(first(windows))))
-         
-
-         (load "scratch/dump.lisp")
-         (pprint (dump (front-window)))
-
-                  
-         (set-view-position (aref (view-subviews (front-window)) 0) 20 40)
-         
-         (point-to-list (view-position (aref (view-subviews (front-window)) 0)))
-          (view-focus-and-draw-contents (front-window))
-
-         (values (first-responder  (first (windows)))
-                 (handle))
 
 
-         (values (map 'list 'dialog-item-text
-                   (view-subviews (first (windows))))
-                 (map 'list (lambda (x) (with-handle (h x) (objcl:lisp-string [h stringValue])))
-                   (view-subviews (first (windows)))))
+#-(and)
+(progn
+
+  (let ((image (load-image #P"~/Pictures/blue-eyes-baby.jpg")))
+    (with-focused-view (front-window)
+      (draw-image image (view-bounds (front-window)))))
+
+  
+  (let ((layout  (aref (view-subviews *w*) 0)))
+    (setf (layout-spacing layout) 5
+          (layout-line-spacing layout) 10
+          (layout-left-margin layout) 10
+          (layout-right-margin layout) 30
+          (layout-top-margin layout)    20
+          (layout-bottom-margin layout) 20
+          (layout-justification layout) :anterior
+          (layout-alignment layout) :center
+          (layout-orientation layout) :horizontal
+          (layout-horizontal-direction layout) :right-to-left
+          (layout-vertical-direction layout) :bottom-up)
+    (adjust-layout layout))
+  
+  (test-flow-layout)
+
+  (rect-to-list (view-bounds (aref (view-subviews *w*) 0)))
+  (:topleft (0 0) :size (311 262))
+  (rect-to-list (layout-box (aref (view-subviews *w*) 0)))
+  (:topleft (10 20) :size (291 222))
+
+  (test-layout)
+  (test-color-box)
+  (test-image-box)
+  (let ((red (make-instance
+              'color-box 
+              :color *red-color*
+              :view-position (make-point 40 40)
+              :view-size     (make-point 80 80)
+              :view-nick-name "red"))
+        (blue (make-instance
+               'color-box 
+               :color *blue-color*
+               :view-position (make-point 10 10)
+               :view-size     (make-point 60 60)
+               :view-nick-name "blue"))
+        (green (make-instance
+                'color-box 
+                :color *green-color*
+                :view-position (make-point 10 10)
+                :view-size     (make-point 40 40)
+                :view-nick-name "green"))
+        (yellow (make-instance
+                 'color-box 
+                 :color *yellow-color*
+                 :view-position (make-point 10 10)
+                 :view-size     (make-point 20 20)
+                 :view-nick-name "yellow")))
+    (add-subviews red blue)
+    (add-subviews blue green)
+    (add-subviews green yellow)
+    (add-subviews *w* red))
 
 
-         (map 'list (lambda (x) (list (class-name (class-of x)) (dialog-item-enabled-p x)))
-           (view-subviews *w*))
-         ((boxed-static-text-dialog-item nil) (boxed-editable-text-dialog-item t))
 
-         (view-draw-contents (aref (view-subviews *w*) 0))
-         (invalidate-view (aref (view-subviews *w*) 0))
-         (remove-subviews *w* (aref (view-subviews *w*) 0))
+  (with-focused-view (front-window)
+    (draw-rect* 2 2 12 12)
+    (draw-rect* 20 10 100 20))
 
-         (view-font (front-window))
+  (view-draw-contents  (front-window))
+  
+  (let ((view (aref (view-subviews (front-window)) 0)))
+    (view-draw-contents view))
 
-         (setf *descriptor-cache* (make-descriptor-cache))
-         (set-view-font (front-window) '("Monaco"  9  :srcor))
-         (with-font-focused-view (front-window)
-           (erase-rect* 10 100 200 200)
-           (draw-text 10 100 200 200 "Hao Wang, logicien americain.")
-           (erase-rect* 10 100 200 200)
-           (draw-text 10 100 200 200 "Hao Wang, logicien americain.
+  (let ((view (aref (view-subviews (front-window)) 0)))
+    (with-focused-view view
+      (view-draw-contents view)))
+
+  (let ((v1 (aref (view-subviews (front-window)) 0))
+        (v2 (aref (view-subviews (front-window)) 1)))
+    (with-focused-view v1
+      (view-draw-contents v1)
+      (draw-rect* 0 0 100 20)
+      (with-focused-view v2
+        (view-draw-contents v2)
+        (draw-rect* 0 0 12 12))))
+
+  (let ((v (aref (view-subviews *w*) 0)))
+    (list
+     (rect-to-list (convert-rectangle (view-bounds v) v *w*))
+     (point-to-list (set-view-position v 50 10))
+     (rect-to-list (convert-rectangle (view-bounds v) v *w*))))
+
+
+  (let* ((v1 (aref (view-subviews *w*) 0))
+         (v2 (aref (view-subviews v1) 0)))
+    (loop for i from 10 to 50
+          do (set-view-position v1 (- 60 i) (+ 10 i))
+             (set-view-position v2 (+ 2 i) 2)))
+
+  (let* ((v1 (aref (view-subviews *w*) 0))
+         (v2 (aref (view-subviews v1) 0)))
+    (set-view-position v2 50 4))
+
+  (point-to-list (view-scroll-position *w*))
+  (set-view-scroll-position *w* -10 0)
+  (view-draw-contents *w*)
+  (mapcar (function point-to-list)
+          (list
+           (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 0) *w*)
+           (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 1) *w*)
+           (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 0) (aref (view-subviews *w*) 1))))
+  ((20 40) (2 2) (18 38))
+  
+  (pprint (dump *w*))
+
+  
+
+  (import '(com.informatimago.common-lisp.cesarum.utility:/apply
+            com.informatimago.common-lisp.cesarum.utility:compose))
+
+  (map 'list (/apply (compose point-to-list view-origin)
+                     (compose point-to-list view-position)
+                     (compose point-to-list view-scroll-position))
+    (view-subviews *w*))
+
+
+  (defparameter *w* (make-instance 'window :view-size (make-point 200 100) :view-position (make-point 200 100)))
+
+  (add-subviews *w* (make-))
+  (with-focused-view *w*
+    (draw-rect* 10 10 80 50))
+
+  
+
+
+  (identify-streams)
+  
+  (invalidate-view *w*)
+  (test-text-box)
+  (position-item *w*)
+  (set-view-position (front-window) 0 180)
+
+  (map 'list (lambda (view) (list (point-to-list (convert-coordinates #@(0 0) view (view-window view)))
+                                  (point-to-list (view-position view))))
+    (view-subviews(first(windows))))
+  
+
+  (load "scratch/dump.lisp")
+  (pprint (dump (front-window)))
+
+  
+  (set-view-position (aref (view-subviews (front-window)) 0) 20 40)
+  
+  (point-to-list (view-position (aref (view-subviews (front-window)) 0)))
+  (view-focus-and-draw-contents (front-window))
+
+  (values (first-responder  (first (windows)))
+          (handle))
+
+
+  (values (map 'list 'dialog-item-text
+            (view-subviews (first (windows))))
+          (map 'list (lambda (x) (with-handle (h x) (objcl:lisp-string [h stringValue])))
+            (view-subviews (first (windows)))))
+
+
+  (map 'list (lambda (x) (list (class-name (class-of x)) (dialog-item-enabled-p x)))
+    (view-subviews *w*))
+  ((boxed-static-text-dialog-item nil) (boxed-editable-text-dialog-item t))
+
+  (view-draw-contents (aref (view-subviews *w*) 0))
+  (invalidate-view (aref (view-subviews *w*) 0))
+  (remove-subviews *w* (aref (view-subviews *w*) 0))
+
+  (view-font (front-window))
+
+  (setf *descriptor-cache* (make-descriptor-cache))
+  (set-view-font (front-window) '("Monaco"  9  :srcor))
+  (with-font-focused-view (front-window)
+    (erase-rect* 10 100 200 200)
+    (draw-text 10 100 200 200 "Hao Wang, logicien americain.")
+    (erase-rect* 10 100 200 200)
+    (draw-text 10 100 200 200 "Hao Wang, logicien americain.
 
 L'algorithme en  question  a  été  publié  en  1960  dans l'IBM Journal,
 article intitule \"Toward  Mechanical Mathematics\", avec des variantes et
@@ -483,13 +540,15 @@ publié en 1962 par MIT Press, un des maîtres­livres de l'Informatique.
 
 
 "))
-         
-         (window-close *w*)
-         )
 
-#-(and) (progn
-          (#/CGContextGetCTM)
-          (#/CGAffineTransformInvert)
-          (#/CGContextConcatCTM)
 
-          )
+  (#/CGContextGetCTM)
+  (#/CGAffineTransformInvert)
+  (#/CGContextConcatCTM)
+
+
+  
+  (window-close *w*)
+  )
+
+;;;; THE END ;;;;
