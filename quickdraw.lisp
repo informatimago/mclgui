@@ -145,20 +145,20 @@ body is evaluated with VAR bound to that rectangle."
   (niy frame-rect view left top right bottom)
   (with-focused-view view
     (with-rectangle-arg (r left top right bottom)
-      (draw-rect* (rect-left r) (rect-top r) (rect-right r) (rect-bottom r)))))
+      (draw-rect* (rect-left r) (rect-top r) (rect-width r) (rect-height r)))))
 
 (defgeneric paint-rect (view left &optional top right bottom))
 (defmethod paint-rect ((view simple-view) left &optional top right bottom)
   (niy paint-rect view left top right bottom)
   (with-focused-view view
     (with-rectangle-arg (r left top right bottom)
-      (fill-rect* (rect-left r) (rect-top r) (rect-right r) (rect-bottom r)))))
+      (fill-rect* (rect-left r) (rect-top r) (rect-width r) (rect-height r)))))
 
 (defgeneric erase-rect (view left &optional top right bottom))
 (defmethod erase-rect ((view simple-view) left &optional top right bottom)
   (with-focused-view view
     (with-rectangle-arg (r left top right bottom)
-      (erase-rect* (rect-left r) (rect-top r) (rect-right r) (rect-bottom r)))))
+      (erase-rect* (rect-left r) (rect-top r) (rect-width r) (rect-height r)))))
 
 (defgeneric invert-rect (view left &optional top right bottom))
 (defmethod invert-rect ((view simple-view) left &optional top right bottom)
@@ -170,10 +170,10 @@ body is evaluated with VAR bound to that rectangle."
 
 (defgeneric fill-rect (view pattern left &optional top right bottom))
 (defmethod fill-rect ((view simple-view) pattern left &optional top right bottom)
-  (niy fill-rect view  pattern left top right bottom)
   (with-focused-view view
-    (with-rectangle-arg (r left top right bottom)
-      (fill-rect* (rect-left r) (rect-top r) (rect-right r) (rect-bottom r)))))
+    (with-pen-state (:pattern pattern)
+      (with-rectangle-arg (r left top right bottom)
+        (fill-rect* (rect-left r) (rect-top r) (rect-width r) (rect-height r))))))
 
 (defgeneric frame-oval (view left &optional top right bottom))
 (defmethod frame-oval ((view simple-view) left &optional top right bottom)
@@ -578,21 +578,131 @@ body is evaluated with VAR bound to that rectangle."
   ;;     (#_CopyBits sb db source-rect dest-rect (mode-arg mode) mask-region)))
   )
 
+
+
+
+
+(defun flip-rect (rect size)
+  (make-rect (rect-left rect)
+             (- (point-v size) (rect-bottom rect))
+             (rect-right rect)
+             (- (point-v size) (rect-top rect))))
+
+
+(defun load-image (path)
+  (wrap [[[NSImage alloc] initWithContentsOfFile: (objcl:objc-string (namestring path))] autorelease]))
+
+
+(defun draw-image (image dst-rect &key src-rect (mode :srccopy))
+  (with-handle (imageh image)
+    (let ((src-rect (if src-rect
+                        (rect-to-nsrect
+                         (flip-rect src-rect (view-size (view-window *current-view*))))
+                        (make-nsrect :x 0 :y 0
+                                     :size (get-nssize [imageh size])))))
+      ;; (format-trace 'draw-image :src src-rect :dst (nsrect dst-rect))
+      #-cocoa-10.6
+      [imageh drawInRect:(nsrect dst-rect) fromRect:(unwrap src-rect)
+              operation:(mode-to-compositing-operation mode)
+              fraction:(cgfloat 1.0)]
+      #+cocoa-10.6
+      [imageh drawInRect:(nsrect dst-rect) fromRect:(unwrap src-rect)
+              operation:(mode-to-compositing-operation mode)
+              fraction:(cgfloat 1.0)
+              respectFlipped:yes
+              hints: *null*])))
+
+
+
 (defgeneric scroll-rect (view rect dh &optional dv))
 (defmethod scroll-rect ((view simple-view) rect dh &optional dv)
-  "ignores any clipping regions"
-  (niy scroll-rect view rect dh dv)
-  ;; (with-focused-view view
-  ;;   (let* ((reg (#_newrgn)))
-  ;;     (#_ScrollRect :ptr rect :long (make-point dh dv) :ptr reg)
-  ;;     #-carbon-compat
-  ;;     (#_invalrgn reg)
-  ;;     #+carbon-compat
-  ;;     (inval-window-rgn (wptr view) reg)
-  ;;     (#_disposergn reg)))
-  ;; TODO: invalidate only the uncovered rectangles.
-  (invalidate-view view t)
-  (values))
+  "
+NOTE:   Ignores any clipping regions.
+RETURN: the update-region
+"
+  (let* (;; (hrect (make-rect (rect-left  rect) (if (plusp dv) (rect-top rect)        (+ (rect-bottom rect) dv))
+         ;;                   (rect-right rect) (if (plusp dv) (+ (rect-top rect) dv) (rect-bottom rect))))
+         ;; (vrect (make-rect (if (plusp dh) (rect-left rect)         (+ (rect-right rect) dh))
+         ;;                   (if (plusp dv) (+ (rect-top  rect) dv)  (rect-top rect))
+         ;;                   (if (plusp dh) (+ (rect-left rect) dh)  (rect-right rect))
+         ;;                   (if (plusp dv) (rect-bottom  rect)      (+ (rect-bottom rect) dv))))
+         (drect       (let ((drect (copy-rect rect)))
+                        (offset-rect drect dh dv)
+                        (intersect-rect rect drect drect)
+                        drect))
+         (srect       (let ((srect (copy-rect drect)))
+                        (offset-rect srect (- dh) (- dv))
+                        srect))
+         (update-list (rect-difference rect drect))
+         (screenshot (focused-screenshot view)))
+    (dolist (rect update-list)
+      (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect)))
+    (draw-image screenshot drect :src-rect srect)
+    #-(and)
+    (union-region (set-rect-region (new-region) hrect)
+                  (set-rect-region (new-region) vrect))
+    ;; TODO: implement union-region!
+    update-list))
 
+
+
+
+#-(and) (
+
+         (loop :for a :from 0 :to (+ (* 2 pi) 0.1) :by 0.1
+               :for dx = (* 40 (sin a))
+               :for dy = (* 20 (cos a))
+               :do (with-focused-view (front-window)
+                     (view-draw-contents (front-window))
+                     (scroll-rect (front-window) (make-rect 370 100 570 300) (round dx) (round dy)))
+                   (sleep 0.1)
+               :finally (view-draw-contents (front-window))) 
+         
+                 
+         (flet ((d (r) (fill-rect (front-window) *black-pattern* r))
+                (reset ()
+                  (erase-rect (front-window) (view-bounds  (front-window)))
+                  (view-draw-contents (front-window))))
+           (loop :for offset :in '(( 50  20)
+                                   (-50  20)
+                                   ( 50 -20)
+                                   (-50 -20)
+                                   (50 0)
+                                   (-50 0)
+                                   (0 20)
+                                   (0 -20))
+                 :do (reset)
+                     (mapcar 'd (apply (function scroll-rect) (front-window) (make-rect 0 0 200 100) offset))
+                     (sleep 2)
+                 :finally (reset)))
+
+
+         (defun rect-to-ltrb (r) (list (rect-left r) (rect-top r) (rect-right r) (rect-bottom r)))
+         (defun d (r) (fill-rect (front-window) *black-pattern* r))
+         (defun r ()
+           (erase-rect (front-window) (view-bounds  (front-window)))
+           (view-draw-contents (front-window)))
+
+         
+         (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) 50 20)))
+         (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) -50 20)))
+         (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) 50 -20)))
+         (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) -50 -20)))
+         (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) 50 0)))
+         (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) -50 0)))
+         (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) 0 20)))
+         (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) 0 -20)))
+
+         
+         (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100)  50  20))
+         (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100) -50  20))
+         (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100)  50 -20))
+         (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100) -50 -20))
+         (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100) 50 0))
+         (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100) 0 20))
+         (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100) -50 0))
+         (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100) 0 -20))
+
+         )
 
 ;;;; THE END ;;;;

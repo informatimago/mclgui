@@ -363,7 +363,7 @@ not normally called directly but instead by stream output functions.
   (:method ((mode integer))
     (aref (car *mode-to-compositing-operation*) mode))
   (:method ((mode keyword))
-    (gethash (cdr *mode-to-compositing-operation*) mode)))
+    (gethash mode (cdr *mode-to-compositing-operation*))))
 
 
 ;; A PEN-STATE uses NSGraphicContext, NSBezierPath and NSColor to draw.

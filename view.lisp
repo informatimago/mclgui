@@ -1174,8 +1174,8 @@ SOURCE-VIEW:    A view in whose coordinate system point is given.
 
 (defun convert-rectangle (rect source-view destination-view)
   (declare (stepper disable))
-  (let ((delta   (subtract-points (view-origin destination-view)
-                                  (view-origin source-view))))
+  (let ((delta (subtract-points (view-origin destination-view)
+                                (view-origin source-view))))
     (make-rect (add-points delta (rect-topleft rect))
                (add-points delta (rect-bottomright rect)))))
 
@@ -1578,6 +1578,7 @@ RETURN:         The cursor shape to display when the mouse is at
 
 
 
+
 ;;; ------------------------------------------------
 ;;; instance drawing
 ;;; ------------------------------------------------
@@ -1591,9 +1592,11 @@ RETURN:         The cursor shape to display when the mouse is at
         [viewh lockFocus]
         (unwind-protect
              ;; [viewh bounds]
-             (setf bitmap [[[NSBitmapImageRep alloc] initWithFocusedViewRect:(unwrap (rect-to-nsrect (convert-rectangle (view-bounds view)
-                                                                                                                        view
-                                                                                                                        (view-window view))))] autorelease])
+             (setf bitmap [[[NSBitmapImageRep alloc]
+                            initWithFocusedViewRect:(unwrap (rect-to-nsrect (convert-rectangle (view-bounds view)
+                                                                                               view
+                                                                                               (view-window view))))]
+                           autorelease])
           [viewh unlockFocus])
         [image addRepresentation:bitmap]
         #+debug-views
@@ -1607,7 +1610,8 @@ RETURN:         The cursor shape to display when the mouse is at
                       :bitmap bitmap
                       :image image)
         #-cocoa-10.6 [image setFlipped:YES]
-        image))))
+        (wrap image)))))
+
 
 (defmacro with-instance-drawing (view &body body)
   (let ((vview (gensym)))
@@ -1622,7 +1626,7 @@ RETURN:         The cursor shape to display when the mouse is at
     (with-focused-view view
       (with-view-handle (viewh view)
         #-cocoa-10.6
-        [(first (view-instance view))
+        [(handle (first (view-instance view)))
          drawInRect:[viewh bounds]
          fromRect:(unwrap (make-nsrect :x 0 :y 0 :size (view-size view)))
          operation:#$NSCompositeCopy
@@ -1635,7 +1639,7 @@ RETURN:         The cursor shape to display when the mouse is at
         (format-trace 'new-instance
                       :instance (first (view-instance view)))
         #+cocoa-10.6
-        [(first (view-instance view))
+        [(handle (first (view-instance view)))
          drawInRect:[viewh bounds]
          fromRect:(unwrap (make-nsrect :x 0 :y 0 :size (view-size view)))
          operation:#$NSCompositeCopy
@@ -1668,6 +1672,8 @@ RETURN:         The cursor shape to display when the mouse is at
 
 ;; (example/instance-drawing/2)
 ;; (example/instance-drawing)
+
+
 
 (defun initialize/view ()
   (niy initialize/view))
