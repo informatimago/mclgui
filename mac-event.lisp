@@ -365,6 +365,8 @@ before returning NIL."
 last started up."
   (truncate (timestamp) (/ +tick-per-second+)))
 
+(defvar *double-click-jitter* 4
+  "Maximum mouse movement distance during a double-click.")
 (defvar *double-click-time* 50
   "Suggested maximum difference (in ticks) that should exist between
 the times of a mouse-up event and a mouse-down event for those two
@@ -376,7 +378,7 @@ the times of a mouse-up event and a mouse-down event for those two
 mouse clicks to be considered a double-click."
   *double-click-time*)
 
-(defvar *caret-time* 20
+(defvar *caret-time* 48
   "The time (in ticks) between blinks of the 'caret'.")
 
 (defun get-caret-time ()

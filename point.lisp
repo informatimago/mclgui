@@ -183,6 +183,9 @@ RETURN:         The point that is the vectorial difference of points A from B.
               (- (point-v a) (point-v b))))
 
 
+(defun point-distance (a b)
+  (let ((d (subtract-points a b)))
+    (max (point-h d) (point-v d))))
 
 
 (defun add-big-points (a b)

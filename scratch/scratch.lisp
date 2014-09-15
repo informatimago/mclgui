@@ -331,26 +331,3 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
 
 
 
-'(word-break-function
-  click-loop-function
-  te-caret-function
-  te-selection-function
-  te-just-left  
-  te-just-right 
-  te-just-center
-  te-no-wrap    
-  te-word-wrap  
-  *caret-half-period*
-  *selection-color*                
-  terec
-  te-init
-  te-default-word-break
-  te-default-caret-hook
-  te-default-high-hook
-  te-set-rects
-  te-set-text
-  te-get-text
-  te-cal-text
-
-  
-  )

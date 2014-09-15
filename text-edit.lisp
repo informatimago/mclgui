@@ -62,10 +62,6 @@
 (defvar *selection-color-active*     *light-blue-color* "Selection color when active.")
 (defvar *selection-color-inactive*   *light-gray-color* "Selection color when inactive.")
 
-#-(and)
-(setf *selection-color-active*     *light-blue-color*
-      *selection-color-inactive*   *light-gray-color*)
-
 
 (defstruct (terec (:conc-name te-))
   (dest-rect   nil :type (or null rect))
@@ -88,7 +84,7 @@
   (text        nil)
   (recal-back  0   :type integer)
   (recal-lines 0   :type integer)
-  (click-stuff 0   :type integer)
+  (click-stuff nil)
   (cr-only    -1   :type integer) ; minusp => cr-only; plusp => word-wrap
   (tx-font     0   :type integer)
   (tx-face     0   :type integer)
@@ -112,10 +108,35 @@
   ;; the characters in current-paragraph-after-point are stored in reverse order.
   current-paragraph-before-point
   current-paragraph-after-point
-  (current-paragraph-dirty nil :type boolean) ; whether (aref (te-paragraphs te) (te-current-paragraph-index te)) needs to be recomputed from current-paragraph-before-point and current-paragraph-after-point  
-  bindings
-  (updates '() :type list)
-  (line-coordinates-cache nil))
+  (current-paragraph-dirty    nil :type boolean) ; whether (aref (te-paragraphs te) (te-current-paragraph-index te)) needs to be recomputed from current-paragraph-before-point and current-paragraph-after-point
+  bindings ; the key bindings hash-table
+  (updates                    '() :type list)
+  (line-coordinates-cache     nil)
+  (selection-rectangles-cache nil)
+  (display-state              nil))
+
+
+;;(remove-method (function print-object) (find-method (function print-object) '() '(terec t)))
+#-(and)
+(defmethod print-object ((te terec) stream)
+  (if *print-readably*
+      (call-next-method)
+      (let* ((line1  (te-line 0 te))
+             (len1   (length line1)))
+        (format stream "#<~S :length ~D :text ~S :selection ~S >"
+                'terec (te-length te)
+                (concatenate 'string
+                             (subseq line1 0 (min 32 len1))
+                             (if (< (te-length te) 32) "" "…"))
+                (if (= (te-sel-start te) (te-sel-end te))
+                    (te-sel-start te)
+                    (list (te-sel-start te) (te-sel-end te))))
+        te)))
+
+
+(defun te-clear-caches (te)
+  (setf (te-line-coordinates-cache te) nil
+        (te-selection-rectangles-cache te) nil))
 
 
 (defun te-invariant (te)
@@ -135,13 +156,71 @@
                 :always (not (null (aref (te-paragraphs te) i))))))
 
 
-(defvar *te-mutex* nil)
+(declaim (inline te-is-active))
+(defun te-is-active (te)
+  "Whether the TeRec is active (ie. displays a blinking caret or full selection boxes)."
+  (plusp (te-active te)))
 
-(defun te-init ()
-  "Initialize the Text Edit Manager."
-  (setf *te-mutex* (make-mutex "Text Edit Mutex"))
-  (values))
 
+(declaim (inline te-has-caret))
+(defun te-has-caret (te)
+  "Whether the TeRec shall display a caret (instead of a selection)."
+  (= (te-sel-start te) (te-sel-end te)))
+
+
+
+(define-condition out-of-bound-error (error)
+  ((start :initform nil :initarg :start :reader out-of-bound-start)
+   (end   :initform nil :initarg :end   :reader out-of-bound-end)
+   (index :initform nil :initarg :index :reader out-of-bound-index)
+   (datum :initform nil :initarg :datum :reader out-of-bound-datum)
+   (label :initform nil :initarg :label :reader out-of-bound-label))
+  (:report (lambda (condition stream)
+             (format stream "Out of bounds: index ~A should have been between ~
+                             ~A (inclusive) and ~A (exclusive) when accessing ~A ~S"
+                     (out-of-bound-index condition)
+                     (out-of-bound-start condition)
+                     (out-of-bound-end condition)
+                     (out-of-bound-label condition)
+                     (out-of-bound-datum condition)))))
+
+
+(defun real-compare (a b)
+  "Compares A and B, returning -1, 0 or 1 depending on their order."
+  (cond
+    ((< a b) -1)
+    ((> a b) +1)
+    (t        0)))
+
+
+(declaim (inline adjustable-vector))
+(defun adjustable-vector (size &optional (elements '()) (element-type t))
+  (let ((avector (make-array size :element-type element-type
+                                  :fill-pointer (length elements)
+                                  :adjustable t)))
+    (replace avector elements)
+    avector))
+
+
+(declaim (inline adjustable-string))
+(defun adjustable-string (size &optional (string ""))
+  "
+PRE:    (<= (length string) size)
+RETURN: An adjustable string with fill-pointer containing the
+        characters of the STRING, and being of allocated SIZE.
+"
+  (adjustable-vector size string 'character))
+
+
+
+
+
+
+;;;---------------------------------------------------------------------
+;;;
+;;;---------------------------------------------------------------------
+
+;;   (tx-font tx-face tx-mode tx-size) --> (line-height font-ascent)
 
 (defun te-update-font-info (te)
   (flet ((set-font-info (ff ms)
@@ -159,57 +238,117 @@
             (set-font-info ff ms)))
         (set-font-info 0 0))))
 
+;;;---------------------------------------------------------------------
+;;;
+;;;---------------------------------------------------------------------
 
-(defun te-default-word-break (text charpos)
-  "The default workd break function."
-  (char<= (aref text charpos) #\space))
+;; edition (by character)
+;; --->
+;; (current-paragraph-before-point current-paragraph-after-point)
+;; <-->
+;; ---(te-current-paragraph)--->
+;;                                 paragraphs
+;;                                           <--- edition (by paragraph)
+;;                                           ---> line-starts
+;;                                           ---> display
 
 
-(defun te-string-width (string te &optional (start 0) (end nil))
+
+;;;---------------------------------------------------------------------
+;;;
+;;;---------------------------------------------------------------------
+
+;; (charpos offset) ==> all characters position from charpos to te-length must be incremented by offset
+
+(defun %te-adjust-starts (charpos increment te)
   "
-RETURN: The width in pixels to draw the STRING in the font configured in the TE TeRec.
+DO:   Adjust by INCREMENT the total length, paragraph and line start
+      positions starting from the paragraph and line following
+      CHARPOS.
 "
-  (let* ((ff          (dpb (te-tx-font te) (byte 16 16) (te-tx-face te)))
-         (ms          (dpb (te-tx-mode te) (byte 16 16) (te-tx-size te))))
-    (font-codes-string-width string ff ms start end)))
-(declaim (inline te-string-width))
+  (loop :for parno :from (1+ (te-paragraph-at charpos te))
+          :below (te-nparagraphs te)
+        :do (incf (car (te-paragraph parno te)) increment))
+  (loop :for lino :from (1+ (te-line-at charpos te))
+          :below (te-nlines te)
+        :do (incf (aref (te-line-starts te) lino) increment))
+  (incf (te-length te) increment))
+
+;;;---------------------------------------------------------------------
+;;; current-paragraph editing
+;;;---------------------------------------------------------------------
 
 
-(defun te-wrap-paragraph (para te)
+;;; current-paragraph-{before,after}-point ---> paragraphs
+
+(defun te-current-paragraph (te)
   "
-DO:     Perform word wrapping on the given paragraph.
-RETURN: A list of line-starts for the paragraph.
-PARA:   A cons (paragraph-start . paragraph-text).
+RETURN: The cons cell containing the start and the string of the current paragraph.
+NOTE:   This string is computed from current-paragraph-before-point
+        and current-paragraph-after-point and cached.
 "
-  (let* ((starts     (list (car para)))
-         (text       (cdr para))
-         (width      (rect-width (te-dest-rect te)))
-         (word-break (te-word-break te))
-         (ff         (dpb (te-tx-font te) (byte 16 16) (te-tx-face te)))
-         (ms         (dpb (te-tx-mode te) (byte 16 16) (te-tx-size te)))
-         (start      0)
-         (end        (length text)))
-    (loop
-      (let ((text-width (font-codes-string-width text ff ms start end)))
-        (when (<= text-width width)
-          (return-from te-wrap-paragraph (nreverse starts)))
-        (multiple-value-bind (found index order)
-            (dichotomy (lambda (mid)
-                         (let* ((text-width (font-codes-string-width text ff ms start mid))
-                                (result (integer-compare width text-width)))
-                           ;; (format-trace 'dichotomy "mid = ~3D, text-width = ~6E, width = ~6E -> ~2D~%" mid text-width width result)
-                           result))
-                       start end)
-          (declare (ignore found order))
-          (let ((next-start (loop
-                              :with wrap = index
-                              :until (or (funcall word-break text wrap) (zerop wrap))
-                              :do (decf wrap)
-                              :finally (return (if (zerop wrap)
-                                                   index
-                                                   (1+ wrap))))))
-            (push (+ (car para) next-start) starts)
-            (setf start next-start)))))))
+  (if (te-current-paragraph-dirty te)
+      (setf (te-current-paragraph-dirty te) nil
+            (aref (te-paragraphs te) (te-current-paragraph-index te))
+            (cons (car (te-current-paragraph-before-point te))
+                  #-(and) (concatenate 'string (cdr (te-current-paragraph-before-point te))
+                                       (reverse (cdr (te-current-paragraph-after-point te))))
+                  ;; Let's assume this will be faster; at least, it should cons less.
+                  (let* ((before     (cdr (te-current-paragraph-before-point te)))
+                         (after      (cdr (te-current-paragraph-after-point  te)))
+                         (len-before (length before))
+                         (len-after  (length after))
+                         (para       (make-string (+ len-before len-after))))
+                    (replace para before)
+                    (loop :for src :from (1- len-after) :downto 0
+                          :for dst :from len-before
+                          :do (setf (aref para dst) (aref after src)))
+                    para)))
+      (aref (te-paragraphs te) (te-current-paragraph-index te))))
+
+
+
+;;;---------------------------------------------------------------------
+;;; paragraph
+;;;---------------------------------------------------------------------
+
+(defun te-paragraph (parno te)
+  "
+PARNO:  An integer between 0 and (te-nparagraphs te) exclusive.
+TE:     A TeRec
+RETURN: A cons cell containing the index of the position an the text of the paragraph number PARNO;
+        the index  of the paragraph in the te-paragraphs gap buffer.
+"
+  (when (or (minusp parno) (<= (te-nparagraphs te) parno))
+    (error 'out-of-bound-error :start 0 :end (te-nparagraphs te) :index parno
+                               :datum (te-paragraphs te)
+                               :label "paragraphs"))
+  (cond
+    ((< parno (te-current-paragraph-index te))
+     (values (aref (te-paragraphs te) parno) parno))
+    ((= parno (te-current-paragraph-index te))
+     (values (te-current-paragraph te) parno))
+    (t
+     (let ((index (+ (- parno (te-current-paragraph-index te) 1)
+                     (te-next-paragraph-index te))))
+       (values (aref (te-paragraphs te) index) index)))))
+
+
+(defun te-paragraph-at (charpos te)
+  "
+CHARPOS: the character position, 0-based.
+TE :     TeRec
+RETURN:  The paragraph number of the paragraph containing charpos.
+"
+  (when (or (minusp charpos) (< (te-length te) charpos))
+    (error 'out-of-bound-error :start 0 :end (te-length te) :index charpos
+                               :datum te
+                               :label "characters"))
+  (multiple-value-bind (found parno order)
+      (dichotomy (lambda (parno) (real-compare charpos (car (te-paragraph parno te))))
+                 0 (te-nparagraphs te))
+    (declare (ignore found order))
+    parno))
 
 
 (defmacro doparagraphs ((index var te &optional result) &body body)
@@ -239,6 +378,211 @@ RETURN: The RESULT.
              ((>= ,index ,vend) ,result)
            (,fbody ,index (aref ,vparas ,index)))))))
 
+;;;---------------------------------------------------------------------
+;;; paragraph editing
+;;;---------------------------------------------------------------------
+
+(defun %te-move-gap-to (parno te)
+  "
+POST:  (= parno (te-current-paragraph-index te))
+NOTE:  This doesn't change current-paragraph-{before,after}-point, hence the %.
+"
+  (when (or (minusp parno) (<= (te-nparagraphs te) parno))
+    (error 'out-of-bound-error :start 0 :end (te-nparagraphs te) :index parno
+                               :datum te
+                               :label "paragraphs"))
+  (let ((current (te-current-paragraph-index te))
+        (next    (te-next-paragraph-index    te))
+        (paras   (te-paragraphs              te)))
+    (cond
+      ((< parno current)
+       (loop
+         :repeat (- current parno)
+         :do (setf (aref paras (decf next)) (aref paras current)
+                   (aref paras current)     nil)
+             (decf current)))
+      ((> parno current)
+       (loop
+         :repeat (- parno current)
+         :do (setf (aref paras (incf current)) (aref paras next)
+                   (aref paras next)           nil)
+             (incf next)))
+      #| otherwise nothing to do. |#)
+    (assert (= parno current))
+    (setf (te-current-paragraph-index te) current
+          (te-next-paragraph-index    te) next)))
+
+
+(declaim (inline te-gap-size))
+(defun te-gap-size (te)
+  (- (te-next-paragraph-index te) (te-current-paragraph-index te)))
+
+
+
+(defun te-adjust-gap (increment te)
+  "
+DO:     Increases or decreases the gap between current-paragraph-index
+        and next-paragraph-index by INCREMENT.
+"
+  (unless (zerop increment)
+    (let* ((current (te-current-paragraph-index te))
+           (next    (te-next-paragraph-index    te))
+           (paras   (te-paragraphs              te))
+           (gap     (- next current 1))
+           (size    (array-dimension paras 0)))
+      (when (minusp (+ gap increment))
+        (error "Cannot reduce the gap (~D) by ~D" gap increment))
+      (if (minusp increment)
+          (progn
+            (replace paras paras :start1 (+ next increment) :start2 increment)
+            (setf paras (adjust-array paras (+ size increment))))
+          (progn
+            (setf paras (adjust-array paras (+ size increment)))
+            (replace paras paras :start1 (+ next increment) :start2 increment)))
+      (incf next increment)
+      (setf (te-next-paragraph-index    te) next
+            (te-paragraphs              te) paras))))
+
+
+;;;---------------------------------------------------------------------
+;;; Split the current paragraph
+;;;---------------------------------------------------------------------
+
+;;; (current-paragraph) --> (current-paragraph-{before,after}-point)
+(defun %te-split-paragraph (index te)
+  (let* ((paragraphs (te-paragraphs te))
+         (para-text  (cdr (aref paragraphs index)))
+         (length     (ceiling (* 1.5 (length para-text))))
+         (line-start (car (aref paragraphs index))))
+    (setf (te-current-paragraph-before-point te) (cons line-start
+                                                       (adjustable-string length para-text))
+          (te-current-paragraph-after-point  te) (cons (+ line-start (length para-text) 1)
+                                                       (adjustable-string length ""))
+          (te-current-paragraph-dirty        te) nil)))
+
+
+;;; move the gap to the paragraph containing charpos and split it to charpos.
+(defun te-split-paragraph-at (charpos te)
+  "
+POST:   (= (te-current-paragraph-index te) (te-paragraph-at te))
+RETURN: parno of the current paragraph.
+"
+  (let ((parno (te-paragraph-at charpos te)))
+    (if (= parno (te-current-paragraph-index te))
+        ;; resplit current paragraph
+        (let* ((line-start (car (te-current-paragraph-before-point te)))
+               (before     (cdr (te-current-paragraph-before-point te)))
+               (after      (cdr (te-current-paragraph-after-point  te)))
+               (new-split  (- charpos line-start)))
+          (unless (= new-split (length before))
+            (cond
+              ((< new-split (length before))
+               ;; move to before
+               (let ((change (- (length before) new-split)))
+                 (when (< (- (array-dimension before 0) (fill-pointer before)) change)
+                   (setf before (adjust-array before (+ (array-dimension before 0) (* 4 change)))))
+                 (loop
+                   :repeat change
+                   :do (vector-push-extend (vector-pop before) after))))
+              ((> new-split (length before))
+               ;; move to after
+               (let ((change (- new-split (length before))))
+                 (when (< (- (array-dimension after 0) (fill-pointer after)) change)
+                   (setf after (adjust-array after (+ (array-dimension after 0) (* 4 change)))))
+                 (loop
+                   :repeat change
+                   :do (vector-push-extend (vector-pop after) before)))))
+            (setf (te-current-paragraph-dirty te) t
+                  (te-current-paragraph-before-point te) (cons line-start before)
+                  (te-current-paragraph-after-point  te) (cons (+ line-start (length before)) after))))
+        (progn          
+          (te-current-paragraph te) ; unsplit current paragraph.
+          ;; split another paragraph:
+          (%te-move-gap-to parno te)
+          (%te-split-paragraph parno te)))))
+
+
+;;;---------------------------------------------------------------------
+;;; paragraph --> line-starts
+;;;---------------------------------------------------------------------
+
+
+(declaim (inline te-whitespacep))
+(defun te-whitespacep (char)
+  "
+RETURN:  Whether CHAR is a white space character (or non-printing control code).
+"
+  (let ((code (char-code char)))
+    (or (<= code #x0020)
+        (= code #x007F)
+        ;; (= code #x00A0) ; NO-BREAK SPACE
+        (and (<= #x1680 code)
+             (find code #(#x1680 #x180E #x2000 #x2001 #x2002 #x2003
+                          #x2004 #x2005 #x2006 #x2007 #x2008 #x2009
+                          #x200A #x200B #x202F #x205F #x3000
+                          ;; #xFEFF ; ZERO WIDTH NO-BREAK SPACE
+                          ))))))
+
+
+(defun te-default-word-break (text charpos)
+  "The default workd break function."
+  (te-whitespacep (aref text charpos)))
+
+(declaim (inline te-ff))
+(defun te-ff (te) (dpb (te-tx-font te) (byte 16 16) (te-tx-face te)))
+
+(declaim (inline te-ms))
+(defun te-ms (te) (dpb (te-tx-mode te) (byte 16 16) (te-tx-size te)))
+
+(declaim (inline te-string-width))
+(defun te-string-width (string te &optional (start 0) (end nil))
+  "
+RETURN: The width in pixels to draw the STRING in the font configured in the TE TeRec.
+"
+  (let* ((ff          (te-ff te))
+         (ms          (te-ms te)))
+    (font-codes-string-width string ff ms start end)))
+
+
+(defun te-wrap-paragraph (para te)
+  "
+DO:     Perform word wrapping on the given paragraph.
+PARA:   A cons (paragraph-start . paragraph-text).
+RETURN: A sorted list of line-starts for the paragraph.
+"
+  (let* ((starts     (list (car para)))
+         (text       (cdr para))
+         (width      (rect-width (te-dest-rect te)))
+         (word-break (or (te-word-break te) (function te-default-word-break)))
+         (ff         (te-ff te))
+         (ms         (te-ms te))
+         (start      0)
+         (end        (length text)))
+    (loop
+      (let ((text-width (font-codes-string-width text ff ms start end)))
+        (when (<= text-width width)
+          (return-from te-wrap-paragraph (nreverse starts)))
+        (multiple-value-bind (found index order)
+            (dichotomy (lambda (mid)
+                         (let* ((text-width (font-codes-string-width text ff ms start mid))
+                                (result (real-compare width text-width)))
+                           ;; (format-trace 'dichotomy "mid = ~3D, text-width = ~6E, width = ~6E -> ~2D~%" mid text-width width result)
+                           result))
+                       start end)
+          (declare (ignore found order))
+          (let ((next-start (loop
+                              :with wrap = index
+                              :until (or (funcall word-break text wrap) (zerop wrap))
+                              :do (decf wrap)
+                              :finally (return (if (zerop wrap)
+                                                   index
+                                                   (1+ wrap))))))
+            (push (+ (car para) next-start) starts)
+            (setf start next-start)))))))
+
+
+;;; global update:
+;;; ( ((tx-font tx-face tx-mode tx-size) --> (line-height font-ascent)) cr-only dest-rect te-paragraph ) --> (nlines line-starts length)
 
 (defun te-calculate-text (te)
   "
@@ -247,12 +591,12 @@ DO:     Compute nlines and line-starts, as the number and positions of
         wrapped, so several lines may be computed for a paragraph.
 NOTE:   Call TE-CAL-TEXT, which is the one with mutex.
 "
-  (progn (print 'te-calculate-text *terminal-io*) (finish-output *terminal-io*))
-  (setf (te-line-coordinates-cache te) nil)
+  (te-clear-caches te)
   (te-update-font-info te)
+  (setf (te-nparagraphs te) (count nil (te-paragraphs te) :test-not (function eql)))
   (if (minusp (te-cr-only te))
       ;; no wrapping:
-      (let ((starts (make-array (te-nparagraphs te) :adjustable t :initial-element 0 :fill-pointer 0)))
+      (let ((starts (make-array (* 2 (te-nparagraphs te)) :adjustable t :initial-element 0 :fill-pointer 0)))
         (doparagraphs (i para te)
           (declare (ignore i))
           (vector-push (car para) starts))
@@ -270,6 +614,480 @@ NOTE:   Call TE-CAL-TEXT, which is the one with mutex.
               (te-line-starts te) starts)))
   (setf (te-length te) (let ((last-paragraph (te-paragraph (1- (te-nparagraphs te)) te)))
                          (+ (car last-paragraph) (length (cdr last-paragraph))))))
+
+
+;;;---------------------------------------------------------------------
+;;; Line
+;;;---------------------------------------------------------------------
+
+(defun te-line (lino te)
+  "
+LINO:   Line Number, 0-based.
+TE:     TeRec
+RETURN: A string containing the characters on that line.
+NOTE:   The newline on the last line of paragraphs is removed.
+"
+  (when (or (minusp lino) (<= (te-nlines te) lino))
+    (error 'out-of-bound-error :start 0 :end (te-nlines te) :index lino
+                               :datum (te-line-starts te)
+                               :label "line starts"))
+  (let ((start (aref (te-line-starts te) lino))
+        (end   (if (< (1+ lino) (te-nlines te))
+                   (aref (te-line-starts te) (1+ lino)) 
+                   (te-length te))))
+    (let* ((para (te-paragraph (te-paragraph-at start te) te))
+           (end  (min (- end (car para)) (length (cdr para)))))
+      (subseq (cdr para) (min end (- start (car para))) end))))
+
+
+(defun te-line-at (charpos te)
+  "
+CHARPOS: the character position, 0-based.
+TE :     TeRec
+RETURN:  The lino of the line containing CHARPOS.
+"
+  (when (or (minusp charpos) (< (te-length te) charpos))
+    (error 'out-of-bound-error :start 0 :end (te-length te) :index charpos
+                               :datum te
+                               :label "characters"))
+  (multiple-value-bind (found lino order)
+      (dichotomy-search (te-line-starts te) charpos (function real-compare))
+    (declare (ignore found order))
+    lino))
+
+
+(defun te-line-coordinates (lino te)
+  "
+LINO:   Line Number, 0-based.
+TE:     TeRec
+RETURN: justified-line-left, base-line, line-rect, line-text.
+"
+  (values-list
+   (cdr (if (eql lino (car (te-line-coordinates-cache te)))
+            (te-line-coordinates-cache te)
+            (let* ((line-height (te-line-height te))
+                   (font-ascent (te-font-ascent te))
+                   (dest-rect   (te-dest-rect   te))
+                   (just        (te-just        te))
+                   (top         (+ (rect-top dest-rect) (* lino line-height)))
+                   (bottom      (+ top line-height))
+                   (base        (+ top font-ascent))
+                   (line        (te-line lino te))
+                   (x           (if (or (= just te-just-right) (= just te-just-center))
+                                    (let* ((end         (loop
+                                                          :with end = (length line)
+                                                          :while (and (plusp end)
+                                                                      (te-whitespacep (aref line (1- end))))
+                                                          :do (decf end)
+                                                          :finally (return end)))
+                                           (line-width (te-string-width line te 0 end)))
+                                      (if (= just te-just-right)
+                                          (- (rect-right dest-rect) line-width)
+                                          (+ (rect-left dest-rect)
+                                             (round (- (rect-width dest-rect) line-width) 2))))
+                                    0)))
+              (setf (te-line-coordinates-cache te)
+                    (list lino x base
+                          (make-rect (rect-left dest-rect) top (rect-right dest-rect) bottom)
+                          line)))))))
+
+
+(defun te-column (charpos te)
+  "
+RETURN: The number of characters between the beginning of the line at
+        CHARPOS on the line at CHARPOS.
+"
+  (multiple-value-bind (found lino order)
+      (dichotomy-search (te-line-starts te) charpos (function real-compare))
+    (declare (ignore found order))
+    (values (- charpos (aref (te-line-starts te) lino))
+            lino)))
+
+
+;;;---------------------------------------------------------------------
+;;; Drawing & Redrawing.
+;;;---------------------------------------------------------------------
+
+
+#|
+
+display state:
+
+(global redraw: dest-rect view-rect font (tx-font tx-face tx-mode tx-size line-height font-ascent)
+ caret (rect lino)  or  selection (rects start-lino end-lino)
+ { lino line-rect base-line x line-text })
+
+(te-display-state-changes current-state new-state) --> display-changes
+
+editing:     current-state --> new-state
+displaying:  (te-display-state-changes current-state new-state) --> display-changes
+
+|#
+
+(defstruct (te-display-line-state (:conc-name tedls-))
+  (lino                 0                       :type integer)
+  (rect                 (make-rect 0 0)         :type rect)
+  (base                 0                       :type integer)
+  (left                 0                       :type integer)
+  (text                 ""                      :type string))
+
+(defstruct (te-display-state (:conc-name teds-))
+  (dest-rect             (make-rect 0 0)        :type rect)
+  (view-rect             (make-rect 0 0)        :type rect)
+  (ff                    0                      :type integer)
+  (ms                    0                      :type integer)
+  (line-height           0                      :type integer)
+  (font-ascent           0                      :type integer)
+  (caret                 t                      :type boolean)
+  (caret-rect            (make-rect 0 0)        :type rect)
+  (caret-lino            0                      :type integer)
+  (selection-rects      '()                     :type list)
+  (selection-start-lino  0                      :type integer)
+  (selection-end-lino    0                      :type integer)
+  (lines                 (adjustable-vector 0)  :type vector #|(vector te-display-line-state *)|#))
+
+
+;; (justified-line-left base-line line-rect line-text) (te-line-coordinates lino te)
+
+(defun te-snapshot-display-state (te)
+  (let ((dest-rect (te-dest-rect te)))
+    (make-te-display-state
+     :dest-rect            dest-rect
+     :view-rect            (te-view-rect te)
+     :ff                   (te-ff te)
+     :ms                   (te-ms te)
+     :line-height          (te-line-height te)
+     :font-ascent          (te-font-ascent te)
+     :caret                (te-has-caret te)
+     :caret-rect           (if (te-has-caret te)   (make-rect 0 0))
+     :caret-lino           (if (te-has-caret te)   0)
+     :selection-rects      (if (te-has-caret te) '()  )
+     :selection-start-lino (if (te-has-caret te) 0    )
+     :selection-end-lino   (if (te-has-caret te) 0    )
+     :lines (adjustable-vector 10 (vector (make-te-display-line-state
+                                           :lino 0
+                                           :rect (make-rect (rect-left dest-rect)
+                                                            (rect-top dest-rect)
+                                                            (rect-right dest-rect)
+                                                            (+ (rect-top dest-rect) (te-line-height te)))
+                                           :base (+ (rect-top dest-rect) (te-font-ascent te))
+                                           :left (case (te-just te)
+                                                   (-1 (rect-right dest-rect))
+                                                   (1  (round (- (rect-right dest-rect) (rect-left dest-rect)) 2))
+                                                   (t  0))
+                                           :text ""))))))
+
+
+;; (te-snapshot-display-state (test-window-te (front-window)))
+;; #S(te-display-state :dest-rect #1=#S(rect :topleft 0 :bottomright 27394495)
+;;                     :view-rect #1#
+;;                     :ff 786432 :ms 65554
+;;                     :line-height 18 :font-ascent 14
+;;                     :caret t
+;;                     :caret-rect #S(rect :topleft 0 :bottomright 0) :caret-lino 0
+;;                     :selection-rects nil :selection-start-lino 0 :selection-end-lino 0
+;;                     :lines #(#S(te-display-line-state :lino 0 :rect #S(rect :topleft 0 :bottomright 1180095) :base 14 :left 0 :text "")))
+
+
+(defun te-display-state-changes (base new)
+"
+Compare the base and new display states, and generates a list of display changes:
+- scrollrects
+- lines needing redisplay
+
+
+"
+  )
+
+
+
+(defun te-redraw-line (lino te)
+  "
+DO:    Draws the line number LINO, according to the current TeRec configuration.
+NOTE:  The focus should be already established.
+"
+  (format-trace 'te-redraw-line :lino lino)
+  (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
+    (erase-rect* (rect-left line-rect) (rect-top line-rect) (rect-width line-rect) (rect-height line-rect))
+    (draw-string x base line))
+  te)
+
+
+(defun te-draw-line (lino te)
+  "
+DO:    Draws the line number LINO, according to the current TeRec configuration.
+NOTE:  The focus should be already established.
+"
+  (format-trace 'te-draw-line :lino lino)
+  (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
+    (declare (ignore line-rect))
+    (draw-string x base line))
+  te)
+
+
+
+
+
+
+(defun te-update-view (clip-rect te)
+  "
+DO:     Draws the text, clipped by CLIP-RECT.
+RETURN: TE
+"
+  (let ((updates (nreverse (te-updates te))))
+    (when updates
+      (setf (te-updates te) '())
+      (when (te-in-port te)
+        (with-font-focused-view (te-in-port te)
+          (with-clip-rect-intersect clip-rect
+            (loop
+              :for update = (pop updates)
+              :do (format-trace 'te-update-view :-> update)
+              :do (if (atom update)
+                      (ecase update
+                        (:display
+                         (loop :for lino :below (te-nlines te)
+                               :do (te-draw-line lino te)))
+                        (:selection
+                         (if (te-has-caret te)
+                             (te-caret-transition (tick-count) te)
+                             (multiple-value-bind (rects start-lino end-lino)
+                                 (te-compute-selection-rectangles (te-sel-start te) (te-sel-end te) te)
+                               (funcall (or (te-high-hook te) (function te-default-high-hook))
+                                        rects start-lino end-lino te)))))
+                      (ecase (first update)
+                        (:old-selection
+                         (destructuring-bind (op start end) update
+                           (declare (ignore op))
+                           (when (/= start end)
+                             (multiple-value-bind (rects start-lino end-lino)
+                                 (te-compute-selection-rectangles start end te)
+                               (declare (ignore rects))
+                               (loop :for lino :from start-lino :to end-lino
+                                     :do (te-redraw-line lino te))))))))
+              :while updates))))))
+  te)
+
+
+(defmacro with-te-update-display (te &body body)
+  ;; TODO: make it more sophisticated: We want to detect automatically
+  ;; what has changed in the TE so that we may redisplay only the
+  ;; lines and the selection that have changed.
+  (let ((vte (gensym)))
+    `(let ((,vte ,te))
+       (multiple-value-prog1 (progn ,@body)
+         (te-update-view (te-view-rect ,vte) ,vte)))))
+
+
+
+;;;---------------------------------------------------------------------
+;;; Caret
+;;;---------------------------------------------------------------------
+
+(defun te-compute-caret-rect (te)
+  "
+RETURN:  the rectangle where the caret must be drawn; the lino where the caret is.
+"
+  (assert (te-has-caret te))
+  (let* ((caret-position (te-sel-start te))
+         (lino (te-line-at caret-position te)))
+    (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
+      (declare (ignore base))
+      ;; (format-trace 'te-compute-caret-rect (list (rect-left line-rect) (rect-top line-rect) (rect-right line-rect) (rect-bottom line-rect)))
+      (let ((caret-x (+ x (te-string-width line te 0 (- caret-position (aref (te-line-starts te) lino))))))
+        (values (make-rect (1- caret-x) (rect-top line-rect) (1+ caret-x) (rect-bottom line-rect)) lino)))))
+
+
+(defun te-default-caret-hook (rect lino te)
+  "The default caret hook function."
+  ;; TODO: add a visibility test.
+  (if (plusp (te-caret-state te))
+      (fill-rect*  (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
+      (te-redraw-line lino te)
+      #-(and)
+      (with-clip-rect-intersect rect
+        (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
+        (te-draw-line lino te))))
+
+
+(defun te-call-caret-hook (te)
+  (when (te-in-port te)
+    (multiple-value-bind (caret-rect lino) (te-compute-caret-rect te)
+      (with-font-focused-view (te-in-port te)
+        (with-clip-rect-intersect (te-view-rect te)
+          (funcall (or (te-caret-hook te)  (function te-default-caret-hook)) caret-rect lino te))))))
+
+
+(defun te-caret-transition (tick te)
+  "
+DO:     Performs a caret transition when times has come.
+"
+  (when (<= (te-caret-time te) tick)
+    ;; (format-trace 'te-caret-transition :tick tick :time (te-caret-time te) :has-caret  (te-has-caret te))
+    (when (te-has-caret te)
+      (let ((period (round *caret-time* 2)))
+        (setf (te-caret-time  te) (* (1+ (truncate tick period)) period)
+              (te-caret-state te) (- 1 (te-caret-state te))))
+      (te-call-caret-hook te))))
+
+
+(defun te-erase-caret (te)
+  "
+DO:     Erase the caret.
+"
+  (setf (te-caret-state te) 0)
+  (te-call-caret-hook te))
+
+
+;;;---------------------------------------------------------------------
+;;; Selection highlighting
+;;;---------------------------------------------------------------------
+
+
+(declaim (inline te-clean-selection))
+(defun te-clean-selection (start end te)
+  "
+DO:     Sort the start and end points, and clip them to text limits.
+RETURN: new-start, new-end
+"
+  (when (< end start) (rotatef start end))
+  (setf start (max start 0))
+  (setf end   (min end   (te-length te)))
+  (values start end))
+
+
+(defun te-default-high-hook (rects start-lino end-lino te)
+  "The default selection highlight hook function."
+  ;; (format-trace 'te-default-high-hook :start-lino start-lino :end-lino end-lino :rects (mapcar (function rect-to-list) rects))
+  ;; TODO: add a visibility test.
+  (flet ((highlight (rect start-lino end-lino)
+           (format-trace 'highlight :rect (rect-to-list rect) :start start-lino :end end-lino)
+           (with-clip-rect-intersect rect
+             (with-fore-color (if (te-is-active te)
+                                  *selection-color-active*
+                                  *selection-color-inactive*)
+               (if (te-has-caret te)
+                   (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
+                   (fill-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))))
+             (loop
+               :for lino :from start-lino :to end-lino
+               :do (te-draw-line lino te)))))
+    (case (length rects)
+      (1
+       (let ((rect (first rects)))
+         (highlight rect start-lino start-lino)))
+      (2
+       (loop
+         :for rect :in rects
+         :for lino :in (list start-lino end-lino)
+         :do (highlight rect lino lino)))
+      (3
+       (destructuring-bind (start-rect middle-rect end-rect) rects
+         (highlight start-rect  start-lino      start-lino)
+         (highlight middle-rect (1+ start-lino) (1- end-lino))
+         (highlight end-rect    end-lino        end-lino)))))
+  (graphics-flush))
+
+
+
+(defun te-compute-selection-rectangles (start end te)
+  "
+START:  The start point of the selection.
+
+END:    The end point of the selection.
+
+DO:     Compute the rectangles covering the selection.  There may be
+        one, two or three rectangles depending on whether the
+        selection is on a single line, on two lines or more.
+
+RECTANGLESP:
+        When true, returns a list of rectangles, when NIL, returns the
+        number of rectangles it would compute.
+
+RETURN: rects-or-count, start-lino, end-lino, start-column, end-column.
+"
+  (values-list
+   (cdr (if (equal (car (te-selection-rectangles-cache te)) (cons start end))
+            (te-selection-rectangles-cache te)
+            (setf (te-selection-rectangles-cache te)
+                  (cons (cons start end)
+                        (let ((start-lino (te-line-at start te))
+                              (end-lino   (te-line-at end   te)))
+                          (cond
+                            ((= start-lino end-lino)
+                             ;; 1 rect
+                             (multiple-value-bind (x base line-rect line) (te-line-coordinates start-lino te)
+                               (declare (ignore base))
+                               (let* ((line-start  (aref (te-line-starts te) start-lino))
+                                      (start-column (- start line-start))
+                                      (end-column   (- end   line-start))
+                                      (left        (+ x (te-string-width line te 0 start-column)))
+                                      (right       (+ x (te-string-width line te 0 end-column))))
+                                 (list (list (make-rect left  (rect-top    line-rect)
+                                                        right (rect-bottom line-rect)))
+                                       start-lino end-lino start-column end-column))))
+                            ((= (1+ start-lino) end-lino)
+                             ;; 2 rects
+                             (multiple-value-bind (start-x start-base start-line-rect start-line) (te-line-coordinates start-lino te)
+                               ;; TODO: perhaps we should forward those data for the highlight function…
+                               (declare (ignore start-base))
+                               (multiple-value-bind (end-x end-base end-line-rect end-line) (te-line-coordinates end-lino te)
+                                 (declare (ignore end-base))
+                                 (let* ((start-line-start  (aref (te-line-starts te) start-lino))
+                                        (end-line-start    (aref (te-line-starts te) end-lino))
+                                        (start-column      (- start start-line-start))
+                                        (end-column        (- end   end-line-start))
+                                        (start-left  (+ start-x (te-string-width start-line te 0 start-column)))
+                                        (end-right   (+ end-x   (te-string-width end-line   te 0 end-column))))
+                                   (list (list (make-rect start-left                   (rect-top    start-line-rect)
+                                                          (rect-right start-line-rect) (rect-bottom start-line-rect))
+                                               (make-rect (rect-left  end-line-rect)   (rect-top    end-line-rect)
+                                                          end-right                    (rect-bottom end-line-rect)))
+                                         start-lino end-lino start-column end-column)))))
+                            (t
+                             ;; 3 rects
+                             (multiple-value-bind (start-x start-base start-line-rect start-line) (te-line-coordinates start-lino te)
+                               (declare (ignore start-base))
+                               (multiple-value-bind (end-x end-base end-line-rect end-line) (te-line-coordinates end-lino te)
+                                 (declare (ignore end-base))
+                                 (let* ((start-line-start  (aref (te-line-starts te) start-lino))
+                                        (end-line-start    (aref (te-line-starts te) end-lino))
+                                        (start-column      (- start start-line-start))
+                                        (end-column        (- end   end-line-start))
+                                        (start-left  (+ start-x (te-string-width start-line te 0 start-column)))
+                                        (end-right   (+ end-x   (te-string-width end-line   te 0 end-column))))
+                                   (list (list (make-rect start-left                   (rect-top    start-line-rect)
+                                                          (rect-right start-line-rect) (rect-bottom start-line-rect))
+                                               (make-rect (rect-left  start-line-rect) (rect-bottom start-line-rect)
+                                                          (rect-right end-line-rect)   (rect-top    end-line-rect))
+                                               (make-rect (rect-left  end-line-rect)   (rect-top    end-line-rect)
+                                                          end-right                    (rect-bottom end-line-rect)))
+                                         start-lino end-lino start-column end-column)))))))))))))
+
+
+
+
+
+;;;---------------------------------------------------------------------
+;;; Public API
+;;;---------------------------------------------------------------------
+
+
+;; We need a mutex to avoid re-entry of te-idle (or other API
+;; functions, from different threads).
+;;
+;; We could have one mutex per TextEdit Record, but it shouldn't be
+;; too much of a restriction to use a single global mutex.
+
+(defvar *te-mutex* nil)
+
+
+(defun te-init ()
+  "Initialize the Text Edit Manager."
+  (setf *te-mutex* (make-mutex "Text Edit Mutex")
+        *selection-color-active*     *light-blue-color*
+        *selection-color-inactive*   *light-gray-color*)
+  (values))
 
 
 (defun te-cal-text (te)
@@ -301,6 +1119,7 @@ RETURN:     TE
   te)
 
 
+;;; Globally replace the text in the TextEdit Record:
 (defun te-set-text (text te)
   "
 DO:     Incorporates a copy of the specified text into the edit record
@@ -320,7 +1139,6 @@ RETURN: TE
       :for i :from 0
       :for para :in paras
       :do (setf (aref paragraphs i) (cons pos para)))
-    (progn (print 'te-set-text *terminal-io*) (finish-output *terminal-io*))
     (with-mutex *te-mutex*
       (setf (te-paragraphs                     te) paragraphs
             (te-nparagraphs                    te) pcount
@@ -332,32 +1150,6 @@ RETURN: TE
             (te-sel-current te) (length text))
       (te-calculate-text te))
     te))
-
-
-(defun te-current-paragraph (te)
-  "
-RETURN: The cons cell containing the start and the string of the current paragraph.
-NOTE:   This string is computed from current-paragraph-before-point
-        and current-paragraph-after-point and cached.
-"
-  (if (te-current-paragraph-dirty te)
-      (setf (te-current-paragraph-dirty te) nil
-            (aref (te-paragraphs te) (te-current-paragraph-index te))
-            (cons (car (te-current-paragraph-before-point te))
-                  #-(and) (concatenate 'string (cdr (te-current-paragraph-before-point te))
-                                       (reverse (cdr (te-current-paragraph-after-point te))))
-                  ;; Let's assume this will be faster; at least, it should cons less.
-                  (let* ((before     (cdr (te-current-paragraph-before-point te)))
-                         (after      (cdr (te-current-paragraph-after-point  te)))
-                         (len-before (length before))
-                         (len-after  (length after))
-                         (para       (make-string (+ len-before len-after))))
-                    (replace para before)
-                    (loop :for src :from (1- len-after) :downto 0
-                          :for dst :from len-before
-                          :do (setf (aref para dst) (aref after src)))
-                    para)))
-      (aref (te-paragraphs te) (te-current-paragraph-index te))))
 
 
 (defun te-get-text (te)
@@ -373,524 +1165,6 @@ RETURN: A copy of the text in the Text Edit record, as a STRING.
               (terpri)
               (setf newline t))
           (write-string (cdr para)))))))
-
-
-(defun te-is-active (te)
-  "Whether the TeRec is active."
-  (plusp (te-active te)))
-
-
-(defun te-has-caret (te)
-  "Whether the TeRec shall display a caret (insteadf of a selection)."
-  (= (te-sel-start te) (te-sel-end te)))
-
-
-(declaim (inline te-is-active te-has-caret))
-
-
-(defun integer-compare (a b)
-  "Compares A and B, returning -1, 0 or 1 depending on their order."
-  (cond
-    ((< a b) -1)
-    ((> a b) +1)
-    (t        0)))
-
-
-(define-condition out-of-bound-error (error)
-  ((start :initform nil :initarg :start :reader out-of-bound-start)
-   (end   :initform nil :initarg :end   :reader out-of-bound-end)
-   (index :initform nil :initarg :index :reader out-of-bound-index)
-   (datum :initform nil :initarg :datum :reader out-of-bound-datum)
-   (label :initform nil :initarg :label :reader out-of-bound-label))
-  (:report (lambda (condition stream)
-             (format stream "Out of bounds: index ~A should have been between ~
-                             ~A (inclusive) and ~A (exclusive) when accessing ~A ~S"
-                     (out-of-bound-index condition)
-                     (out-of-bound-start condition)
-                     (out-of-bound-end condition)
-                     (out-of-bound-label condition)
-                     (out-of-bound-datum condition)))))
-
-
-(defun te-paragraph (parno te)
-  "
-PARNO:  An integer between 0 and (te-nparagraphs te) exclusive.
-TE:     A TeRec
-RETURN: A cons cell containing the index of the position an the text of the paragraph number PARNO.
-"
-  (when (or (minusp parno) (<= (te-nparagraphs te) parno))
-    (error 'out-of-bound-error :start 0 :end (te-nparagraphs te) :index parno
-                               :datum (te-paragraphs te)
-                               :label "paragraphs"))
-  (cond
-    ((< parno (te-current-paragraph-index te))
-     (aref (te-paragraphs te) parno))
-    ((= parno (te-current-paragraph-index te))
-     (te-current-paragraph te))
-    (t
-     (aref (te-paragraphs te) (+ (- parno (te-current-paragraph-index te) 1)
-                                 (te-next-paragraph-index te))))))
-
-
-(defun te-index-of-paragraph-with-position (charpos te)
-  "
-CHARPOS: the character position, 0-based.
-TE :     TeRec
-RETURN:  The index of the paragraph containing charpos.
-"
-  (when (or (minusp charpos) (< (te-length te) charpos))
-    (error 'out-of-bound-error :start 0 :end (te-length te) :index charpos
-                               :datum te
-                               :label "characters"))
-  (multiple-value-bind (found parno order)
-      (dichotomy (lambda (index) (integer-compare charpos (car (te-paragraph index te))))
-                 0 (te-nparagraphs te))
-    (declare (ignore found order))
-    parno))
-
-
-(defun %te-move-gap-to (parno te)
-  (when (or (minusp parno) (<= (te-nparagraphs te) parno))
-    (error 'out-of-bound-error :start 0 :end (te-nparagraphs te) :index parno
-                               :datum te
-                               :label "paragraphs"))
-  (let ((current (te-current-paragraph-index te))
-        (next    (te-next-paragraph-index    te))
-        (paras   (te-paragraphs              te)))
-    (cond
-      ((< parno current)
-       (loop
-         :repeat (- current parno)
-         :do (setf (aref paras (decf next)) (aref paras current)
-                   (aref paras current)     nil)
-             (decf current)))
-      ((> parno current)
-       (loop
-         :repeat (- parno current)
-         :do (setf (aref paras (incf current)) (aref paras next)
-                   (aref paras next)           nil)
-             (incf next)))
-      ;; otherwise nothing to do.
-      )
-    (setf (te-current-paragraph-index te) current
-          (te-next-paragraph-index    te) next)))
-
-
-(defun te-adjust-gap (increment te)
-  (unless (zerop increment)
-    (let* ((current (te-current-paragraph-index te))
-           (next    (te-next-paragraph-index    te))
-           (paras   (te-paragraphs              te))
-           (gap     (- next current 1))
-           (size    (array-dimension paras 0)))
-      (when (minusp (+ gap increment))
-        (error "Cannot reduce the gap (~D) by ~D" gap increment))
-      (if (minusp increment)
-          (progn
-            (replace paras paras :start1 (+ next increment) :start2 increment)
-            (setf paras (adjust-array paras (+ size increment))))
-          (progn
-            (setf paras (adjust-array paras (+ size increment)))
-            (replace paras paras :start1 (+ next increment) :start2 increment)))
-      (incf next increment)
-      (setf (te-next-paragraph-index    te) next
-            (te-paragraphs              te) paras))))
-
-
-(defun adjustable-string (string size)
-  (let ((astring (make-array size :element-type 'character
-                                  :fill-pointer (length string)
-                                  :adjustable t)))
-    (replace astring string)
-    astring))
-
-
-(defun %te-split-paragraph (parno te)
-  (let* ((paragraphs (te-paragraphs te))
-         (para-text  (cdr (aref paragraphs parno)))
-         (length     (ceiling (* 1.5 (length para-text)))))
-    (setf (te-current-paragraph-before-point te) (cons (car (aref paragraphs parno))
-                                                       (adjustable-string para-text length))
-          (te-current-paragraph-after-point  te) (cons (+ (car (aref paragraphs parno))
-                                                          (length para-text)
-                                                          1)
-                                                       (adjustable-string "" length))
-          (te-current-paragraph-dirty        te) nil)))
-
-
-(defun te-split-paragraph-at (charpos te)
-  "
-POST:   (= (te-current-paragraph-index te) (te-paragraph-with-position te))
-"
-  (let ((parno (te-index-of-paragraph-with-position charpos te)))
-    (if (= parno (te-current-paragraph-index te))
-        ;; resplit current paragraph
-        (let* ((before    (cdr (te-current-paragraph-before-point te)))
-               (after     (cdr (te-current-paragraph-after-point  te)))
-               (start     (car (aref (te-paragraphs te) (te-current-paragraph-index te))))
-               (new-split (- charpos start)))
-          (unless (= new-split (length before))
-            (cond
-              ((< new-split (length before))
-               ;; move to before
-               (let ((change (- (length before) new-split)))
-                 (when (< (- (array-dimension before 0) (fill-pointer before)) change)
-                   (setf before (adjust-array before (+ (array-dimension before 0) (* 4 change)))))
-                 (loop
-                   :repeat change
-                   :do (vector-push-extend (vector-pop before) after))))
-              ((> new-split (length before))
-               ;; move to after
-               (let ((change (- new-split (length before))))
-                 (when (< (- (array-dimension after 0) (fill-pointer after)) change)
-                   (setf after (adjust-array after (+ (array-dimension after 0) (* 4 change)))))
-                 (loop
-                   :repeat change
-                   :do (vector-push-extend (vector-pop after) before)))))
-            (setf (te-current-paragraph-dirty te) t
-                  (te-current-paragraph-before-point te)
-                  (cons (car (te-current-paragraph-before-point te))
-                        before)
-                  (te-current-paragraph-after-point  te)
-                  (cons (+ (car (te-current-paragraph-before-point te))
-                           (length before))
-                        after))))
-        (progn
-          ;; unsplit current paragraph:
-          (te-current-paragraph te) 
-          ;; split another paragraph:
-          (%te-move-gap-to parno te)
-          (%te-split-paragraph parno te)))))
-
-
-(defun te-whitespacep (char)
-  "
-RETURN:  Whether CHAR is a white space character (or non-printing control code).
-"
-  (let ((code (char-code char)))
-    (or (<= code #x0020)
-        (= code #x007F)
-        (= code #x00A0)
-        (and (<= #x1680 code)
-             (find code #(#x1680 #x180E #x2000 #x2001 #x2002 #x2003
-                          #x2004 #x2005 #x2006 #x2007 #x2008 #x2009
-                          #x200A #x200B #x202F #x205F #x3000 #xFEFF))))))
-(declaim (inline te-whitespacep))
-
-
-(defun te-text-line (lino te)
-  "
-LINO:   Line Number, 0-based.
-TE:     TeRec
-RETURN: A string containing the characters on that line.
-NOTE:   The newline on the last line of paragraphs is removed.
-"
-  (when (or (minusp lino) (<= (te-nlines te) lino))
-    (error 'out-of-bound-error :start 0 :end (te-nlines te) :index lino
-                               :datum (te-line-starts te)
-                               :label "line starts"))
-  (let ((start (aref (te-line-starts te) lino))
-        (end   (if (< (1+ lino) (te-nlines te))
-                   (aref (te-line-starts te) (1+ lino)) 
-                   (te-length te))))
-    (multiple-value-bind (found index order)
-        (dichotomy (lambda (parno)
-                     (let ((para (te-paragraph parno te)))
-                       (integer-compare start (car para))))
-                   0 (te-nparagraphs te))
-      (declare (ignore found order))
-      (let* ((para (te-paragraph index te))
-             (end  (min (- end (car para)) (length (cdr para)))))
-        ;;(format-trace 'te-text-line :found found :index index :order order :start start :end end :para (car para))
-        (subseq (cdr para) (- start (car para)) end)))))
-
-
-(defun te-line-coordinates (lino te)
-  "
-LINO:   Line Number, 0-based.
-TE:     TeRec
-RETURN: justified-line-left base-line line-rect line-text
-"
-  (values-list
-   (cdr 
-    (if (eql lino (car (te-line-coordinates-cache te)))
-        (te-line-coordinates-cache te)
-        (let* ((line-height (te-line-height te))
-               (font-ascent (te-font-ascent te))
-               (dest-rect   (te-dest-rect   te))
-               (just        (te-just        te))
-               (top         (+ (rect-top dest-rect) (* lino line-height)))
-               (bottom      (+ top line-height))
-               (base        (+ top font-ascent))
-               (line        (te-text-line lino te))
-               (x           (if (or (= just te-just-right) (= just te-just-center))
-                                (let* ((end         (loop
-                                                      :with end = (length line)
-                                                      :while (and (plusp end)
-                                                                  (te-whitespacep (aref line (1- end))))
-                                                      :do (decf end)
-                                                      :finally (return end)))
-                                       (line-width (te-string-width line te 0 end)))
-                                  (if (= just te-just-right)
-                                      (- (rect-right dest-rect) line-width)
-                                      (+ (rect-left dest-rect)
-                                         (round (- (rect-width dest-rect) line-width) 2))))
-                                0)))
-          (setf (te-line-coordinates-cache te)
-                (list lino x base
-                      (make-rect (rect-left dest-rect) top (rect-right dest-rect) bottom)
-                      line)))))))
-
-
-(defun te-line-with-position (charpos te)
-  "
-CHARPOS: the character position, 0-based.
-TE :     TeRec
-RETURN:  The lino of the line containing CHARPOS.
-"
-  (when (or (minusp charpos) (< (te-length te) charpos))
-    (error 'out-of-bound-error :start 0 :end (te-length te) :index charpos
-                               :datum te
-                               :label "characters"))
-  (multiple-value-bind (found lino order)
-      (dichotomy-search (te-line-starts te) charpos (function integer-compare))
-    (declare (ignore found order))
-    lino))
-
-
-(defun te-column (charpos te)
-  "
-RETURN: The number of characters between the beginning of the line and te-sel-start.
-"
-  (multiple-value-bind (found lino order)
-      (dichotomy-search (te-line-starts te) charpos (function integer-compare))
-    (declare (ignore found order))
-    (values (- charpos (aref (te-line-starts te) lino))
-            lino)))
-
-
-(defun te-redraw-line (lino te)
-  "
-DO:    Draws the line number LINO, according to the current TeRec configuration.
-NOTE:  The focus should be already established.
-"
-  (format-trace 'te-redraw-line :lino lino)
-  (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
-    (erase-rect* (rect-left line-rect) (rect-top line-rect) (rect-width line-rect) (rect-height line-rect))
-    (draw-string x base line))
-  te)
-
-
-(defun te-draw-line (lino te)
-  "
-DO:    Draws the line number LINO, according to the current TeRec configuration.
-NOTE:  The focus should be already established.
-"
-  (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
-    (declare (ignore line-rect))
-    (format-trace 'te-draw-line :lino lino)
-    ;; (erase-rect* (rect-left line-rect) (rect-top line-rect) (rect-width line-rect) (rect-height line-rect))
-    (draw-string x base line))
-  te)
-
-
-(defun te-compute-caret-rect (te)
-  "
-RETURN:  the rectangle where the caret must be drawn; the lino where the caret is.
-"
-  (assert (te-has-caret te))
-  (let* ((caret-position (te-sel-start te))
-         (lino (te-line-with-position caret-position te)))
-    (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
-      (declare (ignore base))
-      ;; (format-trace 'te-compute-caret-rect (list (rect-left line-rect) (rect-top line-rect) (rect-right line-rect) (rect-bottom line-rect)))
-      (let ((caret-x (+ x (te-string-width line te 0 (- caret-position (aref (te-line-starts te) lino))))))
-        (values (make-rect (1- caret-x) (rect-top line-rect) (1+ caret-x) (rect-bottom line-rect)) lino)))))
-
-
-(defun te-call-caret-hook (te)
-  (when (te-in-port te)
-    (multiple-value-bind (caret-rect lino) (te-compute-caret-rect te)
-      (with-font-focused-view (te-in-port te)
-        (with-clip-rect-intersect (te-view-rect te)
-          (funcall (te-caret-hook te) caret-rect lino te))))))
-
-
-(defun te-caret-transition (tick te)
-  "
-DO:     Performs a caret transition when times has come.
-"
-  (when (<= (te-caret-time te) tick)
-    ;; (format-trace 'te-caret-transition :tick tick :time (te-caret-time te) :has-caret  (te-has-caret te))
-    (when (te-has-caret te)
-      (setf (te-caret-time  te) (* (1+ (truncate tick *caret-half-period*)) *caret-half-period*)
-            (te-caret-state te) (- 1 (te-caret-state te)))
-      (te-call-caret-hook te))))
-
-
-(defun te-erase-caret (te)
-  "
-DO:     Erase the caret.
-"
-  (setf (te-caret-state te) 0)
-  (te-call-caret-hook te))
-
-
-(defun te-default-caret-hook (rect lino te)
-  "The default caret hook function."
-  ;; TODO: add a visibility test.
-  (if (plusp (te-caret-state te))
-      (fill-rect*  (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
-      (with-clip-rect-intersect rect
-        (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
-        (te-draw-line lino te))))
-
-
-(defun te-default-high-hook (rects start-lino end-lino te)
-  "The default selection highlight hook function."
-  ;; (format-trace 'te-default-high-hook :start-lino start-lino :end-lino end-lino :rects (mapcar (function rect-to-list) rects))
-  ;; TODO: add a visibility test.
-  (flet ((highlight (rect start-lino end-lino)
-           (format-trace 'highlight :rect (rect-to-list rect) :start start-lino :end end-lino)
-           (with-clip-rect-intersect rect
-             (with-fore-color (if (te-is-active te)
-                                  *selection-color-active*
-                                  *selection-color-inactive*)
-               (if (te-has-caret te)
-                   (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
-                   (fill-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect)))
-               #-(and)
-               (cond
-                 ((te-has-caret te)
-                  (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect)))
-                 ((te-is-active te)
-                  (fill-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect)))
-                 (t
-                  (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
-                  (draw-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect)))))
-             (loop
-               :for lino :from start-lino :to end-lino
-               :do (te-draw-line lino te)))))
-    (case (length rects)
-      (1
-       (let ((rect (first rects)))
-         (highlight rect start-lino start-lino)))
-      (2
-       (loop
-         :for rect :in rects
-         :for lino :in (list start-lino end-lino)
-         :do (highlight rect lino lino)))
-      (3
-       (destructuring-bind (start-rect middle-rect end-rect) rects
-         (highlight start-rect  start-lino      start-lino)
-         (highlight middle-rect (1+ start-lino) (1- end-lino))
-         (highlight end-rect    end-lino        end-lino)))))
-  (graphics-flush))
-
-
-
-(defun te-compute-selection-rectangles (start end te)
-  "
-DO:     Compute the rectangles covering the selection.  There may be
-        one, two or three rectangles depending on whether the
-        selection is on a single line, on two lines or more.
-RETURN: rects, start-lino, end-lino.
-"
-  (let ((start-lino (te-line-with-position start te))
-        (end-lino   (te-line-with-position end   te)))
-    (cond
-      ((= start-lino end-lino)
-       ;; 1 rect
-       (multiple-value-bind (x base line-rect line) (te-line-coordinates start-lino te)
-         (declare (ignore base))
-         (let* ((line-start  (aref (te-line-starts te) start-lino))
-                (left        (+ x (te-string-width line te 0 (- start line-start))))
-                (right       (+ x (te-string-width line te 0 (- end   line-start)))))
-           (values (list (make-rect left  (rect-top    line-rect)
-                                    right (rect-bottom line-rect)))
-                   start-lino end-lino))))
-      ((= (1+ start-lino) end-lino)
-       ;; 2 rects
-       (multiple-value-bind (start-x start-base start-line-rect start-line) (te-line-coordinates start-lino te)
-         ;; TODO: perhaps we should forward those data for the highlight function…
-         (declare (ignore start-base))
-         (multiple-value-bind (end-x end-base end-line-rect end-line) (te-line-coordinates end-lino te)
-           (declare (ignore end-base))
-           (let* ((start-line-start  (aref (te-line-starts te) start-lino))
-                  (end-line-start    (aref (te-line-starts te) end-lino))
-                  (start-left  (+ start-x (te-string-width start-line te 0 (- start start-line-start))))
-                  (end-right   (+ end-x   (te-string-width end-line   te 0 (- end   end-line-start)))))
-             (values (list (make-rect start-left                   (rect-top    start-line-rect)
-                                      (rect-right start-line-rect) (rect-bottom start-line-rect))
-                           (make-rect (rect-left  end-line-rect)   (rect-top    end-line-rect)
-                                      end-right                    (rect-bottom end-line-rect)))
-                     start-lino end-lino)))))
-      (t
-       ;; 3 rects
-       (multiple-value-bind (start-x start-base start-line-rect start-line) (te-line-coordinates start-lino te)
-         (declare (ignore start-base))
-         (multiple-value-bind (end-x end-base end-line-rect end-line) (te-line-coordinates end-lino te)
-           (declare (ignore end-base))
-           (let* ((start-line-start  (aref (te-line-starts te) start-lino))
-                  (end-line-start    (aref (te-line-starts te) end-lino))
-                  (start-left  (+ start-x (te-string-width start-line te 0 (- start start-line-start))))
-                  (end-right   (+ end-x   (te-string-width end-line   te 0 (- end   end-line-start)))))
-             (values (list (make-rect start-left                   (rect-top    start-line-rect)
-                                      (rect-right start-line-rect) (rect-bottom start-line-rect))
-                           (make-rect (rect-left  start-line-rect) (rect-bottom start-line-rect)
-                                      (rect-right end-line-rect)   (rect-top    end-line-rect))
-                           (make-rect (rect-left  end-line-rect)   (rect-top    end-line-rect)
-                                      end-right                    (rect-bottom end-line-rect)))
-                     start-lino end-lino))))))))
-
-
-(defun te-update-view (clip-rect te)
-  "
-DO:     Draws the text, clipped by CLIP-RECT.
-RETURN: TE
-"
-  (let ((updates (nreverse (te-updates te))))
-    (when updates
-      (setf (te-updates te) '())
-      (when (te-in-port te)
-        (with-font-focused-view (te-in-port te)
-          (with-clip-rect-intersect clip-rect
-            (loop
-              :for update = (pop updates)
-              :do (format-trace 'te-update-view :-> update)
-              :do (if (atom update)
-                      (ecase update
-                        (:display
-                         (loop :for lino :below (te-nlines te)
-                               :do (te-draw-line lino te)))
-                        (:selection
-                         (if (te-has-caret te)
-                             (te-caret-transition (tick-count) te)
-                             (multiple-value-call (te-high-hook te)
-                               (te-compute-selection-rectangles (te-sel-start te) (te-sel-end te) te)
-                               te))))
-                      (ecase (first update)
-                        (:old-selection
-                         (destructuring-bind (op start end) update
-                           (declare (ignore op))
-                           (when (/= start end)
-                             (multiple-value-bind (rects start-lino end-lino)
-                                 (te-compute-selection-rectangles start end te)
-                               (loop :for lino :from start-lino :to end-lino
-                                     :do (te-redraw-line lino te))))))))
-              :while updates))))))
-  te)
-
-
-(defmacro with-te-update-display (te &body body)
-  ;; TODO: make it more sophisticated: We want to detect automatically
-  ;; what has changed in the TE so that we may redisplay only the
-  ;; lines and the selection that have changed.
-  (let ((vte (gensym)))
-    `(let ((,vte ,te))
-       (multiple-value-prog1 (progn ,@body)
-         (te-update-view (te-view-rect ,vte) ,vte)))))
-
 
 
 (defun te-new (dest-rect view-rect window)
@@ -918,7 +1192,6 @@ RETURN: The new TeRec.
     (setf (te-word-break te) (function te-default-word-break)
           (te-caret-hook te) (function te-default-caret-hook)
           (te-high-hook  te) (function te-default-high-hook))
-    (progn (print 'te-new *terminal-io*) (finish-output *terminal-io*))
     (te-set-text "" te)
     te))
 
@@ -930,28 +1203,223 @@ RETURN: The new TeRec.
 
 
 (defun te-idle (te)
-  ;; (format-trace 'te-idle)
+  "
+Call TE-IDLE repeatedly to make a blinking caret appear at the
+insertion point (if any) in the text specified by TE.  (Title caret
+appears only when the window containing that text is active, of
+course.)  TextEdit observes a minimum blink interval specified by
+*CARET-HALF-PERIOD*: no matter how often you call TE-IDLE, the time
+between blinks will never be less than the minimum interval.
+
+Note: The initial minimum blink interval setting is 32 ticks. The
+user can adjust this by setting *CARET-HALF-PERIOD*.
+
+To provide a constant, frequency of blinking, you should call TE-IDLE
+as often as possible-at least once each time through your main event
+loop.  Call it more than once if your application does an unusually
+large amount of processing each time through the loop.
+
+Note: You actually need to call TE-IDLE only when the window
+containing the text is active.
+"
   (with-mutex *te-mutex*
     (when (te-is-active te)
       (te-caret-transition (tick-count) te))))
 
 
+(defun %te-coordinates-at-point (pt te)
+  (let* ((h     (point-h pt))
+         (v     (point-v pt))
+         (lino  (truncate (- v (rect-top (te-dest-rect te)))
+                          (te-line-height te)))
+         (start (if (<= (length (te-line-starts te)) lino)
+                    (te-length te)
+                    (aref (te-line-starts te) lino)))
+         (lino  (if (<= (length (te-line-starts te)) lino)
+                    (1- (length (te-line-starts te)))
+                    lino)))
+    (values (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
+              (declare (ignore base line-rect))
+              (if (<= h x)
+                  start
+                  (let ((ff         (te-ff te))
+                        (ms         (te-ms te))
+                        (offset     (- h x)))
+                    (multiple-value-bind (found index order)
+                        (dichotomy (lambda (charpos)
+                                     (let ((width (font-codes-string-width line ff ms 0 charpos)))
+                                       (real-compare offset width)))
+                                   0 (length line))
+                      (cond
+                        (found
+                         (+ start index))
+                        ((minusp order)
+                         ;; should not occur for above (<= h x) test.
+                         start) 
+                        ((<= (1- (length line)) index)
+                         ;; TODO: We're not handling the spaces suffix.
+                         (+ start (length line)))
+                        (t (let ((width      (font-codes-string-width line ff ms 0 index))
+                                 (next-width (font-codes-string-width line ff ms 0 (1+ index))))
+                             (+ start index (if (< h (round (+ width next-width) 2)) 0 1)))))))))
+            lino)))
+
+
+(defun te-word-at (charpos lino te)
+  "
+PRE:    LINO is the line number containing CHARPOS.
+RETURN: The start and end positions of the word that contains CHARPOS.
+"
+  (let* ((word-break (or (te-word-break te) (function te-default-word-break)))
+         (line-start (aref (te-line-starts te) lino))
+         (start      (- charpos line-start))
+         (end        start)
+         (line       (te-line lino te)))
+    (if (zerop (length line))
+        (values charpos charpos)
+        (progn
+          (format-trace 'te-word-at :charpos charpos :lino :lino
+                        :start start :line line)
+          (loop
+            :until (or (minusp start) (funcall word-break line start))
+            :do (decf start)
+            :finally (incf start))
+          (loop
+            :until (or (<= (length line) end) (funcall word-break line end))
+            :do (incf end))
+          (format-trace 'te-word-at :word (subseq line start end))
+          (values (+ start line-start) (+ end line-start))))))
+
+
+(defun te-default-click-loop ()
+  (not (wait-mouse-up)))
+
+
+(defun %te-click-loop (word extend initial-charpos initial-lino current-charpos current-lino te)
+  (let ((click-loop (or (te-click-loop te) (function te-default-click-loop))))
+    (if word
+        (multiple-value-bind (istart iend) (te-word-at initial-charpos initial-lino te)
+          (multiple-value-bind (cstart cend) (te-word-at current-charpos current-lino te)
+            (loop
+              ;; TODO: This is not good.
+              :do (if extend
+                      (te-set-select (min istart cstart) (max iend cend) te)
+                      (te-set-select cstart cend te))
+              :until (funcall click-loop)
+              :do (let ((pt (get-mouse)))
+                    (multiple-value-bind (new-charpos new-lino) (%te-coordinates-at-point pt te)
+                    (format-trace 'click-loop :pt (point-to-list pt) :new-charpos new-charpos)
+                      (when (/= current-charpos new-charpos)
+                        (setf current-charpos new-charpos
+                              current-lino new-lino)
+                        (multiple-value-setq (cstart cend) (te-word-at new-charpos new-lino te))))))))
+        ;; 
+        (loop
+          :do (if extend
+                  (te-set-select current-charpos (if (< current-charpos (round (+ (te-sel-start te)
+                                                                                  (te-sel-end te)) 2))
+                                                     (te-sel-end   te)
+                                                     (te-sel-start te)) te) 
+                  (te-set-select current-charpos initial-charpos te))
+          :until (funcall click-loop)
+          :do (setf current-charpos (%te-coordinates-at-point (get-mouse) te))))))
+
+
 (defun te-click (pt extend te)
+  "
+
+TEClick controls the placement and highlighting of the selection range
+as determined by mouse events. Call TEClick whenever a mouse-down
+event occurs in the view rectangle of the edit record specified by
+hTE, and the window associated with that edit record is
+active. TEClick keeps control until the mouse button is released. Pt
+is the mouse location (in local coordinates) at the time the button
+was pressed, obtainable from the event record.
+
+Note: Use the QuickDraw procedure GlobalToLocal to convert the global
+coordinates of the mouse location given in the event record to the
+local coordinate system for pt.
+
+Pass TRUE for the extend parameter if the Event Manager indicates that
+the Shift key was held down at the time of the click (to extend the
+selection).
+
+TEClick unhighlights the old selection range unless the selection
+range is being extended. If the mouse moves, meaning that a drag is
+occurring, TEClick expands or shortens the selection range
+accordingly. In the case of a double-click, the word under the cursor
+becomes the selection range; dragging expands or shortens the
+selection a word at a time.
+
+"
   (with-mutex *te-mutex*
-    ;; TODO
-    ))
+    (let* ((now    (tick-count))
+           (double (and (< (- now (te-click-time te)) *double-click-time*)
+                        (< (point-distance pt (te-click-loc te)) *double-click-jitter*))))
+      (multiple-value-bind (charpos lino) (%te-coordinates-at-point pt te)
+        (if double
+            (%te-click-loop t extend
+                            (car (te-click-stuff te)) (cdr (te-click-stuff te))
+                            charpos lino te)
+            (progn
+              (setf (te-click-time  te) now
+                    (te-click-loc   te) pt
+                    (te-click-stuff te) (cons charpos lino))
+              (%te-click-loop nil extend
+                              charpos lino
+                              charpos lino te)))))))
 
 
 
-(defun te-clean-selection (start end te)
-  (when (< end start) (rotatef start end))
-  (setf start (max start 0))
-  (setf end   (min end   (te-length te)))
-  (values start end))
-(declaim (inline te-clean-selection))
+
+#|
+
+word & extend:
+      click-stuff.charpos -> a.start-word a.end-word
+      pt.charpos          -> b.start-word b.end-word
+      sel.start   <- (min a.start-word b.start-word)
+      sel.end     <- (min a.end-word b.end-word)
+      sel.current <- closer to pt.charpos of b.start-word b.end-word
+
+      NOPE: current shall be determined by the next clic
+      NOTE: it seems reducing shift-click selections are done with
+            respect to the middle of the selection text anyways.
+
+word & ¬extend:
+      pt.charpos          -> start-word end-word
+      sel.start   <- start-word 
+      sel.end     <- end-word
+      sel.current <- closer to pt.charpos of b.start-word b.end-word
+
+
+¬word & extend
+      sel.start   <- (min click-stuff.charpos pt.charpos)
+      sel.end     <- (max click-stuff.charpos pt.charpos)
+      sel.current <- pt.charpos
+
+¬word & ¬extend
+      sel.start   <- pt.charpos
+      sel.end     <- pt.charpos
+      sel.current <- pt.charpos
+
+|#
+
 
 
 (defun te-set-select (start end te)
+  "
+
+TESetSelect sets the selection range to the text between selStart and
+selEnd in the text specified by hTE. The old selection range is
+unhighlighted, and the new one is highlighted. If selStart equals
+selEnd, the selection range is an insertion point, and a caret is
+displayed.
+
+SelEnd and selStart can range from 0 to 32767. If selEnd is anywhere
+beyond the last character of the text, the position just past the last
+character is used.
+
+"
   (with-mutex *te-mutex*
     (with-te-update-display te
      (multiple-value-bind (start end) (te-clean-selection start end te)
@@ -965,6 +1433,15 @@ RETURN: The new TeRec.
 
 
 (defun te-activate (te)
+  "
+
+TEActivate highlights the selection range in the view rectangle of the
+edit record specified by hTE. If the selection range is an insertion
+point, it displays a caret there. This procedure should be called
+every time the Toolbox Event Manager function GetNextEvent reports
+that the window containing the edit record has become active.
+
+"
   (with-mutex *te-mutex*
     (with-te-update-display te
      (setf (te-active te) 1
@@ -973,6 +1450,15 @@ RETURN: The new TeRec.
 
 
 (defun te-deactivate (te)
+  "
+
+TEDeactivate unhighlights the selection range in the view rectangle of
+the edit record specified by hTE. If the selection range is an
+insertion point, it removes the caret. This procedure should be called
+every time the Toolbox Event Manager function GetNextEvent reports
+that the window containing the edit record has become inactive.
+
+"
   (with-mutex *te-mutex*
     (with-te-update-display te
      (setf (te-active te) 0)
@@ -980,6 +1466,59 @@ RETURN: The new TeRec.
 
 
 (defun te-key (char te)
+  "
+TE-KEY processes the character CHAR, possibly modified by the
+*CURRENT-EVENT* modifiers.  It actually goes thru a binding table
+mapping key chords (for now, using only the character code of CHAR),
+to editing commands.
+
+The default command is TE-SELF-INSERT-COMMAND, which performs the
+following default TE-KEY algorithm:
+
+TE-KEY replaces the selection range in the text specified by TE with
+the character given by the key parameter, and leaves an insertion
+point just past the inserted character. If the selection range is an
+insertion point, TE-KEY just inserts the character there. If the key
+parameter contains a Backspace character, the selection range or the
+character immediately to the left of the insertion point is
+deleted. TE-KEY redraws the text as necessary. Call TE-KEY every time
+the Toolbox Event Manager function GetNextEvent reports a keyboard
+event that your application decides should be handled by TextEdit.
+
+Note: TE-KEY inserts every character passed in the key parameter, so
+it's up to your application to filter out all characters that aren't
+actual text (such as keys typed in conjunction with the Command key).
+
+The other commands implemented are mostly emacs simple Control key:
+
+    default       te-self-insert-command
+    C-@           te-set-mark-command
+    C-A           te-beginning-of-line-command     (*)
+    C-B           te-backward-char-command         (*)
+    C-C           te-enter-command
+    C-D           te-delete-char-command
+    C-E           te-end-of-line-command           (*)
+    C-F           te-forward-char-command          (*)
+    C-J           te-newline-command
+    C-K           te-kill-line-command
+    C-L           te-recenter-top-bottom-command
+    C-M           te-newline-command
+    C-N           te-next-line-command             (*)
+    C-O           te-open-line-command
+    C-P           te-previous-line-command         (*)
+    C-T           te-transpose-chars-command
+    C-V           te-scroll-up-command
+    C-W           te-kill-region-command
+    C-Y           te-yank-command
+    Rubout        te-delete-backward-char-command
+    up-arrow      te-previous-line-command         (*)
+    down-arrow    te-next-line-command             (*)
+    left-arrow    te-backward-char-command         (*)
+    right-arrow   te-forward-char-command          (*)
+
+The commands marked with (*) also extend the selection when used with
+the Shift key.
+"
   (let ((code (char-code char))
         (mods (if *current-event*
                   (event-modifiers *current-event*)
@@ -990,10 +1529,6 @@ RETURN: The new TeRec.
         (when (te-has-caret te)
           (te-erase-caret te))
         (funcall (te-get-binding code te) mods code char te)))))
-
-
-(defun %te-copy (te)
-  (put-scrap :text (progn "TODO")))
 
 
 (defun te-cut (te)
@@ -1037,18 +1572,55 @@ DO:     Replaces the selection range in the text specified by TE with
 
 
 (defun te-delete (te)
+  "
+DO:     removes the selection range from the text specified by TE,
+        and redraws the text as necessary. TE-DELETE is the same as
+        TE-CUT (above) except that it doesn't transfer the selection
+        range to the scrap.  If the selection range is an insertion
+        point, nothing happens.
+"
   (with-mutex *te-mutex*
     (with-te-update-display te
       (%te-delete te))))
 
 
 (defun te-insert (text te)
+  "
+
+DO:     TE-INSERT takes the specified text and inserts it just before
+        the selection range into the text indicated by TE, redrawing
+        the text as necessary. The text parameter points to the text
+        to be inserted, and the length parameter indicates the number
+        of characters to be inserted. TE-INSERT doesn't affect either
+        the current selection range or the scrap.
+
+"
   (with-mutex *te-mutex*
     (with-te-update-display te
-     (%te-insert text te))))
+      (let ((start   (te-sel-start   te))
+            (end     (te-sel-end     te))
+            (current (te-sel-current te)))
+        (setf (te-sel-current te) start)
+        (%te-insert text te)
+        (setf (te-sel-start   te) (+ start   (length text))
+              (te-sel-end     te) (+ end     (length text))
+              (te-sel-current te) (+ current (length text)))))))
 
 
 (defun te-set-just (just te)
+  "
+DO:     Sets the justification of the text specified by TE to
+        just. TextEdit provides three predefined constants for setting
+        justification:
+
+            TE-JUST-LEFT
+            TE-JUST-CENTER
+            TE-JUST-RIGHT
+
+        By default, text is left-justified. If you change the
+        justification, call InvalRect after TE-SET-JUST, so the text
+        will be redrawn with the new justification.
+"
   (check-type just (member -1 0 1))
   (with-mutex *te-mutex*    
     (setf (te-just te) just)
@@ -1056,6 +1628,17 @@ DO:     Replaces the selection range in the text specified by TE with
 
 
 (defun te-update (update-rect te)
+  "
+DO:     Draws the text specified by TE within the rectangle specified
+        by UPDATE-RECT (given in the coordinates of the current
+        window). Call TE-UPDATE every time the Toolbox Event Manager
+        function GetNextEvent reports an update event for a text
+        editing window, in WINDOW-UPDATE-EVENT-HANDLER or in the
+        VIEW-DRAW-CONTENTS of the window, since it's called from
+        WINDOW-UPDATE-EVENT-HANDLER.  TE-UPDATE should be called in
+        the dynamic context established by WITH-FOCUSED-VIEW on the
+        window.
+"
   (let ((clip-rect (make-rect 0 0)))
     (with-mutex *te-mutex*
       (intersect-rect update-rect (te-view-rect te) clip-rect)
@@ -1127,8 +1710,8 @@ WARNING:
         initialize the desk scrap or clear its previous contents
         before calling TEToScrap.
 
-NOTE:   We do nothing since our PUT-SCRAP already puts directly into
-        the Desk scrap.
+NOTE:   We do nothing since our PUT-SCRAP already writes directly the
+        Desk scrap.
 "
   0)
 
@@ -1147,10 +1730,11 @@ RETURN: the size of the TextEdit scrap in bytes.
   (length (get-scrap :text)))
 
 
-(defun te-set-crap-len (length)
+(defun te-set-scrap-len (length)
   "
 DO:     sets the size of the TextEdit scrap to the given number of bytes.
 "
+  (declare (ignore length))
   (values))
 
 
@@ -1183,40 +1767,114 @@ DO:     Installs in the clikLoop field of the specified edit record a
 ;;; Commands (key bindings):
 ;;;--------------------------------------------------------------------
 
-(defun %te-adjust-starts (charpos increment te)
-  (loop :for parno :from (1+ (te-index-of-paragraph-with-position charpos te))
-          :below (te-nparagraphs te)
-        :do (incf (car (te-paragraph parno te)) increment))
-  (loop :for lino :from (1+ (te-line-with-position charpos te))
-          :below (te-nlines te)
-        :do (incf (aref (te-line-starts te) lino) increment))
-  (incf (te-length te) increment))
+
+(defun te-selected-text (te)
+  "
+RETURN: a string containing the selected text from the TEREC.
+"
+  (if (= (te-sel-start te) (te-sel-end te))
+      ""
+      (multiple-value-bind (rects start-lino end-lino start-column end-column)
+          (te-compute-selection-rectangles (te-sel-start te) (te-sel-end te) te)
+        (ecase (length rects)
+          (1
+           (subseq (te-line start-lino te) start-column end-column))
+          (2
+           (with-output-to-string (*standard-output*)
+             (write-line   (subseq (te-line start-lino te) start-column))
+             (write-string (subseq (te-line end-lino te) 0 end-column))))
+          (3
+           (with-output-to-string (*standard-output*)
+             (write-line   (subseq (te-line start-lino te) start-column))
+             (loop
+               :for lino :from (1+ start-lino) :to (1- end-lino)
+               :do (write-line (te-line lino te)))
+             (write-string (subseq (te-line end-lino te) 0 end-column))))))))
 
 
-(defun %te-delete (te)
+(defun %te-copy (te)
+  (if (= (te-sel-start te) (te-sel-end te))
+      (zero-scrap)
+      (put-scrap :text (te-selected-text te))))
+
+(defun %te-split-paragraph (charpos te)
+  
   )
 
 
+(defun %te-delete (te)
+  (let ((start (te-sel-start te))
+        (end   (te-sel-end te)))
+    (unless (= start end)
+      (multiple-value-bind (rects start-lino end-lino start-column end-column)
+          (te-compute-selection-rectangles start end te)
+        (declare (ignore start-lino end-lino end-column))
+        (if (= 1 (length rects))
+            (progn
+              (te-split-paragraph-at end te)
+              (decf (fill-pointer (cdr (te-current-paragraph-before-point te))) (- end start)))
+            (let ((start-parno (te-paragraph-at start te))
+                  (end-parno   (te-paragraph-at end   te)))
+              (te-split-paragraph-at end te)
+              (let ((index (te-current-paragraph-index te))
+                    (deleted-para-count (- end-parno start-parno)))
+                (loop
+                  :repeat deleted-para-count
+                  :do (setf (aref (te-paragraphs te) index) nil)
+                      (decf index))
+                (assert (= start-parno index))
+                (let* ((para   (te-paragraph index te))
+                       (before (adjustable-string (* 2 start-column) (subseq (cdr para) 0 start-column))))
+                  (setf (te-current-paragraph-before-point te) (cons (car (te-current-paragraph-before-point te))
+                                                                     before)
+                        (te-current-paragraph-dirty te) t)
+                  (decf (te-nparagraphs te) deleted-para-count))))))
+      (%te-adjust-starts start (- end start) te)
+      (setf (te-sel-end     te) end
+            (te-sel-current te) end))))
+
+
 (defun %te-insert (text te)
-  ;; TODO: Deal with newlines!
   (assert (= (te-sel-start te) (te-sel-end te)))
-  (let ((charpos (te-sel-current te))
-        (count   (length text)))
+  (let* ((paragraphs (split-sequence #\Newline text))
+         (nparas     (length paragraphs))
+         (plen       (length (first paragraphs)))
+         (charpos    (te-sel-current te)))
     (format-trace '%te-insert :text text :charpos charpos)
     (te-split-paragraph-at charpos te)
-    (loop
-      :for char :across text
-      :do (vector-push-extend char (cdr (te-current-paragraph-before-point te))))
-    (setf (te-current-paragraph-dirty te) t)
-    (format-trace 'te-self-insert (te-current-paragraph-before-point te))
-    (incf (car (te-current-paragraph-after-point te)) count)
-    (%te-adjust-starts charpos count te)
-    (push :display  (te-updates te))
-    (te-set-select (+ charpos count) (+ charpos count) te)))
+    (when (<= (te-gap-size te) nparas)
+      (te-adjust-gap nparas te))
+    (let* ((after   (cdr (te-current-paragraph-after-point   te))) ; keep after the insertion point
+           (before  (cdr (te-current-paragraph-before-point  te)))
+           (current (length before))
+           (nlen    (+ current plen)))
+      ;; insert into the current paragraph:
+      (setf before (adjust-array before nlen :fill-pointer nlen))
+      (replace before (pop paragraphs) :start1 current)
+      (setf (car (te-current-paragraph-after-point   te)) (+ nlen (car (te-current-paragraph-before-point  te)))
+            (cdr (te-current-paragraph-after-point   te)) "")
+      (te-current-paragraph te) ; unsplit current paragraph.
+      (let* ((index   (te-current-paragraph-index te))
+             (parapos (loop
+                        :for parapos = (1+ (car (te-current-paragraph-after-point   te)))
+                          :then (+ parapos plen 1)
+                        :for para :in paragraphs
+                        :for plen = (length para)
+                        :do (setf (aref (te-paragraphs te) (incf index))
+                                  (cons parapos (adjustable-string plen para)))
+                        :finally (return parapos))))
+        (decf index)
+        (setf (te-current-paragraph-index te) index)
+        (%te-split-paragraph index te)
+        (setf (cdr (te-current-paragraph-after-point te)) after)
+        ;; compute new lines and adjust following.
+        (setf (te-sel-start   te) parapos
+              (te-sel-end     te) parapos
+              (te-sel-current te) parapos)))))
 
 
-(defun te-self-insert (mods code char te)
-  (declare (ignore modes code))
+(defun te-self-insert-command (mods code char te)
+  (declare (ignore mods code))
   (when (/= (te-sel-start te) (te-sel-end te))
     ;; TODO: save the selection for undo
     (%te-delete te))
@@ -1224,40 +1882,89 @@ DO:     Installs in the clikLoop field of the specified edit record a
   (values))
 
 
-(defun te-newline (mods code char te)
-  (declare (ignore modes code char))
+(defun te-transpose-chars-command (mods code char te)
+  (declare (ignore mods code char))
+  ;; Note: transpose-chars at the end of a line doesn't move forward,
+  ;; but in the middle of a line, it moves forward.
+
+  ;; if after is empty then just swap the two previous characters (if
+  ;; there's only one then the previous char moves up the end of the
+  ;; previous line, but at the beginning of buffer, it just beeps).
+  ;; if after is not empty then swap the previous and next and advance one char.
+  
   ;; TODO
   (values))
 
 
-(defun te-open-line (mods code char te)
-  (declare (ignore modes code char))
+(defun te-newline-command (mods code char te)
+  (declare (ignore mods code char))
+  ;; use after to create a new paragraph and move to it (beginning of line).
   ;; TODO
   (values))
 
 
-
-
-
-(defun te-transpose-chars (mods code char te)
-  (declare (ignore modes code char))
+(defun te-open-line-command (mods code char te)
+  (declare (ignore mods code char))
+  ;; use after to create a new paragraph and stay on the old paragraph.
   ;; TODO
   (values))
 
-(defun te-kill-region (mods code char te)
-  (declare (ignore modes code char))
+
+(defun te-kill-region-command (mods code char te)
+  (declare (ignore mods code char))
+  (%te-copy te)
   (%te-delete te)
   (values))
 
+;; deleting:
 
-(defun te-yank (mods code char te)
-  (declare (ignore modes code char))
+(defun te-delete-backward-char-command (mods code char te)
+  (te-split-paragraph-at (te-sel-end te) te)
+  ;; if beginning of line, then join with the previous line
+  ;; else delete the previous character (in before).
+  ;; TODO
+  (values))
+
+
+(defun te-delete-char-command (mods code char te)
+  (te-split-paragraph-at (te-sel-end te) te)
+  ;; if end of line, then join with the next line
+  ;; else delete the following character (in after).
+  ;; TODO
+  (values))
+
+
+(defun te-join-next-line (lino te)
+  ;; TODO
+  )
+
+
+(defun te-kill-line-command (mods code char te)
+  (declare (ignore mods code char))
+  (let* ((lino (te-line-at (te-sel-current te) te))
+         (end  (if (< (1+ lino) (length (te-line-starts te)))
+                   (1- (aref (te-line-starts te) (1+ lino)))
+                   (te-length te))))
+    (if (and (< end (te-length te))
+             (= (te-sel-current te) end))
+        (te-join-next-line lino te)
+        (progn
+          (te-set-select (te-sel-current te) end te)
+          (%te-copy te)
+          (%te-delete te))))
+  (values))
+
+
+(defun te-yank-command (mods code char te)
+  (declare (ignore mods code char))
   (%te-copy te)
   (values))
 
 
-(defun te-undo (mods code char te)
-  (declare (ignore modes code char))
+(defun te-undo-command (mods code char te)
+  (declare (ignore mods code char te))
+  ;; We don't implement it yet.
+  ;; Usually, it's implemented by the application anyways.
   (values))
 
 
@@ -1334,18 +2041,20 @@ DO:     Compute the new selection points from the current ones and the
   te)
 
 
-(defun te-beginning-of-line (mods code char te)
+(defun te-beginning-of-line-command (mods code char te)
   (declare (ignore code char))
   (multiple-value-bind (colno lino) (te-column (te-sel-current te) te)
+    (declare (ignore lino))
     (let ((extend (plusp (logand mods shift-key)))
           (new-point (- (te-sel-current te) colno)))
       (te-change-selection extend new-point te)))
   (values))
 
 
-(defun te-end-of-line (mods code char te)
+(defun te-end-of-line-command (mods code char te)
   (declare (ignore code char))
   (multiple-value-bind (colno lino) (te-column (te-sel-current te) te)
+    (declare (ignore colno))
     (let ((extend (plusp (logand mods shift-key)))
           (new-point (if (= lino (1- (te-nlines te)))
                          (te-length te)
@@ -1354,7 +2063,7 @@ DO:     Compute the new selection points from the current ones and the
   (values))
 
 
-(defun te-backward-char (mods code char te)
+(defun te-backward-char-command (mods code char te)
   (declare (ignore code char))
   (let ((extend (plusp (logand mods shift-key)))
         (new-point (max 0 (1- (te-sel-current te)))))
@@ -1362,7 +2071,7 @@ DO:     Compute the new selection points from the current ones and the
   (values))
 
 
-(defun te-forward-char (mods code char te)
+(defun te-forward-char-command (mods code char te)
   (declare (ignore code char))
   (let ((extend (plusp (logand mods shift-key)))
         (new-point (min (1+ (te-sel-current te)) (te-length te))))
@@ -1370,8 +2079,8 @@ DO:     Compute the new selection points from the current ones and the
   (values))
 
 
-(defun te-previous-line (mods code char te)
-  (declare (ignore mods code char))
+(defun te-previous-line-command (mods code char te)
+  (declare (ignore code char))
   (multiple-value-bind (colno lino) (te-column (te-sel-current te) te)
     (let ((extend (plusp (logand mods shift-key))))
       (if (zerop lino)
@@ -1385,8 +2094,8 @@ DO:     Compute the new selection points from the current ones and the
   (values))
 
 
-(defun te-next-line (mods code char te)
-  (declare (ignore mods code char))
+(defun te-next-line-command (mods code char te)
+  (declare (ignore code char))
   (multiple-value-bind (colno lino) (te-column (te-sel-current te) te)
     (let ((extend (plusp (logand mods shift-key))))
       (if (= (1+ lino) (te-nlines te))
@@ -1402,43 +2111,26 @@ DO:     Compute the new selection points from the current ones and the
   (values))
 
 
-;; deleting:
-
-(defun te-delete-backward-char (mods code char te)
-  (te-split-paragraph-at (te-sel-end te) te)
-  ;; TODO
-  (values))
-
-
-(defun te-delete-char (mods code char te)
-  (te-split-paragraph-at (te-sel-end te) te)
-  ;; TODO
-  (values))
-
-
-(defun te-kill-line (mods code char te)
-  (te-split-paragraph-at (te-sel-end te) te)
-  ;; TODO
-  (values))
-
-
 ;; special:
 
-(defun te-set-mark (mods code char te)
-  (te-set-select (te-sel-end te) (te-sel-end te) te)
+(defun te-set-mark-command (mods code char te)
+  (declare (ignore mods code char))
+  (te-set-select (te-sel-current te) (te-sel-current te) te)
   (values))
 
 
-(defun te-enter (mods code char te)
+(defun te-enter-command (mods code char te)
+  (declare (ignore mods code char te))
   (values))
 
 
-(defun te-beep (mods code char te)
+(defun te-beep-command (mods code char te)
+  (declare (ignore mods code char te))
   (ed-beep 1)
   (values))
 
 
-(defun te-recenter-top-bottom (mods code char te)
+(defun te-recenter-top-bottom-command (mods code char te)
   (declare (ignore mods code char))
   (when (te-in-port te)
     (with-font-focused-view (te-in-port te)
@@ -1448,7 +2140,9 @@ DO:     Compute the new selection points from the current ones and the
   (values))
 
 
-(defun te-scroll-up (mods code char te)
+(defun te-scroll-up-command (mods code char te)
+  (declare (ignore mods code char te))
+  ;; TODO
   (values))
 
 
@@ -1470,62 +2164,59 @@ DO:     Compute the new selection points from the current ones and the
 
 
 (defun te-set-default-bindings (te)
-  (te-bind :default 'te-self-insert te)
-  (te-bind     0 'te-set-mark te)
-  (te-bind     1 'te-beginning-of-line te)
-  (te-bind     2 'te-backward-char te)
-  (te-bind     3 'te-enter te)
-  (te-bind     4 'te-delete-char te)
-  (te-bind     5 'te-end-of-line te)
-  (te-bind     6 'te-forward-char te)
-  (te-bind     7 'te-beep te)
-  (te-bind     8 'te-beep te)
-  (te-bind     9 'te-beep te)
-  (te-bind    10 'te-newline te)
-  (te-bind    11 'te-kill-line te)
-  (te-bind    12 'te-recenter-top-bottom te)
-  (te-bind    13 'te-newline te)
-  (te-bind    14 'te-next-line te)
-  (te-bind    15 'te-open-line te)
-  (te-bind    16 'te-previous-line te)
-  (te-bind    17 'te-beep te)
-  (te-bind    18 'te-beep te)
-  (te-bind    19 'te-beep te)
-  (te-bind    20 'te-transpose-chars te)
-  (te-bind    21 'te-beep te)
-  (te-bind    22 'te-scroll-up te)
-  (te-bind    23 'te-kill-region te)
-  (te-bind    24 'te-beep te)
-  (te-bind    25 'te-yank te)
-  (te-bind    26 'te-beep te)
-  (te-bind    27 'te-beep te)
-  (te-bind    28 'te-beep te)
-  (te-bind    29 'te-beep te)
-  (te-bind    30 'te-beep te)
-  (te-bind    31 'te-undo te)
-  (te-bind   127 'te-delete-backward-char te)
-  (te-bind 63232 'te-previous-line te)
-  (te-bind 63233 'te-next-line te)
-  (te-bind 63234 'te-backward-char te)
-  (te-bind 63235 'te-forward-char te))
+  (te-bind :default 'te-self-insert-command te)
+  (te-bind     0 'te-set-mark-command te)
+  (te-bind     1 'te-beginning-of-line-command te)
+  (te-bind     2 'te-backward-char-command te)
+  (te-bind     3 'te-enter-command te)
+  (te-bind     4 'te-delete-char-command te)
+  (te-bind     5 'te-end-of-line-command te)
+  (te-bind     6 'te-forward-char-command te)
+  (te-bind     7 'te-beep-command te)
+  (te-bind     8 'te-beep-command te)
+  (te-bind     9 'te-beep-command te)
+  (te-bind    10 'te-newline-command te)
+  (te-bind    11 'te-kill-line-command te)
+  (te-bind    12 'te-recenter-top-bottom-command te)
+  (te-bind    13 'te-newline-command te)
+  (te-bind    14 'te-next-line-command te)
+  (te-bind    15 'te-open-line-command te)
+  (te-bind    16 'te-previous-line-command te)
+  (te-bind    17 'te-beep-command te)
+  (te-bind    18 'te-beep-command te)
+  (te-bind    19 'te-beep-command te)
+  (te-bind    20 'te-transpose-chars-command te)
+  (te-bind    21 'te-beep-command te)
+  (te-bind    22 'te-scroll-up-command te)
+  (te-bind    23 'te-kill-region-command te)
+  (te-bind    24 'te-beep-command te)
+  (te-bind    25 'te-yank-command te)
+  (te-bind    26 'te-beep-command te)
+  (te-bind    27 'te-beep-command te)
+  (te-bind    28 'te-beep-command te)
+  (te-bind    29 'te-beep-command te)
+  (te-bind    30 'te-beep-command te)
+  (te-bind    31 'te-undo-command te)
+  (te-bind   127 'te-delete-backward-char-command te)
+  (te-bind 63232 'te-previous-line-command te)
+  (te-bind 63233 'te-next-line-command te)
+  (te-bind 63234 'te-backward-char-command te)
+  (te-bind 63235 'te-forward-char-command te))
 
-
-;;(remove-method (function print-object) (find-method (function print-object) '() '(terec t)))
 #-(and)
-(defmethod print-object ((te terec) stream)
-  (if *print-readably*
-      (call-next-method)
-      (let* ((line1  (te-text-line 0 te))
-             (len1   (length line1)))
-        (format stream "#<~S :length ~D :text ~S :selection ~S >"
-                'terec (te-length te)
-                (concatenate 'string
-                             (subseq line1 0 (min 32 len1))
-                             (if (< (te-length te) 32) "" "…"))
-                (if (= (te-sel-start te) (te-sel-end te))
-                    (te-sel-start te)
-                    (list (te-sel-start te) (te-sel-end te))))
-        te)))
+(loop with bindings = (te-bindings (test-window-te (front-window)))
+      for k being the hash-key of bindings
+      for v = (gethash k bindings)
+      do (format t "~10A -> ~A~%"
+                 (typecase k
+                   (integer (if (< k 32)
+                                (format nil "C-~A" (code-char (+ k (char-code #\@))))
+                                (char-name (code-char k))))
+                   (t k))
+                 v))
+
+
+
 
 ;;;---------------------------------------------------------------------
 ;;; Tests
@@ -1568,6 +2259,15 @@ DO:     Compute the new selection points from the current ones and the
    (let ((te (test-window-te window)))
      (when te
        (te-key char te)))))
+
+(defmethod view-click-event-handler ((window te-test-window) where)
+  (reporting-errors
+    (let ((te (test-window-te window)))
+      (when te
+        (te-click where
+                  (when *current-event*
+                    (event-modifierp *current-event* shift-key))
+                  te)))))
 
 
 ;; TODO: call test/paragraph on terec in different states.
@@ -1779,13 +2479,52 @@ fifth1 fifth2 fifth3 fifth4 fifth5
     (assert (or (= (te-current-paragraph-index te) (te-next-paragraph-index te))
                 (null (aref (te-paragraphs te) (1- (te-next-paragraph-index te))))))
     (values
-     (te-index-of-paragraph-with-position charpos te)
+     (te-paragraph-at charpos te)
      (te-current-paragraph-index te)
      (te-next-paragraph-index    te)
      (te-paragraphs te))))
 
 
+
 #-(and) (progn
+          (defparameter *text* (format nil "~
+Hao Wang, logicien americain. 
+
+L'algorithme en question a été publié en 1960 dans l'IBM Journal, ~
+article intitule \"Toward Mechanical Mathematics\", avec des variantes et ~
+une extension au calcul des prédicats. Il s'agit ici du \"premier ~
+programme\" de Wang, systeme \"P\". 
+
+L'article a été écrit en 1958, et les expériences effectuées sur IBM 704 ~
+-- machine à lampes, 32 k mots de 36 bits, celle-là même qui vit naître ~
+LISP à la même époque. Le programme a été écrit en assembleur (Fortran ~
+existait, mais il ne s'était pas encore imposé) et l'auteur estime que ~
+\"there is very little in the program that is not straightforward\". 
+
+Il observe que les preuves engendrées sont \"essentiellement des arbres\", ~
+et annonce que la machine a démontré 220 théorèmes du calcul des ~
+propositions (tautologies) en 3 minutes. Il en tire argument pour la ~
+supériorité d'une approche algorithmique par rapport à une approche ~
+heuristique comme celle du \"Logic Theorist\" de Newell, Shaw et Simon (à ~
+partir de 1956 sur la machine JOHNNIAC de la Rand Corporation): un débat ~
+qui dure encore... 
+
+Cet algorithme a été popularisé par J. McCarthy, comme exemple-fanion ~
+d'application de LISP. Il figure dans le manuel de la première version ~
+de LISP (LISP 1, sur IBM 704 justement, le manuel est daté de Mars ~
+1960), et il a été repris dans le celebre \"LISP 1.5 Programmer's Manual\" ~
+publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique. 
+
+"))
+
+          (te-set-text *text* (test-window-te (front-window)))
+          (setf (te-click-stuff (test-window-te (front-window))) nil)
+          
+          (te-init)
+          (test/te-wrap-paragraph)
+
+          (test/te-all)
+          (test/te-set-text)
 
           (test/te-split)
           (test/te-selection)
@@ -1793,35 +2532,36 @@ fifth1 fifth2 fifth3 fifth4 fifth5
           (te-set-select start end te)
           (te-change-selection extend new-point te)
 
-          
-          (test/te-all)
-          (test/te-set-text)
-          (test/te-wrap-paragraph)
+          (inspect (test-window-te (front-window)))
+
+          (te-cal-text (test-window-te (front-window)))
           
           (dotimes (i (te-nlines (test-window-te (front-window))))
-            (write-line (te-text-line i (test-window-te (front-window)))))
+            (write-line (te-line i (test-window-te (front-window)))))
 
           (rect-to-list (te-compute-caret-rect (test-window-te (front-window))))
           (:topleft (0 -1) :size (200 2))
-          
+
           (map nil (lambda (w) (ignore-errors (te-cal-text (test-window-te w))))
             (remove 'te-test-window (windows) :key (lambda (x) (class-name (class-of x))) :test-not (function eql)))
 
           (let ((te (test-window-te (front-window))))
-            (list (te-index-of-paragraph-with-position 0 te)
-                  (te-index-of-paragraph-with-position 300 te)
-                  (te-index-of-paragraph-with-position (te-length te) te)))
+            (list (te-paragraph-at 0 te)
+                  (te-paragraph-at 300 te)
+                  (te-paragraph-at (te-length te) te)))
 
           (let ((te (test-window-te (front-window))))
             (setf (te-length te) 1475))
+
           (let ((te (test-window-te (front-window))))
             (values (te-length te)
                     (TE-line-starts te)))
 
 
+
           
           (let ((te (test-window-te (front-window))))
-            (TE-TEXT-LINE 25 te))
+            (te-line 25 te))
           
           (let ((te (test-window-te (front-window))))
             (te-invariant te))
@@ -1871,24 +2611,10 @@ fifth1 fifth2 fifth3 fifth4 fifth5
                     (rect-right rect)
                     (rect-bottom rect))))
           
-          (0 324 376 342)
-          (-1 324 1 342)
-          
-          (0 324 376 342)
-          (-1 324 1 342)
-
-          (324 0 342 376)
-          (-1 0 1 376)
-          (324 0 342 376)
-          (-1 0 1 376)         
-
-          (594 0 612 200) 
-          (-1 0 1 200)
-
 
           (let* ((te  (test-window-te (front-window)))
                  (caret-position (te-sel-start te))
-                 (lino (te-line-with-position caret-position te)))
+                 (lino (te-line-at caret-position te)))
             ;; (te-line-coordinates lino te)
             (rect-to-list (te-compute-caret-rect te)))
           (:topleft (-1 0) :size (2 200))
@@ -1898,7 +2624,23 @@ fifth1 fifth2 fifth3 fifth4 fifth5
           ""
           
           (te-line-coordinates lino te)
+
+           (defstruct e (v (make-array 2000 :element-type 'integer :initial-element 0)))
+          (time (loop with v = (e-v (make-e)) 
+                      for i below 2000
+                      do (incf (aref v i))))
+
+          (time (loop
+                  for para in (let ((text (split-sequence #\Newline *text*)))
+                             (loop repeat 2000
+                                   with i = text
+                                   collect (pop i)
+                                   unless i
+                                     do (setf i text)))
+                  do (multiple-value-bind (ff ms) (font-codes '("Times" 18))
+                         (font-codes-string-width para ff ms))))
+
+
           )
 
-;;;; THE END ;;;
-;
+

@@ -1,0 +1,70 @@
++----------------------------------------------------------------------------------------------------------------------------------+
+|                                                                                                                                  |
+| paragraphs                                                                                                                       |
+|              +---+                                                                                                               |
+|            0 | *-|----> ( 0    . "Hao Wang, logicien americain. "                                                              ) |
+|              |---|                                                                                                               |
+|            1 | *-|----> ( 31   . "")                                                                                             |
+|              |---|                                                                                                               |
+|            2 | *-|----> ( 32   . "L'algorithme en question a été publié en 1960 dans l'IBM Journal, article intitule \"Towar...) |
+|              |---|                                                                                                               |
+|            3 | *-|----> ( 269  . "")                                                                                             |
+|              |---|                                                                                                               |
+|  current:  4 | *-|----> ( 270  . "L'article a été écrit en 1958, et les expériences effectuées sur IBM 704 -- machine à lamp...) |
+|              |---|                                                                                                               |
+|            5 |NIL|                                                                                                               |
+|              |---|                                                                                                               |
+|            6 |NIL|                                                                                                               |
+|              |---|                                                                                                               |
+|  next:     7 | * |----> ( 629  . "")                                                                                             |
+|              |---|                                                                                                               |
+|            8 | *-|----> ( 630  . "Il observe que les preuves engendrées sont \"essentiellement des arbres\", et annonce que... ) |
+|              |---|                                                                                                               |
+|            9 | *-|----> ( 1070 . "")                                                                                             |
+|              |---|                                                                                                               |
+|           10 | *-|----> ( 1071 . "Cet algorithme a été popularisé par J. McCarthy, comme exemple-fanion d'application de LIS...) |
+|              |---|                                                                                                               |
+|           11 | *-|----> ( 1424 . "")                                                                                             |
+|              |---|                                                                                                               |
+|           12 | *-|----> ( 1425 . "")                                                                                             |
+|              +---+                                                                                                               |
+|                                                                                                                                  |
+| nparagraph:              13                                                                                                      |
+| current-paragraph-index: 4                                                                                                       |
+| next-paragraph-index:    7                                                                                                       |
+|                                                                                                                                  |
+| line-starts:              #(0                                                                                                    |
+|                            31                                                                                                    |
+|                            32 63 98 134 170 198 235                                                                              |
+|                           269 270 308 343 378 412 445 481 519 550 590 628                                                        |
+|                           629                                                                                                    |
+|                           630 657 690 721 754 781 820 855 890 923 960 996 1027 1059                                              |
+|                          1070                                                                                                    |
+|                          1071 1107 1126 1158 1195 1229 1262 1298 1331 1362 1389                                                  |
+|                          1424                                                                                                    |
+|                          1425)                                                                                                   |
+|                                                                                                                                  |
+| current-paragraph-before-point: ( 270 . "L'article a été écrit en 1958, ")                                                       |
+| current-paragraph-after-point:  ( 301 . " .\"drawrofthgiarts ton si taht margorp eht ni elttil yrev ... ecneirépxe sel te")      |
+|                                                                                                                                  |
+| sel-start                372                                                                                                     |
+| sel-end:                 372                                                                                                     |
+| sel-current:             372                                                                                                     |
+|                                                                                                                                  |
+|                                                                                                                                  |
+|                                                                                                                                  |
++----------------------------------------------------------------------------------------------------------------------------------+
+
+
+edition (by character)
+--->
+(current-paragraph-before-point current-paragraph-after-point)
+<-->
+paragraphs
+<--- edition (by paragraph)
+---> line-starts
+---> display
+
+
+                      
+
