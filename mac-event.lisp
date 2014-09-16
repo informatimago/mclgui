@@ -378,7 +378,7 @@ the times of a mouse-up event and a mouse-down event for those two
 mouse clicks to be considered a double-click."
   *double-click-time*)
 
-(defvar *caret-time* 48
+(defvar *caret-time* 32
   "The time (in ticks) between blinks of the 'caret'.")
 
 (defun get-caret-time ()

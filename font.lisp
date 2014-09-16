@@ -753,35 +753,40 @@ The valid value range is from -1.0 to 1.0. The value of 0.0 corresponds to 0 deg
 (defvar *descriptor-cache* (make-descriptor-cache))
 ;; (setf *descriptor-cache* (make-descriptor-cache))
 
+(defvar *descriptor-cache-usage* (list 0))
+
 (defun font-descriptor-from-codes (ff ms)
-  (unless (and (eql ff (descriptor-cache-ff *descriptor-cache*))
-               (eql ms (descriptor-cache-ms *descriptor-cache*)))
-    (setf  (descriptor-cache-ff *descriptor-cache*) ff
-           (descriptor-cache-ms *descriptor-cache*) ms
-           (descriptor-cache-descriptor *descriptor-cache*)
-           (multiple-value-bind (name size mode face color) (font-values ff ms)
-             (multiple-value-bind (traits others) (style-to-font-traits face)
-               (declare (ignore others)) ; for now…
-               ;; (print (list name size mode traits others color))
-               (list (awrap [NSFontDescriptor
-                             fontDescriptorWithFontAttributes:
-                             (unwrap-plist
-                              (list
-                               NSFontAttributeName            [NSFont fontWithName: (objcl:objc-string name)
-                                                                      size:(cgfloat size)]
-                               NSFontNameAttribute            name
-                               NSFontSizeAttribute            (cgfloat size)
-                               NSForegroundColorAttributeName (if (zerop color)
-                                                                  (make-color 0 0 0)
-                                                                  (error "Color for font not implemented yet."))
-                               NSFontTraitsAttribute          (unwrap-plist
-                                                               (list NSFontSymbolicTrait  (font-traits-to-mask traits)))
-                               ;; NSUnderlineStyleAttributeName  (if (member :underline others) 1 0)
-                               ;; NSShadowAttributeName          (if (member :shadow    others) *default-shadow* nil)
-                               ;; NSStrokeWidthAttributeName     (if (member :outline   others) 3.0f0 0.0f0)
-                               ))])
-                     mode
-                     size)))))
+  (if (and (eql ff (descriptor-cache-ff *descriptor-cache*))
+           (eql ms (descriptor-cache-ms *descriptor-cache*)))
+      (incf (car *descriptor-cache-usage*))
+      (progn
+        (push 0  *descriptor-cache-usage*)
+        (setf  (descriptor-cache-ff *descriptor-cache*) ff
+               (descriptor-cache-ms *descriptor-cache*) ms
+               (descriptor-cache-descriptor *descriptor-cache*)
+               (multiple-value-bind (name size mode face color) (font-values ff ms)
+                 (multiple-value-bind (traits others) (style-to-font-traits face)
+                   (declare (ignore others)) ; for now…
+                   ;; (print (list name size mode traits others color))
+                   (list (awrap [NSFontDescriptor
+                                 fontDescriptorWithFontAttributes:
+                                 (unwrap-plist
+                                  (list
+                                   NSFontAttributeName            [NSFont fontWithName: (objcl:objc-string name)
+                                                                          size:(cgfloat size)]
+                                   NSFontNameAttribute            name
+                                   NSFontSizeAttribute            (cgfloat size)
+                                   NSForegroundColorAttributeName (if (zerop color)
+                                                                      (make-color 0 0 0)
+                                                                      (error "Color for font not implemented yet."))
+                                   NSFontTraitsAttribute          (unwrap-plist
+                                                                   (list NSFontSymbolicTrait  (font-traits-to-mask traits)))
+                                   ;; NSUnderlineStyleAttributeName  (if (member :underline others) 1 0)
+                                   ;; NSShadowAttributeName          (if (member :shadow    others) *default-shadow* nil)
+                                   ;; NSStrokeWidthAttributeName     (if (member :outline   others) 3.0f0 0.0f0)
+                                   ))])
+                         mode
+                         size))))))
   (values-list (list* (handle (first (descriptor-cache-descriptor *descriptor-cache*)))
                       (rest (descriptor-cache-descriptor *descriptor-cache*)))))
 

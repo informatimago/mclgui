@@ -265,6 +265,7 @@
       (when window
         (let* ((pen  (view-pen window))
                (size (pen-size pen)))
+          ;; TODO: deal with rectangular pen sizes.
           [NSBezierPath setDefaultLineWidth:(cgfloat (average (point-h size) (point-v size)))]
           [[NSBezierPath bezierPathWithRoundedRect:(ns:make-ns-rect x y w h)
                          xRadius:(cgfloat (/ oval-width  2.0))
@@ -278,7 +279,8 @@
       (when window
         (let* ((pen  (view-pen window))
                (size (pen-size pen)))
-          [NSBezierPath setDefaultLineWidth:(cgfloat 0.0)]
+          ;; TODO: deal with rectangular pen sizes.
+          [NSBezierPath setDefaultLineWidth:(cgfloat (average (point-h size) (point-v size)))]
           [[NSBezierPath bezierPathWithRoundedRect:(ns:make-ns-rect x y w h)
                          xRadius:(cgfloat (/ oval-width  2.0))
                          yRadius:(cgfloat (/ oval-height 2.0))] fill])))))
@@ -295,7 +297,8 @@
                                        (view-window *current-view*)
                                        (slot-value (view-window *current-view*) 'back-color))
                                   *background-color*))))
-          [NSBezierPath setDefaultLineWidth:(cgfloat 0.0)]
+          ;; TODO: deal with rectangular pen sizes.
+          [NSBezierPath setDefaultLineWidth:(cgfloat (average (point-h size) (point-v size)))]
           [NSGraphicsContext saveGraphicsState]
           (unwind-protect
                (progn

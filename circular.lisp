@@ -31,8 +31,7 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
-(in-package "MCLGUI")
+(in-package "MCLGUI.CIRCULAR")
 
 (defun process-referenced-nodes (root walker processor &key (test (function eql)))
   (let ((table (make-hash-table :test test)))
@@ -90,6 +89,7 @@ EXAMPLE: (print-identified-conses '((a . b) #1=(c . d) (e . #1#)))
                                   (princ ")" stream)))))))))
        (print-node node))))
   tree)
+
 (defun test/print-identified-conses/1 ()
   (let ((result (substitute-if #\9 (function digit-char-p) ; reference numbers may be different.
                                (with-output-to-string (stream)
@@ -105,9 +105,11 @@ EXAMPLE: (print-identified-conses '((a . b) #1=(c . d) (e . #1#)))
 
 (defvar *circular-references* nil)
 
+
 (defmacro with-circular-references ((&key (test ''eql)) &body body)
   `(let ((*circular-references* (cons (make-hash-table :test ,test) 0)))
      ,@body))
+
 
 (defun circular-register (object)
   (let ((count (gethash object (car *circular-references*) 0)))
@@ -117,6 +119,7 @@ EXAMPLE: (print-identified-conses '((a . b) #1=(c . d) (e . #1#)))
         ;; (invoke-debugger (make-condition 'simple-error :format-control "circular-register: Re-registering."))
         (warn "BAD: re-registering ~S" object)
         nil))))
+
 
 (defun circular-reference (object)
   (let ((index (gethash object (car *circular-references*))))
@@ -128,6 +131,7 @@ EXAMPLE: (print-identified-conses '((a . b) #1=(c . d) (e . #1#)))
                          (cons (incf (cdr *circular-references*))
                                nil))))
       (t       index))))
+
 
 (defmacro resolve-circular-reference (object substitution)
   (let ((vindex (gensym))

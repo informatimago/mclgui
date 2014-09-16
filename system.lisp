@@ -32,7 +32,7 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 
-(in-package "MCLGUI")
+(in-package "MCLGUI.SYSTEM")
 (objcl:enable-objcl-reader-macros)
 
 
@@ -60,15 +60,6 @@
 
 
 
-
-
-#+ccl
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (import '(ccl:*lisp-cleanup-functions*
-            ccl:*save-exit-functions*
-            ccl:*restore-lisp-functions*
-            ccl:def-load-pointers
-            ccl:*lisp-startup-functions*)))
 
 
 #-ccl
@@ -197,7 +188,6 @@ If :CANCEL is thrown, the application doesn't terminate.")
   @[NSObject subClass:MclguiInitializer
              slots:()]
 
-
   @[MclguiInitializer
     method:(applicationDidFinishLaunching:(:id)notification)
     resultType:(:void)
@@ -215,7 +205,9 @@ If :CANCEL is thrown, the application doesn't terminate.")
         (map nil (function call-with-restart) *application-did-finish-launching-functions*)))
     [[NSNotificationCenter defaultCenter] removeObserver:self]
     [self release]
-    (setf *initializer* nil)])
+    (setf *initializer* nil)]
+  
+  );;eval-when
 
 
 (on-restore add-application-did-finish-launching-initializer
@@ -290,30 +282,6 @@ RETURN:         If the OBJECT is a list containing a single non-NIL
            (atom (first object)))
       (first object)
       object))
-
-
-;; Note: taken from com.informatimago.common-lisp.cesarum.utility
-(defun nsubseq (sequence start &optional (end nil))
-  "
-RETURN:  When the SEQUENCE is a vector, the SEQUENCE itself, or a dispaced
-         array to the SEQUENCE.
-         When the SEQUENCE is a list, it may destroy the list and reuse the
-         cons cells to make the subsequence.
-"
-  (if (vectorp sequence)
-      (if (and (zerop start) (or (null end) (= end (length sequence))))
-          sequence
-          (make-array (- (if end
-                             (min end (length sequence))
-                             (length sequence))
-                         start)
-                      :element-type (array-element-type sequence)
-                      :displaced-to sequence
-                      :displaced-index-offset start))
-      (let ((result (nthcdr start sequence)))
-        (when end
-          (setf (cdr (nthcdr (- end start -1) sequence)) nil))
-        result)))
 
 
 (defun standard-generic-function-p (object)
