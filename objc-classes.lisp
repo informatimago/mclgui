@@ -417,6 +417,14 @@
                                        ',(if (= 1 (length body)) body `(progn ,@body))
                                        err)
                                (finish-output *error-output*)
+                               (window-show (message-dialog (with-output-to-string (*standard-output*)
+                                                              (format t "~%ERROR ~A~%while ~S~2%"
+                                                                      err
+                                                                      ',(if (= 1 (length body)) body `(progn ,@body)))
+                                                              (print-backtrace *standard-output*))
+                                                            :size #@(768 1024)
+                                                            :modal nil
+                                                            :title (format nil "Lisp Error: ~A" err)))
                                #+debug (invoke-debugger err)
                                (return-from ,vhandler nil))))
          ,@body))))
@@ -645,7 +653,8 @@ DO:             Evaluates the BODY in a lexical environment where
   [super close]]
 
 (defun close-nswindow (winh)
-  [winh doClose])
+  (reporting-errors
+    [winh doClose]))
 
 ;; (objc:define-objc-method ((:void do-close) mclgui-window)
 ;;   ;; (format-trace "-[MclguiWindow doClose]")
@@ -771,13 +780,15 @@ DO:             Evaluates the BODY in a lexical environment where
 (defun needs-to-draw-rect (window rect)
   #+(and debug-objc debug-view)
   (format-trace 'needs-to-draw-rect :posi (point-to-list (rect-topleft rect)) :size (point-to-list (rect-size rect)) :win window)
-  (with-handle (winh window)
-    [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]
-    [winh setViewsNeedDisplay:yes]))
+  (reporting-errors
+   (with-handle (winh window)
+     [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]
+     [winh setViewsNeedDisplay:yes])))
 
 (defun needs-to-display (window)
-  (with-handle (winh window)
-    [winh setViewsNeedDisplay:yes]))
+  (reporting-errors
+   (with-handle (winh window)
+     [winh setViewsNeedDisplay:yes])))
 
 @[MclguiWindow
   method:(mouseDown:(:id)event)
