@@ -31,7 +31,6 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
 (in-package "MCLGUI")
 
 (eval-when (:compile-toplevel :load-toplevel :execute) ; to be able to use #S in the same file.
@@ -105,11 +104,11 @@ RETURN:         A list of two lists containing the coordinates of the
   value)
 
 (defun (setf rect-right)   (value rect)
-  (setf  (rect-bottomright rect) (make-point value  (point-v (rect-bottomright rect))))
+  (setf (rect-bottomright rect) (make-point value  (point-v (rect-bottomright rect))))
   value)
 
 (defun (setf rect-bottom)    (value rect)
-  (setf  (rect-bottomright rect) (make-point (point-h (rect-bottomright rect))  value))
+  (setf (rect-bottomright rect) (make-point (point-h (rect-bottomright rect))  value))
   value)
 
 (defun (setf rect-width)  (new-width rect)
@@ -121,6 +120,11 @@ RETURN:         A list of two lists containing the coordinates of the
   "Moves the botright point to accomodate the new height"
   (setf (rect-bottom rect) (+ (rect-top rect) new-height))
   new-height)
+
+(defun assign-rect (dst-rect src-rect)
+  (setf (rect-topleft     dst-rect) (rect-topleft     src-rect)
+        (rect-bottomright dst-rect) (rect-bottomright src-rect))
+  dst-rect)
 
 (defun equal-rect (rect1 rect2)
   "
