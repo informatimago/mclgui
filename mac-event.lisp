@@ -129,14 +129,22 @@ application        used defined.
 |#
 
 
+(declaim (inline event-key-code))
 (defun event-key-code (event)
   (nth-value 0 (decode-key-message (event-message event))))
 
+(declaim (inline event-character))
 (defun event-character (event)
   (nth-value 1 (decode-key-message (event-message event))))
 
+(declaim (inline modifierp))
+(defun modifierp (modifiers modifier-key)
+  (plusp (logand modifiers modifier-key)))
+
+(declaim (inline event-modifierp))
 (defun event-modifierp (event modifier-key)
-  (plusp (logand (event-modifiers event) modifier-key)))
+  (modifierp (event-modifiers event) modifier-key))
+
 
 (defmethod print-object ((event event) stream)
   (format stream "#S(~S" 'event)
