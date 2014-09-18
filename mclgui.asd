@@ -57,8 +57,11 @@
                (:file "packages"
                 :depends-on ("cocoa"))
 
-               (:file "macros"
+               (:file "debug"
                 :depends-on ("packages"))
+
+               (:file "macros"
+                :depends-on ("packages" "debug"))
 
                (:file "mutex"
                 :depends-on ("packages"))
@@ -67,13 +70,14 @@
                 :depends-on ("packages"))
 
                (:file "process"
-                :depends-on ("packages" "mailbox"))
+                :depends-on ("packages" "mailbox"
+                                        "debug"))
 
                (:file "variables"
-                :depends-on ("packages" 
-                             "point"))
+                :depends-on ("packages" "point"))
+               
                (:file "system"
-                :depends-on ("packages"))
+                :depends-on ("packages" "debug"))
 
                (:file "circular"
                 :depends-on ("packages"))

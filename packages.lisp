@@ -33,9 +33,16 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 
+(defpackage "MCLGUI.DEBUGGING"
+  (:use "COMMON-LISP")
+  (:export "FORMAT-TRACE" "*MCLGUI-TRACE*" "*MCLGUI-PACKAGE*"
+           "UNFREQUENTLY" "NIY" "UIWARN" "TIME/STDOUT"
+           "FUNCTION-ADDRESS" "ALL-FUNCTIONS" "FIND-FUNCTION-FROM-ADDRESS"))
+
 (defpackage "MCLGUI.SYSTEM"
   (:use "COMMON-LISP")
   (:use "COM.INFORMATIMAGO.COMMON-LISP.LISP-SEXP.SOURCE-FORM")
+  (:use "MCLGUI.DEBUGGING")
   #+ccl (:import-from "CCL"
                       "*LISP-CLEANUP-FUNCTIONS*" "*SAVE-EXIT-FUNCTIONS*"
                       "*RESTORE-LISP-FUNCTIONS*" "DEF-LOAD-POINTERS"
@@ -66,7 +73,7 @@
 (defpackage "MCLGUI.WRAPPER"
   (:use "COMMON-LISP")
   (:use "COM.INFORMATIMAGO.CLEXT.CLOSER-WEAK")
-  (:use "MCLGUI.SYSTEM" "MCLGUI.CIRCULAR")
+  (:use "MCLGUI.DEBUGGING" "MCLGUI.SYSTEM" "MCLGUI.CIRCULAR")
   (:import-from "COM.INFORMATIMAGO.OCLO"  "*NULL*" "NULLP")
   (:export "ANONYMOUS-WRAPPER" "ANONYMOUS-WRAPPER-THUNK"
            "ANONYMOUS-WRAPPER-THUNK-SOURCE" "AWRAP" "DO-NSARRAY"
@@ -88,7 +95,7 @@
    "SPLIT-SEQUENCE")
   (:use "COM.INFORMATIMAGO.COMMON-LISP.LISP-SEXP.SOURCE-FORM"
         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY")
-  (:use "MCLGUI.SYSTEM" "MCLGUI.CIRCULAR" "MCLGUI.WRAPPER")
+  (:use "MCLGUI.DEBUGGING" "MCLGUI.SYSTEM" "MCLGUI.CIRCULAR" "MCLGUI.WRAPPER")
   (:nicknames "UI")
   (:shadowing-import-from "CLOSER-MOP"
                           "STANDARD-CLASS" "STANDARD-METHOD" "STANDARD-GENERIC-FUNCTION"
