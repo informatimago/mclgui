@@ -793,7 +793,11 @@ RETURN:         NIL.
             (when (and (stringp (slot-value item 'title))
                        (string= (slot-value item 'title) "-"))
               (setf (slot-value item 'enabledp) nil))
-            (%attach-item-to-menu item menu)
+            (handler-case
+                (%attach-item-to-menu item menu)
+              #+ccl
+              (ccl::ns-exception (err)
+                (format-trace 'remove-menu-item :err err)))
             (set-part-color-loop item (slot-value item 'color-list))))))
 
 
@@ -816,7 +820,11 @@ RETURN:         NIL.
                                 (handle-of-menu-item-of item)
                                 (handle item))))
                 (when nsitem
-                  [nsmenu removeItem:nsitem])))
+                  (handler-case
+                      [nsmenu removeItem:nsitem]
+                    #+ccl
+                    (ccl::ns-exception (err)
+                      (format-trace 'remove-menu-item :err err))))))
             (setf (slot-value item 'owner) nil)
             (setf (slot-value menu 'item-list) (delete item (slot-value menu 'item-list)))))))))
 
