@@ -594,6 +594,8 @@ body is evaluated with VAR bound to that rectangle."
 
 
 (defun draw-image (image dst-rect &key src-rect (mode :srccopy))
+  (unless *current-view*
+    (error "Please wrap calls to ~S in ~S" 'draw-image 'with-focused-view))
   (with-handle (imageh image)
     (let ((src-rect (if src-rect
                         (rect-to-nsrect

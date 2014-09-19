@@ -65,6 +65,31 @@ paragraphs
 ---> line-starts
 ---> display
 
+(length "bonjour le
+monde!
 
-                      
+") --> 19 
+
+
+0 1 2 3 4 5 6 7 8 9 a b
++-+-+-+-+-+-+-+-+-+-+
+:b:o:n:j:o:u:r: :l:e: \n
++-+-+-+-+-+-+-+-+-+-+
+
+b c d e f g h i
++-+-+-+-+-+-+
+:m:o:n:d:e:!:
++-+-+-+-+-+-+
+
+i j
++
+: \n
++
+
+
+j 
++
+: 
++
+
 
