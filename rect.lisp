@@ -190,12 +190,14 @@ RETURN:         The center point of the RECT.
 The OFFSET-RECT function moves rectangle H to the right and V down.
 It returns the destructively modified rectangle.
 
-RECTANGLE:      A rectangle.
+RECT:           A rectangle.
 
 H:              Horizontal position.
 
 V:              Vertical position.  If V is NIL (the default), H is
                 assumed to represent a point.
+
+RETURN:         RECT
 "
   (let ((d  (make-point h v)))
     (setf (rect-topleft     rect) (add-points (rect-topleft     rect) d)
@@ -210,12 +212,14 @@ returns the destructively modified rectangle.  If H and V are
 positive, the left and right sides and the top and bottom move toward
 the center.  If H and V are negative, the sides move outward.
 
-RECTANGLE:      A rectangle.
+RECT:           A rectangle.
 
 H:              Horizontal position.
 
 V:              Vertical position.  If V is NIL (the default), H is
                 assumed to represent a point.
+
+RETURN:         RECT
 "
   (let ((d (make-point h v)))
     (setf (rect-topleft     rect) (add-points      (rect-topleft     rect) d)
@@ -223,7 +227,7 @@ V:              Vertical position.  If V is NIL (the default), H is
     rect))
 
 
-(defun intersect-rect (rect1 rect2 dest-rect)
+(defun intersect-rect (rect1 rect2 &optional (dest-rect (make-rect 0 0)))
   "
 The INTERSECT-RECT function stores in DEST-RECT the rectangle created
 by the intersection of RECT1 and RECT2 and returns DEST-RECT.  A
@@ -236,6 +240,8 @@ RECT2:          A rectangle.
 
 DEST-RECT:      A rectangle structure used to hold the intersection of
                 RECT1 and RECT2.
+
+RETURN:         DEST-RECT
 "
   (let ((l1 (rect-left   rect1))
         (t1 (rect-top    rect1))
@@ -260,7 +266,7 @@ DEST-RECT:      A rectangle structure used to hold the intersection of
     dest-rect))
 
 
-(defun union-rect (rect1 rect2 dest-rect)
+(defun union-rect (rect1 rect2 &optional (dest-rect (make-rect 0 0)))
   "
 The UNION-RECT function stores in DEST-RECT the rectangle created by
 the union of RECT1 and RECT2 and returns DEST-RECT.  A single
@@ -273,6 +279,8 @@ RECT2:          A rectangle.
 
 DEST-RECT:      A rectangle structure used to hold the intersection of
                 RECT1 and RECT2.
+
+RETURN:         DEST-RECT
 "
   (let ((l1 (rect-left   rect1))
         (t1 (rect-top    rect1))
@@ -299,8 +307,7 @@ RECT1:          A rectangle.
 
 RECT2:          A rectangle.
 "
-  (let ((inter (make-rect 0 0)))
-    (intersect-rect rect1 rect2 inter)
+  (let ((inter (intersect-rect rect1 rect2)))
     (cond
       ((equal-rect inter rect1) '())
       ((empty-rect-p inter)     (list rect1))
