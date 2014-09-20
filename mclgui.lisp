@@ -62,6 +62,7 @@ Must be called on the main thread."
     (initialize/menu)
     (initialize/view)
     (initialize/window)
+    (te-init)
     (initialize/table-dialog-item)
     (initialize/file)
     (initialize/event)
