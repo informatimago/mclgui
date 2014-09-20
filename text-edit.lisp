@@ -160,7 +160,6 @@
               (= (te-sel-current te) (te-sel-end   te)))
           () "sel-current (~D) must be either sel-start (~D) or sel-end (~D)."
           (te-sel-current te) (te-sel-start te) (te-sel-end   te))
-  ;; there's at least one empty paragraph:
   (assert (<= 1 (te-nparagraphs te) (length (te-paragraphs te)))
           () "There must be at least one paragraph and nparagraphs = ~D must be less or equal to (length paragraphs) = ~D)."
           (te-nparagraphs te) (length (te-paragraphs te))) 
@@ -346,7 +345,10 @@ DO:   Adjust by INCREMENT the total length, paragraph and line start
     (setf (te-%line-starts te) starts
           (te-%nlines te) (length starts)
           (te-line-starts-dirty te) nil
-          (te-length te) (1- start))))
+          (te-length te) (decf start))
+    (setf (te-sel-start   te) (min start (te-sel-start   te))
+          (te-sel-end     te) (min start (te-sel-end     te))
+          (te-sel-current te) (min start (te-sel-current te)))))
 
 
 (defun te-nlines (te)
@@ -931,7 +933,7 @@ RETURN: TE
                         (:old-selection
                          (destructuring-bind (op start end) update
                            (declare (ignore op))
-                           (when (and (/= start end) (<= end (te-length te)))
+                           (when (and (/= start end) (<= (max start end) (te-length te)))
                              (multiple-value-bind (rects start-lino end-lino)
                                  (te-compute-selection-rectangles start end te)
                                (declare (ignore rects))
@@ -951,14 +953,16 @@ RETURN: TE
             (,vselection (cons (te-sel-start ,vte) (te-sel-end ,vte))))
        (with-font-focused-view (te-in-port ,vte)
          (with-clip-rect-intersect (te-%view-rect ,vte)
+           (when (and (te-in-port ,vte) (te-has-caret ,vte))
+             (te-erase-caret ,vte))
            (multiple-value-prog1 (progn ,@body)
              (unless (and (= (car ,vselection) (te-sel-start ,vte))
                           (= (cdr ,vselection) (te-sel-end   ,vte)))
-               (te-show-charpos (te-sel-current te) te))
-             (when (te-in-port te)
-               (invalidate-corners (te-in-port te)
-                                   (rect-topleft (te-%view-rect te))
-                                   (rect-bottomright (te-%view-rect te))
+               (te-show-charpos (te-sel-current ,vte) ,vte))
+             (when (te-in-port ,vte)
+               (invalidate-corners (te-in-port ,vte)
+                                   (rect-topleft (te-%view-rect ,vte))
+                                   (rect-bottomright (te-%view-rect ,vte))
                                    #|already erased:|#nil))
              (te-update-view (te-%view-rect ,vte) ,vte)))))))
 
@@ -1507,8 +1511,6 @@ sel.current <- pt.charpos
 
 (defun %te-set-select (start end te)
   (assert (<= start end))
-  (when (and (te-in-port te) (te-has-caret te))
-    (te-erase-caret te))
   (push (list :old-selection (te-sel-start te) (te-sel-end te)) (te-updates te))
   (setf (te-sel-start   te) start
         (te-sel-end     te) end
@@ -1730,6 +1732,11 @@ DO:     Takes the specified text and inserts it just before the
         (%te-set-select (+ start tlen) (+ end tlen) te)
         (setf (te-sel-current te) (+ current tlen))))
     (te-invariant te)))
+
+
+(defun TE-Auto-View (auto te)
+  ;; TODO: TE-Auto-View
+  )
 
 
 (defun te-set-font (font face mode size te)
@@ -1993,11 +2000,10 @@ NOTE:   We set the selection because deleting can reduce the size
   (te-invariant te)
   ;; TODO: add display updating stuff.
   (unless (= start end)
-    (multiple-value-bind (rects start-lino end-lino start-column end-column)
-        (te-compute-selection-rectangles start end te)
-      (declare (ignore start-lino end-lino end-column))
+    (let ((start-lino (te-line-at start te))
+          (end-lino   (te-line-at end   te)))
       (te-split-paragraph-at end te)
-      (if (= 1 (length rects))
+      (if (= start-lino end-lino)
           (decf (fill-pointer (te-current-paragraph-before-point te)) (- end start))
           (let* ((start-parno        (te-paragraph-at start te))
                  (index              (te-current-paragraph-index te))
@@ -2007,15 +2013,16 @@ NOTE:   We set the selection because deleting can reduce the size
               :do (setf (aref (te-paragraphs te) index) nil)
                   (decf index))
             (assert (= start-parno index))
-            (let* ((para   (te-paragraph index te))
-                   (before (adjustable-string (* 2 start-column) (nsubseq (tep-text para) 0 start-column))))
+            (let* ((para         (te-paragraph index te))
+                   (start-column (- start (tep-startpos para)))
+                   (before       (adjustable-string (* 2 start-column) (nsubseq (tep-text para) 0 start-column))))
               (setf (te-current-paragraph-before-point te) before
-                    (te-current-paragraph-index te)              index)
-              (decf (te-nparagraphs te) (1+ deleted-para-count))))))
+                    (te-current-paragraph-index te)        index)
+              (decf (te-nparagraphs te) deleted-para-count)))))
     (setf (te-current-paragraph-dirty te) t
           (te-line-starts-dirty       te) t)
     (te-clear-caches te))
-  (%te-set-select start start te)
+  (%te-set-caret start te)
   (te-invariant te))
 
 
@@ -2179,15 +2186,24 @@ RETURN: The position after the last character inserted.
 
 (defun te-kill-line-command (mods code char te)
   (declare (ignore mods code char))
-  (let* ((lino (te-line-at (te-sel-current te) te))
-         (end  (te-line-end lino te)))
-    (if (and (< end (te-length te))
-             (= (te-sel-current te) end))
+  (let* ((start (te-sel-current te))
+         (lino  (te-line-at start te))
+         (end   (te-line-end lino te)))
+    (format-trace 'te-kill-line-command
+                  :start start :end end :lino lino
+                  :length (te-length te)
+                  :start (te-sel-start te) :end (te-sel-end te) :current (te-sel-current te)
+                  :test (list (/= (te-sel-start te) (te-sel-end te))
+                              (= (te-sel-current te) end)
+                              (< end (te-length te))))
+    (if (and (= (te-sel-start te) (te-sel-end te))
+             (= (te-sel-current te) end)
+             (< end (te-length te)))
         (te-join-next-line lino te)
         (progn
-          (%te-set-select (te-sel-current te) end te)
-          (%te-copy (te-sel-start te) (te-sel-end te) te)
-          (%te-delete (te-sel-start te) (te-sel-end te) te))))
+          (%te-set-select start end te)
+          (%te-copy start end te)
+          (%te-delete start end te))))
   (values))
 
 
@@ -2405,15 +2421,15 @@ DO:     Compute the new selection points from the current ones and the
        (te-line-height te))))
 
 
-;; (defun te-set-top-line (lino te)
-;;   (let ((new-top-offset (* lino (te-line-height te)))
-;;         (view-rect      (te-%view-rect te))
-;;         (dest-rect      (te-dest-rect te)))
-;;     (setf (rect-top    dest-rect) (- (rect-top view-rect) new-top-offset))
-;;     (te-set-rects dest-rect view-rect te)))
-;; 
-;; (defun te-set-bottom-line (lino te)
-;;   (te-set-top-line (max 0 (- lino (te-lines-per-page te) -1)) te))
+(defun te-set-top-line (lino te)
+  (let ((new-top-offset (* lino (te-line-height te)))
+        (view-rect      (te-%view-rect te))
+        (dest-rect      (te-dest-rect te)))
+    (setf (rect-top dest-rect) (- (rect-top view-rect) new-top-offset))
+    (te-set-rects dest-rect view-rect te)))
+
+(defun te-set-bottom-line (lino te)
+  (te-set-top-line (max 0 (- lino (te-lines-per-page te) -1)) te))
 
 
 (defun te-offset-for-top-line (lino te)
@@ -2614,6 +2630,21 @@ DO:     Compute the new selection points from the current ones and the
                   te)))))
 
 
+(defclass te-test-item-window (te-test-window)
+  ())
+
+(defmethod window-size-parts ((window te-test-item-window))
+  (values))
+
+(defmethod view-draw-contents ((window te-test-item-window))
+  (let ((te (test-window-te window)))
+    (when te
+      (with-focused-view window
+        (let ((border (inset-rect (te-view-rect te) -2 -2)))
+          (draw-rect* (rect-left border) (rect-top border) (rect-width border) (rect-height border)))
+        (te-update (te-%view-rect te) te)))))
+
+
 ;; TODO: call test/paragraph on terec in different states.
 (defun test/paragraph (te)
   (doparagraphs (i para te)
@@ -2666,6 +2697,25 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
       )))
 
 
+(defun test/te-field ()
+  (let* ((window (make-instance 'te-test-item-window
+                                :window-title "test/field"
+                                :view-size #@(200 100)
+                                :view-font '("Times" 18 :plain :srcor)))
+         (text   "hello world")
+         (te     (te-new (make-rect 20 10 180 30) (make-rect 20 10 180 30) window)))
+    (setf (test-window-te window) te)
+    ;; ---
+    (te-set-wrapping +te-no-wrap+ te)
+    (te-set-just +te-just-left+ te)
+    (te-set-text text te)
+    (with-focused-view (te-in-port te)
+      (let ((rect (te-%view-rect te)))
+        (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))))
+    (view-draw-contents window)
+    te))
+
+
 (defun test/te-wrap-paragraph ()
   (let* ((window (make-instance 'te-test-window
                                 :window-title "test/te-wrap-paragraph"
@@ -2710,7 +2760,8 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
       (let ((rect (te-%view-rect te)))
         (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))))
     (view-draw-contents window)
-    (test/paragraph te)))
+    (test/paragraph te)
+    te))
 
 
 (defun test/te-selection ()
@@ -2995,6 +3046,8 @@ monde!
 
 " *te*)
 
+          (defparameter *te* (test/te-field))
+          (defparameter *te* (test/te-wrap-paragraph))
           )
 
 
