@@ -33,7 +33,6 @@
 ;;;;**************************************************************************
 ;;;;    
 (defpackage "MCLGUI.CG"
-  (:nicknames "CG")
   (:use "CL" "CCL")
   (:import-from "CCL" "WITH-SPECS-AUX" "PARSE-BODY"
                 "MAKE-GCABLE-RECORD" "RECORD-LENGTH")

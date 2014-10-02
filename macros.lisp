@@ -113,19 +113,6 @@ POSITION:       0 means insert in front of the list.
 
 (defvar *step-mode* :run)
 
-(defun object-identity (object)
-  "
-RETURN:         A string containing the object identity as printed by
-                PRINT-UNREADABLE-OBJECT.
-"
-  (declare (stepper disable))
-  (let ((*step-mode* :run)
-        (*print-readably* nil))
-    (let ((ident
-           (with-output-to-string (stream)
-             (print-unreadable-object (object stream :type nil :identity t)))))
-      (subseq ident 3 (1- (length ident))))))
-
 
 (defun call-print-parseable-object (object stream type identity thunk)
   "
@@ -247,5 +234,48 @@ recent outstanding catch-cancel.
   `(throw :cancel ,value))
 
 
+(defun ensure-simple-string (s)
+  (cond ((simple-string-p s) s)
+        ((stringp s)
+         (let* ((len  (length s))
+                (base (every (lambda (ch) (typep ch 'base-char)) s))
+                (new  (if base
+                          (make-string len :element-type 'base-char)
+                          (make-string len :element-type 'character))))
+           (replace new s)))
+        (t (error 'simple-type-error
+                  :datum s :expected-type 'string
+                  :format-control "~S: bad argument type, got ~S of type ~S, expected a ~S"
+                  :format-arguments (list 'ensure-simple-string s (type-of s) 'string)))))
+
+
+;;; Simplified form of with-slots.  Expands into a let instead of a symbol-macrolet
+;;; Thus, you can access the slot values, but you can't setq them.
+(defmacro with-slot-values (slot-entries instance-form &body body)
+  (let ((instance (gensym)) var slot-name bindings)
+    (dolist (slot-entry slot-entries)
+      (cond ((symbolp slot-entry)
+             (setq var slot-entry slot-name slot-entry))
+            ((and (listp slot-entry) (cdr slot-entry) (null (cddr slot-entry))
+                  (symbolp (car slot-entry)) (symbolp (cadr slot-entry)))
+             (setq var (car slot-entry) slot-name (cadr slot-entry)))
+            (t (error "Malformed slot-entry: ~a to with-slot-values.~@
+                       Should be a symbol or a list of two symbols."
+                      slot-entry)))
+      (push `(,var (slot-value ,instance ',slot-name)) bindings))
+    `(let ((,instance ,instance-form))
+       (let ,(nreverse bindings)
+         ,@body))))
+
+
+(defmacro with-item-rect ((var the-item) &body body)
+  (let ((pos (gensym))
+        (size (gensym))
+        (item (gensym)))
+    `(let* ((,item ,the-item)
+            (,pos (view-position ,item))
+            (,size (view-size ,item))
+            (,var (make-rect ,pos (add-points ,pos ,size))))
+       ,@body)))
 
 ;;;; THE END ;;;;

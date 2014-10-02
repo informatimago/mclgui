@@ -232,18 +232,6 @@
     ))
 
 
-(defmethod view-click-event-handler ((item control-dialog-item) where)
-  (with-handle (handle item)
-    (niy view-click-event-handler item where))
-  #-(and)
-  (progn
-    (setf ok (#_TrackControl handle where (%null-ptr)))
-    (unless (zerop ok)
-    (dialog-item-action item))))
-
-
-
-
 
 (defparameter *eol-chars*
   `(#\return #\linefeed ,(code-char #x2028) ,(code-char #x2029)))

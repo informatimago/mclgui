@@ -36,9 +36,8 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
-
 (in-package "MCLGUI")
+
 
 (defclass dialog (window) 
   ()
@@ -195,7 +194,7 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
       ;; We set *eventhook* instead of using let, because
       ;; events may be processed in a different thread.
       #-(and) (unless *modal-dialog-on-top*
-        (update-menus :disable))
+                (update-menus :disable))
       (unwind-protect
            (with-handle (winh dialog)
              (window-show dialog)
@@ -368,52 +367,48 @@ STRING:         A string against which to compare the text of the
 (defmethod find-subview-of-type ((view simple-view) subview-type)
   (declare (ignorable view) (ignore subview-type))
   nil)
-        
+
 
 
 
 
 (defmethod set-current-key-handler ((dialog window) item &optional (select-all t)
-                                      &aux old)
+                                    &aux old)
   (unless (or (null item)
               (and (member item (%get-key-handler-list dialog) :test (function eq))
                    (key-handler-p item)))
     (error "~s is either disabled or is not a key-handler item of ~s" item dialog))
   (without-interrupts
-   (if (and (not (eql item (setf old (%get-current-key-handler dialog))))
-            (if old 
-              (when (exit-key-handler old item)
-                (multiple-value-bind (s e) (selection-range old)
-                  (declare (ignore s))
-                  ; do this first else display may be wrong.
-                  (set-selection-range old e e))
-                (setf (%get-current-key-handler dialog) nil) ;; << !! so frame.. knows
-                (view-deactivate-event-handler old)
-                t)
-              t))
-     (progn
-       (niy set-current-key-handler dialog item select-all) #-(and)
-       (with-handle (winh dialog)
-         (with-handle (viewh item)
-           [winh makeFirstResponder:viewh]))
-       (setf (%get-current-key-handler dialog) item)
-       (when item
-         (when select-all
-           (set-selection-range item 0 most-positive-fixnum))
-         (if (window-active-p dialog)
-           (view-activate-event-handler item))
-         (enter-key-handler item old)))
-     (when (and item (eql item old) select-all)
-       (set-selection-range item 0 most-positive-fixnum))))
+    (if (and (not (eql item (setf old (%get-current-key-handler dialog))))
+             (if old 
+                 (when (exit-key-handler old item)
+                   (multiple-value-bind (s e) (selection-range old)
+                     (declare (ignore s))
+                                        ; do this first else display may be wrong.
+                     (set-selection-range old e e))
+                   (setf (%get-current-key-handler dialog) nil) ;; << !! so frame.. knows
+                   (view-deactivate-event-handler old)
+                   t)
+                 t))
+        (progn
+          (setf (%get-current-key-handler dialog) item)
+          (when item
+            (when select-all
+              (set-selection-range item 0 most-positive-fixnum))
+            (if (window-active-p dialog)
+                (view-activate-event-handler item))
+            (enter-key-handler item old)))
+        (when (and item (eql item old) select-all)
+          (set-selection-range item 0 most-positive-fixnum))))
   item)
 
-;Check for a view-key-event-handler method?
+                                        ;Check for a view-key-event-handler method?
 (defmethod key-handler-p ((item dialog-item))
   nil)
 
 (defmethod key-handler-p ((item key-handler-mixin))
   (or (not (method-exists-p #'dialog-item-enabled-p item))
-       (dialog-item-enabled-p item)))
+      (dialog-item-enabled-p item)))
 
 (defmethod change-key-handler ((view view))
   (let* ((dialog (view-window view))
@@ -430,22 +425,22 @@ STRING:         A string against which to compare the text of the
 
 #|
 (defmethod cut ((dialog window))
-  (window-delegate-op dialog 'cut))
+(window-delegate-op dialog 'cut))
 
 (defmethod copy ((dialog window))
-  (window-delegate-op dialog 'copy))
+(window-delegate-op dialog 'copy))
 
 (defmethod paste ((dialog window))
-  (window-delegate-op dialog 'paste))
+(window-delegate-op dialog 'paste))
 
 (defmethod clear ((dialog window))
-  (window-delegate-op dialog 'clear))
+(window-delegate-op dialog 'clear))
 
 (defmethod undo ((w window))
-  (window-delegate-op w 'undo))
+(window-delegate-op w 'undo))
 
 (defmethod undo-next ((w window))
-  (window-delegate-op w 'undo-next))
+(window-delegate-op w 'undo-next))
 |#
 
 
@@ -481,7 +476,7 @@ STRING:         A string against which to compare the text of the
 
 ;;;;;;;;;; 
 ;; draw-theme-text-box
- ;; moved from pop-up-menu.lisp
+;; moved from pop-up-menu.lisp
 
 (defun current-pixel-depth ()
   (niy current-pixel-depth)
@@ -523,27 +518,27 @@ STRING:         A string against which to compare the text of the
                                (current-pixel-depth) (current-port-color-p)))
       (let ((len (- end start)))
         (%stack-block ((the-chars (%i+ len len)))
-                      (copy-string-to-ptr text start len the-chars)          
-                      (if (not truncwhere)
-                          (with-macptrs ((cfstr (#_CFStringCreatewithcharacters (%null-ptr) the-chars len))) 
-                            (#_Drawthemetextbox cfstr #$kThemeCurrentPortFont #$Kthemestateactive t rect text-justification (%null-ptr))
-                            (#_CFRelease cfstr))
-                          (progn
-                            (setf truncwhere
-                                  (case truncwhere
-                                    (:end #$truncend)
-                                    (:middle #$truncmiddle)
-                                    (t #$truncend)))              
-                            (with-macptrs ((cfstr (#_CFStringCreateMutable (%null-ptr) 0)))
-                              (#_CFStringAppendCharacters cfstr the-chars len)                
-                              (unwind-protect
-                                   (progn
-                                     (rlet ((foo :boolean))
-                                           (errchk (#_TruncateThemeText cfstr #$kThemeCurrentPortFont #$Kthemestateactive
-                                                                        (- (pref rect :rect.right)(pref rect :rect.left))
-                                                                        truncwhere
-                                                                        foo)))
-                                     (#_DrawThemetextbox cfstr #$kThemeCurrentPortFont #$Kthemestateactive t rect text-justification (%null-ptr)))
-                                (#_cfrelease cfstr))))))))))
+          (copy-string-to-ptr text start len the-chars)          
+          (if (not truncwhere)
+              (with-macptrs ((cfstr (#_CFStringCreatewithcharacters (%null-ptr) the-chars len))) 
+                (#_Drawthemetextbox cfstr #$kThemeCurrentPortFont #$Kthemestateactive t rect text-justification (%null-ptr))
+                (#_CFRelease cfstr))
+              (progn
+                (setf truncwhere
+                      (case truncwhere
+                        (:end #$truncend)
+                        (:middle #$truncmiddle)
+                        (t #$truncend)))              
+                (with-macptrs ((cfstr (#_CFStringCreateMutable (%null-ptr) 0)))
+                  (#_CFStringAppendCharacters cfstr the-chars len)                
+                  (unwind-protect
+                       (progn
+                         (rlet ((foo :boolean))
+                           (errchk (#_TruncateThemeText cfstr #$kThemeCurrentPortFont #$Kthemestateactive
+                                                        (- (pref rect :rect.right)(pref rect :rect.left))
+                                                        truncwhere
+                                                        foo)))
+                         (#_DrawThemetextbox cfstr #$kThemeCurrentPortFont #$Kthemestateactive t rect text-justification (%null-ptr)))
+                    (#_cfrelease cfstr))))))))))
 
 ;;;; THE END ;;;;

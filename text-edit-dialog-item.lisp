@@ -14,16 +14,21 @@
 ;;;;    
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
+;;;;    <akh>
+;;;;    <slh>
+;;;;    <gb>
+;;;;    <bill>
 ;;;;MODIFICATIONS
-;;;;    2014-09-07 <PJB> Implemented using CL text-edit manager.
+;;;;    2014-09-07 <PJB>  Implemented using CL text-edit manager.
 ;;;;    1997-06-02 <akh>  see below
 ;;;;    1995-11-29 <slh>  merged in Alice's changes (below)
 ;;;;    1995-06-23 <akh>  added te-typein-menu class, fixed some  set size and position bugs
 ;;;;                      No luck with body color
 ;;;;                      more carbon-compat - use wptr-font-codes
+;;;;    1994-02-27 <akh>  merge with d13
 ;;;;    -------- 4.4B3
-;;;;    1901-07-13 <akh> more carbon-compat in get-*te-handle*
-;;;;    1901-05-11 <akh> carbon-compat _textbox => tetextbox
+;;;;    1991-07-13 <akh> more carbon-compat in get-*te-handle*
+;;;;    1991-05-11 <akh> carbon-compat _textbox => tetextbox
 ;;;;    ------- 4.3f1c1
 ;;;;    1997-05-05 <akh> better luck with body color
 ;;;;    1996-03-26 <gb>  lowmem accessors.
@@ -74,10 +79,12 @@
    (sel-start :initform 0)
    (sel-end :initform 0)))
 
+
 ;; use this class if you want to have typein menus that use text-edit-dialog-item 
-(defclass te-typein-menu (typein-menu)()
+(defclass te-typein-menu (typein-menu)
+  ()
   (:default-initargs    
-    :editable-text-class 'text-edit-dialog-item))
+   :editable-text-class 'text-edit-dialog-item))
 
 (defmethod part-color ((item text-edit-dialog-item) key)
   (or (getf (slot-value item 'color-list) key nil)
@@ -93,321 +100,314 @@
 (defvar *null-text-handle* nil)
 (defvar *te-handle-dialog-item* nil)
 
-#-carbon-compat
 (defun get-*te-handle* ()
-  (let ((te-handle *te-handle*))
-    (if (macptrp te-handle)
-      te-handle
-      (let* ((wptr %temp-port%)
-             (rect (rref wptr grafport.portrect)))  ;; wrong for OSX
-        (with-port wptr
-          (setq te-handle (#_TENew rect rect))
-          (setq *te-handle* te-handle
-                *null-text-handle* (rref te-handle :TERec.HText)
-                *te-handle-dialog-item* nil)
-          te-handle)))))
-
-#+carbon-compat
-(defun get-*te-handle* ()
-  (let ((te-handle *te-handle*))
-    (if (macptrp te-handle)
-      te-handle
-      (let* ((wptr %temp-port%))
-        (rlet ((rect :rect))
-          (#_getwindowportbounds wptr rect)
-          (with-port wptr
-            (setq te-handle (#_TENew rect rect))
-            (setq *te-handle* te-handle
-                  *null-text-handle* (rref te-handle :TERec.HText)
-                  *te-handle-dialog-item* nil)
-            te-handle))))))
-
-
+  (or *te-handle*
+      (let ((rect (if *current-view*
+                      (view-frame (or (view-window *current-view*) *current-view*))
+                      (make-rect 0 0 40 20))))
+        (setf *null-text-handle* ""
+              *te-handle-dialog-item* nil
+              *te-handle* (te-new rect rect (and *current-view* (view-window *current-view*)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Update the text-edit record for the current-key-handler of a window
 ;;
+(defgeneric dialog-te-handle (window &optional select))
 (defmethod dialog-te-handle ((w window) &optional select)
   (without-interrupts
-   (let* ((hTE (get-*te-handle*))
-          (item *te-handle-dialog-item*)
-          (current-text (current-key-handler w)))
-     (cond ((not (typep current-text 'text-edit-dialog-item))   ; ignore fred-dialog-items
-            (setq *te-handle-dialog-item* nil))
-           (t (unless (eq current-text item)
-                (let ((wptr (wptr w)))         ; generate error if there is none.
-                  (when item
-                    (setf (slot-value item 'sel-start) (rref hTE TERec.selstart)
-                          (slot-value item 'sel-end) (rref hTE TERec.selend))
-                    (with-focused-view (view-container item)
-                      (with-fore-color (part-color item :text)
-                        (with-back-color (part-color item :body)
-                          (#_TEDeactivate hTE)))))
-                  (if (null current-text)
-                    (progn
-                      (rset hTE TERec.hText *null-text-handle*)
-                      (rset hTE TERec.inport #+carbon-compat (#_getwindowport %temp-port%)
-                                             #-carbon-compat %temp-port))
-                    (with-focused-view (view-container current-text)
-                      (with-fore-color (part-color current-text :text)
-                        (with-back-color (part-color current-text :body)
-                      (rset hTE terec.inport #+carbon-compat (#_getwindowport wptr)
-                                              #-carbon-compat wptr)
-                      (with-slot-values (dialog-item-handle line-height font-ascent
-                                         text-justification)
-                                        current-text
-                        (rset hTE TERec.Just text-justification)   ; JooFung Wong's fix
-                        (rset hTE TERec.hText dialog-item-handle)
-                        (rset hTE TERec.LineHeight line-height)
-                        (rset hTE TERec.FontAscent font-ascent))
-                      (with-item-rect (rect current-text)
-                        ;could change this to copy-record for clarity ***
-                        (rset hTE TERec.destrect.topleft (rref rect :rect.topleft))
-                        (rset hTE TERec.destrect.bottomright (rref rect :rect.bottomright))
-                        (rset hTE TERec.viewrect.topleft (rref rect :rect.topleft))
-                        (rset hTE TERec.viewrect.bottomright (rref rect :rect.bottomright)))
-                      (rset hTE TERec.clickloc -1)
-                      (multiple-value-bind (ff ms) (view-font-codes current-text)
-                        (%hput-long hTE ff 74)
-                        (%hput-long hTE ms 78)
-                        (with-font-codes ff ms
-                          (#_TEAutoView t hTE)
-                          (#_TECalText hTE)
-                          (if select
-                            (progn
-                              (rset hTE TERec.selstart 0)
-                              (rset hTE TERec.selend 32000))
-                            (progn
-                              (rset hTE TERec.selstart (slot-value current-text 'sel-start))
-                              (rset hTE TERec.selend  (slot-value current-text 'sel-end))))
-                          (if #-carbon-compat (rref wptr windowrecord.hilited)
-                              #+carbon-compat (#_iswindowhilited wptr)
-                            (#_TEActivate hTE))))))))
-                  (setq *te-handle-dialog-item* current-text)))
-              hTE)))))
+    (let* ((hTE (get-*te-handle*))
+           (item *te-handle-dialog-item*)
+           (current-text (current-key-handler w)))
+      (cond ((not (typep current-text 'text-edit-dialog-item))   ; ignore fred-dialog-items
+             (setq *te-handle-dialog-item* nil))
+            ((eql current-text item)
+             ;; no change, nothing to do. 
+             (setq *te-handle-dialog-item* current-text))
+            (t 
+             (when item
+               ;; leave the old item
+               (setf (slot-value item 'sel-start) (te-sel-start hTE)
+                     (slot-value item 'sel-end)   (te-sel-end   hTE))
+               (with-focused-view (view-container item)
+                 (with-fore-and-back-color (part-color item :text) (part-color item :body)
+                   (TE-Deactivate hTE))))
+             (if current-text
+                 (with-focused-view (view-container current-text)
+                   (with-fore-and-back-color (part-color current-text :text) (part-color current-text :body)
+                     ;; install into the new item
+                     (with-slot-values (dialog-item-handle line-height font-ascent text-justification) current-text
+                       (setf (te-in-port hTE) w)
+                       (te-set-just text-justification hTE)   ; JooFung Wong's fix
+                       (te-set-text dialog-item-handle hTE)
+                       (setf (te-click-loc hTE) -1)
+                       (multiple-value-bind (ff ms) (view-font-codes current-text)
+                         (with-font-codes ff ms
+                           (te-set-font-info ff ms hTE)
+                           (when line-height (setf (te-line-height hTE) line-height))
+                           (when font-ascent (setf (te-font-ascent hTE) font-ascent))
+                           (with-item-rect (rect current-text)
+                             (te-set-rects rect rect hTE))
+                           (TE-Auto-View t hTE)
+                           (TE-Cal-Text hTE)
+                           (if select
+                               (te-set-select 0 32000 hTE)
+                               (te-set-select (slot-value current-text 'sel-start)
+                                              (slot-value current-text 'sel-end)
+                                              hTE))
+                           (when (window-active-p w)
+                             (TE-Activate hTE)))))))
+                 (progn
+                   ;; leave all items
+                   (te-set-text *null-text-handle* hTE)
+                   (setf (te-in-port hTE) w)))
+             (setq *te-handle-dialog-item* current-text)))
+      hTE)))
 
+
+#-(and) (
+
+         *te-handle-dialog-item*
+         (editable-text-dialog-item :view-nick-name nil :view-position (6 5) :position/window (38 57) :view-size (273 154) :view-scroll-position (0 0) "#x302005018DCD")
+         
+         (let ((te (get-*te-handle*)))
+           (with-focused-view (view-container *te-handle-dialog-item*)
+             (view-font-codes  *te-handle-dialog-item*))
+           (values (te-ff te) (te-ms te)))
+         0
+         0
+         262144
+         9
+
+
+         (
+          (multiple-value-call (function te-set-font-info) (with-focused-view (view-container *te-handle-dialog-item*)
+                                                             (view-font-codes  *te-handle-dialog-item*)) te)
+          (te-cal-text te)
+          (values (te-ff te) (te-ms te)))
+         262144
+         9
+         262144
+         9
+         (multiple-value-call (function font-spec) (with-focused-view (view-container *te-handle-dialog-item*)
+                                                     (view-font-codes  *te-handle-dialog-item*)))
+         ("Monaco" 9 :srccopy :plain (:color-index 0))
+         ("Monaco" 9 :srccopy :plain (:color-index 0))
+         )
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; The guts
 ;;
 
-(defmethod key-handler-idle ((item text-edit-dialog-item) &optional 
-                          (dialog (view-window item)))
+(defmethod key-handler-idle ((item text-edit-dialog-item)
+                             &optional (dialog (view-window item)))
   (let ((hTE (dialog-te-handle dialog)))
     (with-focused-dialog-item (item)
-      (#_TEIdle hTE))))
+      (TE-Idle hTE))))
 
-; Should never be called unless the item is contained in a window.
+
+;; Should never be called unless the item is contained in a window.
 (defmethod install-view-in-window ((item text-edit-dialog-item) view)
   (declare (ignore view))
-  (let* ((text (ensure-simple-string (slot-value item 'dialog-item-text)))
-         (h (%str-to-handle text)))
-    (setf (slot-value item 'dialog-item-handle) h
+  (let* ((text (ensure-simple-string (slot-value item 'dialog-item-text))))
+    (setf (slot-value item 'dialog-item-handle) text
           (slot-value item 'dialog-item-text) nil))
   (call-next-method))
+
 
 (defmethod remove-view-from-window ((item text-edit-dialog-item))
   (dispose-text-edit-handle item))
 
-(defun dispose-text-edit-handle (item)
-  (with-slot-values ((h dialog-item-handle)) item
-    (when h
-      (with-dereferenced-handles ((p h))
-        (setf (slot-value item 'dialog-item-text)
-              (%str-from-ptr p (#_GetHandleSize h))))
-      (#_DisposeHandle :errchk h))))
 
-(defmethod remove-key-handler :after ((item text-edit-dialog-item) &optional
-                                      (dialog (view-window item)))
+(defun dispose-text-edit-handle (item)
+  (setf (slot-value item 'dialog-item-text) (slot-value item 'dialog-item-handle)
+        (slot-value item 'dialog-item-handle) nil)
+  (values))
+
+
+(defmethod remove-key-handler :after ((item text-edit-dialog-item)
+                                      &optional (dialog (view-window item)))
   (when dialog
     (dialog-te-handle dialog)))   ; update the *te-handle*
 
-; This is not always necessary, but the code that knows if it is
-; is in the method for basic-editable-text-dialog-item.
+
+;; This is not always necessary, but the code that knows if it is
+;; is in the method for basic-editable-text-dialog-item.
 (defmethod dialog-item-disable :before ((item text-edit-dialog-item))
   (let ((dialog (view-window item)))
     (when (and dialog (dialog-item-handle item))
       (dialog-te-handle dialog))))
 
-(defmethod set-view-font-codes :after ((item text-edit-dialog-item)
-                                       ff ms &optional ff-mask ms-mask
-                                       &aux height)
-  (declare (ignore ff-mask ms-mask))
-  (multiple-value-setq (ff ms) (view-font-codes item))
-  (multiple-value-bind (ascent descent widmax leading)
-                       (font-codes-info ff ms)
-    (declare (ignore widmax))
-    (setf height (+ ascent descent leading)
-          (slot-value item 'line-height) height
-          (slot-value item 'font-ascent) ascent)
-    (let ((my-dialog (view-window item)))
-      (when (and my-dialog
-                 (eq item (current-key-handler my-dialog)))
-        (let ((te-handle (dialog-te-handle my-dialog)))
-          (rset te-handle :terec.fontAscent ascent)
-          (rset te-handle :terec.lineHeight height))))))
 
-(defmethod set-view-position :before ((item text-edit-dialog-item) h &optional v
-                              &aux (new-pos (make-point h v)))
+(defmethod set-view-font-codes :after ((item text-edit-dialog-item) ff ms
+                                       &optional ff-mask ms-mask)
+  (declare (ignore ff ms ff-mask ms-mask))
+  (when (view-window item)
+    (multiple-value-bind (ff ms) (view-font-codes item)
+      (te-set-font-info ff ms (dialog-te-handle (view-window item))))))
+
+
+(defmethod set-view-position :before ((item text-edit-dialog-item) h &optional v)
   (let ((my-dialog (view-window item))
-        (position (view-position item)))    
+        (position  (view-position item))
+        (new-pos   (make-point h v)))    
     (when my-dialog
-       (if (eq item (current-key-handler my-dialog))
-         (with-pointers ((pTE (dialog-te-handle my-dialog)))
-           (if position
-             (let* ((diff (subtract-points new-pos position)))
-              (#_OffsetRect :ptr (pref pTE terec.viewrect) :long diff)
-              (#_OffsetRect :ptr (pref pTE terec.destrect) :long diff))
-             (progn
-               (setf (pref pTE terec.viewrect.topleft) position)
-               (setf (pref pTE terec.destrect.bottomright) (add-points position (view-size item))))))))))
+      (if (eql item (current-key-handler my-dialog))
+          (let ((te-handle (dialog-te-handle my-dialog)))
+            (if position
+                (let* ((diff (subtract-points new-pos position))
+                       (view (offset-rect (te-view-rect te-handle) diff))
+                       (dest (offset-rect (te-dest-rect te-handle) diff)))
+                  (te-set-rects dest view te-handle))
+                (let ((view (te-view-rect te-handle))
+                      (dest (te-dest-rect te-handle)))
+                  (setf (rect-topleft view) position
+                        (rect-bottomright dest) (add-points position (view-size item)))
+                  (te-set-rects dest view te-handle))))))))
 
-(defmethod set-view-size ((item text-edit-dialog-item) h &optional v
-                          &aux (new-size (make-point h v)))
-  (without-interrupts
-   (invalidate-view item t)
-   (setf (slot-value item 'view-size) new-size)
-   (when (and (installed-item-p item)(view-position item))
-     (with-focused-dialog-item (item)
-       (let* ((my-dialog (view-window item))
-              (position (view-position item))
-              (new-corner (add-points position new-size))
-              (hTE (dialog-te-handle my-dialog)))
-         (if (eq item (current-key-handler my-dialog))
-           (progn
-             (rset hTE terec.viewrect.bottomright new-corner)
-             (rset hTE terec.destrect.bottomright new-corner)
-             (#_TECalText hTE)
-             (invalidate-view item)))))))
-  new-size)
+
+(defmethod set-view-size ((item text-edit-dialog-item) h &optional v)
+  (let ((new-size (make-point h v)))
+    (without-interrupts
+      (invalidate-view item t)
+      (setf (slot-value item 'view-size) new-size)
+      (when (and (installed-item-p item) (view-position item))
+        (with-focused-dialog-item (item)
+          (let* ((my-dialog  (view-window item))
+                 (hTE        (dialog-te-handle my-dialog))
+                 (position   (view-position item))
+                 (new-corner (add-points position new-size)))
+            (when (eql item (current-key-handler my-dialog))
+              (let ((view (te-view-rect hTE))
+                    (dest (te-dest-rect hTE)))
+                (setf (rect-bottomright view) new-corner
+                      (rect-bottomright dest) new-corner)
+                (te-set-rects dest view hTE))
+              (invalidate-view item))))))
+    new-size))
+
 
 (defmethod view-click-event-handler ((item text-edit-dialog-item) where)
   (let ((my-dialog (view-window item)))
-    (with-quieted-view item             ; prevents flashing
-      (if (neq item (current-key-handler my-dialog)) 
-        (set-current-key-handler my-dialog item nil))
-      (with-focused-dialog-item (item)
-        (with-fore-color (part-color item :text)
-          (with-back-color (part-color item :body)            
-            (#_TEClick where (shift-key-p) (dialog-te-handle my-dialog))))))))
+    ;; (with-quieted-view item             ; prevents flashing
+    (unless (eql item (current-key-handler my-dialog)) 
+      (set-current-key-handler my-dialog item nil))
+    (with-focused-dialog-item (item)
+      (with-fore-and-back-color (part-color item :text) (part-color item :body)
+        (TE-Click where (shift-key-p) (dialog-te-handle my-dialog))))))
+
 
 (defmethod view-activate-event-handler ((item text-edit-dialog-item))
   (let ((my-dialog (view-window item)))
-    (if (eq item (current-key-handler my-dialog))
+    (when (eql item (current-key-handler my-dialog))
       (with-focused-dialog-item (item)
-        (with-fore-color (part-color item :text)
-          (with-back-color (part-color item :body)
-            (#_TEActivate (dialog-te-handle my-dialog))))))))
+        (with-fore-and-back-color (part-color item :text) (part-color item :body)
+          (TE-Activate (dialog-te-handle my-dialog)))))))
+
 
 (defmethod view-deactivate-event-handler ((item text-edit-dialog-item))
   (let ((my-dialog (view-window item)))
-    (if (and my-dialog (eq item (current-key-handler my-dialog)))
+    (when (and my-dialog (eql item (current-key-handler my-dialog)))
       (with-focused-dialog-item (item)
-        (with-fore-color (part-color item :text)
-          (with-back-color (part-color item :body)
-            (#_TEDeactivate (dialog-te-handle my-dialog))))))))
+        (with-fore-and-back-color (part-color item :text) (part-color item :body)
+          (TE-Deactivate (dialog-te-handle my-dialog)))))))
 
+
+(defgeneric toggle-blinkers (item on-p))
 (defmethod toggle-blinkers ((item text-edit-dialog-item) on-p)
   (if on-p
-    (view-activate-event-handler item)
-    (view-deactivate-event-handler item)))
+      (view-activate-event-handler item)
+      (view-deactivate-event-handler item)))
+
 
 (defmethod set-dialog-item-text ((item text-edit-dialog-item) text)
   (setq text (ensure-simple-string text))
   (if (installed-item-p item)
-    (progn
-      (%str-to-handle text (dialog-item-handle item))
-      (with-focused-dialog-item (item)
+      (progn
+        (setf (dialog-item-handle item) text)
         (let ((my-dialog (view-window item)))
-          (when (eq item (current-key-handler my-dialog))
-            (#_TECalText (dialog-te-handle my-dialog))))
-        (when (> (length text) 0)
-          (set-selection-range item 0 32000))
-        (invalidate-view item)))
-    (setf (slot-value item 'dialog-item-text) text))
+          (when (eql item (current-key-handler my-dialog))
+            (with-focused-dialog-item (item)
+              (TE-Cal-Text (dialog-te-handle my-dialog))))
+          (when (plusp (length text))
+            (set-selection-range item 0 32000))
+          (invalidate-view item)))
+      (setf (slot-value item 'dialog-item-text) text))
   text)
+
 
 (defmethod dialog-item-text ((item text-edit-dialog-item))
   (let ((handle (dialog-item-handle item)))
     (if (and handle (wptr item))
-      (with-pointers ((tp handle))
-        (%str-from-ptr tp (#_GetHandleSize handle)))
-      (slot-value item 'dialog-item-text))))
+        handle
+        (slot-value item 'dialog-item-text))))
 
+(defgeneric dialog-item-text-length (item))
 (defmethod dialog-item-text-length ((item text-edit-dialog-item))
-  (let ((handle (dialog-item-handle item)))
-    (if (and handle (wptr item))
-      (#_GetHandleSize handle)
-      (length (slot-value item 'dialog-item-text)))))      
+  (length (dialog-item-text item)))      
 
-(defmethod view-draw-contents :after ((item text-edit-dialog-item)
-                                      &aux  te size)
-  (let ((my-dialog (view-window item))
+
+(defmethod view-draw-contents :after ((item text-edit-dialog-item))
+  (let ((my-dialog     (view-window item))
         (item-position (view-position item))
-        (item-size (view-size item))
-        (enabled-p (dialog-item-enabled-p item))
-        (colorp (color-or-gray-p item)))
+        (item-size     (view-size item))
+        (enabled-p     (dialog-item-enabled-p item))
+        (colorp        (color-or-gray-p item)))
     (when (installed-item-p item)
-      (with-slot-values (dialog-item-handle text-justification)
-                        item
+      (with-slot-values (dialog-item-handle text-justification) item
         (without-interrupts
-         (rlet ((rect :rect))
-           (rset rect rect.topleft item-position)
-           (rset rect rect.bottomright
-                 (add-points item-position item-size))
-           (setq te (dialog-te-handle my-dialog))
-           (setq size (#_GetHandleSize dialog-item-handle))           
-           (with-fore-color (if (and colorp (not enabled-p))
-                              *gray-color* 
-                              (part-color item :text))
-             (with-back-color (part-color item :body)
-               (if (eq item (current-key-handler my-dialog))
-                 (progn
-                   (let ((wp (wptr my-dialog)))
-                     (multiple-value-bind (ff ms)
-                                          (wptr-font-codes wp)
-                       
-                       (%hput-long te ff 74)
-                       (%hput-long te ms 78)
-                       (#_EraseRect rect)  ; << put this back seems good for body color
-                       (#_TEUpdate rect te))))
-                 (with-pointers ((tp dialog-item-handle))
-                   (#_TETextBox tp size rect text-justification)))))))))))
+          (let ((rect (make-rect item-position (add-points item-position item-size)))
+                (te   (dialog-te-handle my-dialog)))
+            (with-fore-and-back-color (if (and colorp (not enabled-p))
+                                          *gray-color* 
+                                          (part-color item :text))
+                (part-color item :body)
+              (if (eql item (current-key-handler my-dialog))
+                  (progn
+                    (multiple-value-bind (ff ms) (view-font-codes my-dialog)
+                      (te-set-font-info ff ms te))
+                    (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
+                    (te-update rect te))
+                  (Text-Box dialog-item-handle rect text-justification)))))))))
+
 
 (defmethod view-key-event-handler ((item text-edit-dialog-item) char)
-  (when (integerp char) (setq char (code-char char)))
+  (when (integerp char)
+    (setq char (code-char char)))
   (let ((container (view-container item)))
     (with-focused-dialog-item (item container)
       (with-text-colors item
-        (#_TEKey char (dialog-te-handle (view-window item))))
+        (TE-Key char (dialog-te-handle (view-window item))))
       (dialog-item-action item))))
+
 
 (defmethod selection-range ((item text-edit-dialog-item))
   (without-interrupts
-   (if (eq item *te-handle-dialog-item*)
-     (let ((teh *te-handle*))
-       (values
-        (rref teh teREC.selstart)
-        (rref teh teREC.selend)))
-     (values (slot-value item 'sel-start)
-             (slot-value item 'sel-end)))))
+    (if (eql item *te-handle-dialog-item*)
+        (let ((teh *te-handle*))
+          (values
+           (te-sel-start teh)
+           (te-sel-end   teh)))
+        (values (slot-value item 'sel-start)
+                (slot-value item 'sel-end)))))
+
 
 (defmethod set-selection-range ((item text-edit-dialog-item) &optional start end)
   (multiple-value-bind (s e) (selection-range item)
     (unless start (setq start e))
-    (unless end (setq end e))
-    (if (< end start) (psetq start end end start))
-    (unless (and (eq start s) (eq end e))
+    (unless end   (setq end   e))
+    (when (< end start) (rotatef start end))
+    (unless (and (= start s) (= end e))
       (setf (slot-value item 'sel-start) start
-            (slot-value item 'sel-end) end)
+            (slot-value item 'sel-end)   end)
       (without-interrupts
-       (when (eq item *te-handle-dialog-item*)
-         (let ((teh *te-handle*))
-           (with-focused-view (view-container item)
-             (with-fore-color (part-color item :text)
-               (with-back-color (part-color item :body)
-                 (#_TESetSelect start end teh))))))))))
+        (when (eql item *te-handle-dialog-item*)
+          (let ((teh *te-handle*))
+            (with-focused-view (view-container item)
+              (with-fore-color (part-color item :text)
+                (with-back-color (part-color item :body)
+                  (TE-Set-Select start end teh))))))))))
+
 
 (defmethod cut ((item text-edit-dialog-item))
   (let ((my-dialog (view-container item)))
@@ -415,45 +415,41 @@
       (with-fore-color (part-color item :text)
         (with-back-color (part-color item :body)
           (with-font-codes nil nil
-            (#_TECut (dialog-te-handle (view-window item))))))))
+            (TE-Cut (dialog-te-handle (view-window item))))))))
   (te-scrap-to-lisp-scrap)
   (dialog-item-action item))
+
 
 (defmethod copy ((item text-edit-dialog-item))
   (let ((my-dialog (view-container item)))
     (with-focused-view my-dialog
       (with-font-codes nil nil
-        (#_TECopy (dialog-te-handle (view-window item))))))
+        (TE-Copy (dialog-te-handle (view-window item))))))
   (te-scrap-to-lisp-scrap)
   (dialog-item-action item))
 
+
 (defun te-scrap-to-lisp-scrap ()
-  #-carbon-compat
-  (put-scrap :text (%str-from-ptr (%get-ptr (#_LMGetTEScrpHandle))
-                                  (#_LMGetTEScrpLength)))
-  #+carbon-compat
-  (put-scrap :text (%str-from-ptr (%get-ptr (#_TEGetScrapHandle))
-                                  (#_TEGetScrapLength))))
-                                  
-             
+  (values))
+
 
 (defmethod paste ((item text-edit-dialog-item))
   (let ((my-dialog (view-container item))
-        (scrap (get-scrap :text))
+        (scrap     (get-scrap :text))
         (te-handle (dialog-te-handle (view-window item))))
     (when scrap
       (with-focused-view my-dialog
         (with-fore-color (part-color item :text)
           (with-back-color (part-color item :body)
             (with-font-codes nil nil
-              (with-cstrs ((sp scrap))
-                (#_TEDelete te-handle)
-                (#_TEInsert sp (length scrap) te-handle))))))))
+              (TE-Delete te-handle)
+              (TE-Insert scrap te-handle)))))))
   (dialog-item-action item))
+
 
 (defmethod select-all ((item text-edit-dialog-item))
   (set-selection-range item 0 32000))
-  
+
 
 (defmethod clear ((item text-edit-dialog-item))
   (let ((my-dialog (view-container item)))
@@ -461,38 +457,44 @@
       (with-fore-color (part-color item :text)
         (with-back-color (part-color item :body)
           (with-font-codes nil nil
-            (#_TEDelete (dialog-te-handle (view-window item))))))))
+            (TE-Delete (dialog-te-handle (view-window item))))))))
   (dialog-item-action item))
 
-#| This code doesn't work yet
-(defclass etdi (fred-dialog-item) ())
-(defclass etdi (text-edit-dialog-item) ())
 
-(defmethod update-instance-for-redefined-class
-  ((item etdi #|editable-text-dialog-item|#) added-slots discarded-slots property-list
-   &key)
-  (declare (ignore discarded-slots))
-  (let ((fred-p (memq 'frec added-slots))
-        (window (view-window item)))
-    (if window
-      (remove-view-from-window item))
-    (if fred-p
-      (progn
-        (dispose-text-edit-handle item)
-        (instance-initialize item :view-font (view-font item)))
-      (let* ((frec (getf property-list 'frec))
-             (buf (uvref frec 1)))      ; (fr.cursor frec)
-        (setf (slot-value item 'dialog-item-text)
-              (buffer-substring buf 0 (buffer-size buf)))))
-    (if window
-      (install-view-in-window item window)))
-  item)
-|#
+;;;---------------------------------------------------------------------
+;;; Tests
+;;;---------------------------------------------------------------------
+
+(defun test/tedi ()
+  (let ((window (make-instance 'dialog
+                               :window-title "test/tedi"
+                               :view-size #@(200 400)
+                               :view-font '("Geneva" 12))))
+    (make-instance 'text-edit-dialog-item :view-position #@(20 50) :view-size #@(180 20) :dialog-item-text "Input"
+                                          :view-container window)
+    window))
+
+#-(and) (
+         (test/tedi)
+         (map nil 'print (mapcar (function first) *font-families*))
+         (
+          "Andale Mono" 
+          "Arial" 
+          "Arial Black" 
+          "Courier" 
+          "Courier New" 
+          "Didot" 
+          "Geneva" 
+          "Helvetica" 
+          "Lucida Grande" 
+          "Menlo" 
+          "Monaco" 
+          "Optima" 
+          "Osaka" 
+          "PT Mono" 
+          )
+         )
 
 
-(provide 'text-edit-dialog-item)
 
-#|
-	Change History (most recent last):
-	2	12/27/94	akh	merge with d13
-|# ;(do not edit past this line!!)
+;;;; THE END ;;;;

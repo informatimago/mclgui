@@ -471,6 +471,7 @@ NEW-CONTAINER:  The new container of the view.
     ;; If container is nil, removes view from container
     ;; Note: The dialog code depends on the fact that the view-container slot is
     ;; changed AFTER the WPTR is changed.
+    (format-trace 'set-view-container :view view :new-container new-container)
     (let ((old-container (view-container view)))
       (unless (eql new-container old-container)    
         (when new-container
@@ -494,6 +495,7 @@ NEW-CONTAINER:  The new container of the view.
             ;;       view-container (eg. to focus-view).
             (remove-view-from-superview view)
             (unless (eql new-window old-window)
+              (format-trace 'set-view-container 'remove-view-from-window :old-window old-window)
               (remove-view-from-window view))
             (setf (slot-value view 'view-container) nil))
           ;; -
@@ -502,6 +504,7 @@ NEW-CONTAINER:  The new container of the view.
           (when new-container
             (add-view-to-container view new-container)
             (unless (eql new-window old-window)
+              (format-trace 'set-view-container 'install-view-in-window :new-window new-window)
               (install-view-in-window view new-window))
             (invalidate-view view)
             (when (eql view current-view)
@@ -1178,6 +1181,26 @@ SOURCE-VIEW:    A view in whose coordinate system point is given.
                                 (view-origin source-view))))
     (make-rect (add-points delta (rect-topleft rect))
                (add-points delta (rect-bottomright rect)))))
+
+
+(defgeneric local-to-global (view h &optional v))
+(defmethod local-to-global ((view simple-view) h &optional v)
+  (let ((window (view-window view))
+        (p      (make-point h v)))
+    (if (or (null window) (eql view window))
+        (add-points (view-position view) p)
+        (add-points (view-position window)
+                    (convert-coordinates p view window)))))
+ 
+
+(defgeneric global-to-local (view h &optional v))
+(defmethod global-to-local ((view simple-view) h &optional v)
+  (let ((window (view-window view))
+        (g      (make-point h v)))
+    (if (or (null window) (eql view window))
+        (subtract-points g (view-position view))
+        (convert-coordinates (subtract-points g (view-position window))
+                             window view))))
 
 
 (defgeneric find-view-containing-point (view h &optional v direct-subviews-only)

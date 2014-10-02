@@ -11,6 +11,7 @@
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
+;;;;    2014-09-23 <PJB> Added application-name.
 ;;;;    2012-05-18 <PJB> Created.
 ;;;;BUGS
 ;;;;LEGAL
@@ -39,9 +40,25 @@
 (in-package "MCLGUI")
 (objcl:enable-objcl-reader-macros)
 
+(defgeneric application-name (application))
+
+#+ccl
+(progn
+  (defvar *application-name* nil)
+  (defmethod application-name ((application ccl::application))
+    *application-name*)
+  (defmethod (setf application-name) (new-name (application ccl::application))
+    (setf *application-name* new-name)))
 
 (defclass application (wrapper #+ccl ccl::application)
-  ())
+  ((name :initform nil :initarg :name :accessor application-name
+         :documentation "
+RETURN:         The name of the application (a string). The default
+                value is NIL.
+
+APPLICATION:    The application.  MCL standard event handling always
+                uses the value of *APPLICATION*.
+")))
 
 (defclass lisp-development-system (application #+ccl ccl::lisp-development-system)
   ())
@@ -133,18 +150,6 @@ KEY:            The current keystroke character.
 "
   (declare (ignore key))
   (ed-beep))
-
-
-(defgeneric application-name (application)
-  (:documentation "
-RETURN:         The name of the application (a string). The default
-                value is NIL.
-
-APPLICATION:    The application.  MCL standard event handling always
-                uses the value of *APPLICATION*.
-")
-  (:method ((application application))
-    nil))
 
 
 (defgeneric application-file-creator (application)

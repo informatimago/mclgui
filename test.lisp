@@ -413,7 +413,7 @@
 
 
 (defmethod view-click-event-handler ((view test-view) where)
-  (format-trace "view-click-event-handler" 'test-view :where (point-to-list where) :size (point-to-list (view-size view)))
+  (format-trace '(view-click-event-handler test-view) :where (point-to-list where) :size (point-to-list (view-size view)) :view view)
   (setf (test-view-lastpos view) where)
   (with-focused-view view
     (draw-point (point-h where) (point-v where))))

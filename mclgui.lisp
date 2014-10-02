@@ -50,7 +50,7 @@
 Must be called on the main thread."
   (unless *initialized*
     (initialize/process)
-    (initialize/application)
+    (initialize/paragraph-style)
     (initialize/screen)
     (initialize/region)
     (initialize/color)
@@ -70,6 +70,7 @@ Must be called on the main thread."
     (initialize/pop-up-menu-dialog-item)
     #+has-appleevent (when (fboundp 'initialize/apple-event)
                        (initialize/apple-event))
+    (initialize/application)
     (setf *initialized* t))
   (values))
 

@@ -486,7 +486,7 @@ V:              The vertical coordinate of the new position, or NIL if
   (let ((siz      (make-point h v))
         (frame    (window-frame-from-nswindow-frame window))
         (mswindow (handle window)))
-    (format-trace '(set-view-size window) (point-to-list siz))
+    ;; (format-trace '(set-view-size window) (point-to-list siz))
     (setf (%view-size window) siz)
     (if (and mswindow (/= siz (rect-size frame)))
         (flet ((resize (redisplay)

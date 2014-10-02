@@ -56,9 +56,11 @@ argument.
 "))
 
 
-(defmethod initialize-instance ((item button-dialog-item) &key
-                                                            (border-p t)
-                                                            (view-font (view-default-font item)))
+(defmethod initialize-instance ((item button-dialog-item)
+                                &key
+                                  (border-p t)
+                                  (view-font (view-default-font item)))
+  (declare (ignorable view-font))
   (call-next-method)
   (unless border-p
     (setf (view-get item 'no-border) t)))

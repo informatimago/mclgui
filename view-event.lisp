@@ -66,8 +66,8 @@
     view))
 
 (defmethod view-click-event-handler ((view simple-view) where)
-  ;; (declare (ignore where))
-  (format-trace 'view-click-event-handler 'simple-view view (point-to-list where))
+  (declare (ignorable where))
+  (format-trace '(view-click-event-handler simple-view) :where (point-to-list where) :view view)
   view)
 
 ;; (defmethod view-click-event-handler ((view view) where)
@@ -86,7 +86,7 @@
                             (point-in-click-region-p subview where))
                           (view-subviews view)
                           :from-end t)))
-    (format-trace 'view-click-event-handler :view view :where (point-to-list where) :subview subview)
+    (format-trace '(view-click-event-handler view) :where (point-to-list where)  :view view :subview subview)
     (if subview
         (progn (view-convert-coordinates-and-click subview where view)
                nil)

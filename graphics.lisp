@@ -11,6 +11,7 @@
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
+;;;;    2014-09-24 <PJB> Added draw-text.
 ;;;;    2012-07-04 <PJB> Extracted from pw-graphics.lisp for mclgui usage.
 ;;;;BUGS
 ;;;;LEGAL
@@ -36,10 +37,18 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
 (in-package "MCLGUI")
 (objcl:enable-objcl-reader-macros)
 (enable-sharp-at-reader-macro)
+
+
+(defun draw-yellow-box ()
+  (with-fore-color *yellow-color*
+    (let* ((r (if (and *current-view* (view-window *current-view*))
+                  (convert-rectangle (view-bounds *current-view*)
+                                     *current-view* (view-window *current-view*))
+                  (view-bounds *current-view*))))
+      (fill-rect* (rect-left r) (rect-top r) (rect-width r) (rect-height r)))))
 
 
 (defun clip-rect* (x y w h)
@@ -49,16 +58,9 @@
 (defun draw-char (x y cn)
   (draw-string x y (string cn)))
 
+
 (defun draw-string (x y str)
   ;; (format-trace "draw-string" x y str *current-view* (when *current-view* (view-window *current-view*)))
-  ;; (with-fore-color *yellow-color*
-  ;;   (let* ((o (view-origin *current-view*))
-  ;;          (x (point-h o))
-  ;;          (y (point-v o))
-  ;;          (s (view-size *current-view*))
-  ;;          (w (point-h s))
-  ;;          (h (point-v s)))
-  ;;     (draw-rect* x y w h)))
   (destructuring-bind (ff ms) *current-font-codes*
     (multiple-value-bind (descriptor mode) (font-descriptor-from-codes ff ms)
       (declare (ignore mode)) ; TODO: manage mode (:srcOr …)
@@ -74,33 +76,31 @@
          withAttributes:  [descriptor fontAttributes]])))
   str)
 
-(defun font-attributes (descriptor)
-  [descriptor fontAttributes] #-(and)
-  (let* ((attributes [[descriptor fontAttributes] mutableCopy])
-         (name [attributes objectForKey:#$NSFontNameAttribute])
-         (size [attributes objectForKey:#$NSFontSizeAttribute]))
-    [attributes setObject:[NSFont fontWithName:name size:[size doubleValue]]
-                forKey:#$NSFontNameAttribute]
-    attributes))
 
-(defun draw-text (x y width height text)
-  ;; (print-backtrace)
-  ;; (format-trace "draw-string" x y str *current-view* (when *current-view* (view-window *current-view*)))
-  ;; (with-fore-color *yellow-color*
-  ;;   (let* ((o (view-origin *current-view*))
-  ;;          (x (point-h o))
-  ;;          (y (point-v o))
-  ;;          (s (view-size *current-view*))
-  ;;          (w (point-h s))
-  ;;          (h (point-v s)))
-  ;;     (draw-rect* x y w h)))
+(defun font-attributes (descriptor)
+  [descriptor fontAttributes]
+  #-(and) (let* ((attributes [[descriptor fontAttributes] mutableCopy])
+                 (name [attributes objectForKey:#$NSFontNameAttribute])
+                 (size [attributes objectForKey:#$NSFontSizeAttribute]))
+            [attributes setObject:[NSFont fontWithName:name size:[size doubleValue]]
+                        forKey:#$NSFontNameAttribute]
+            attributes))
+
+
+(defun draw-text (x y width height text
+                  &optional (truncation :clipping) (justification :natural) (compress-p nil))
+  (format-trace "draw-text" (list x y width height) text truncation justification compress-p)
+  #-(and) (draw-yellow-box)
   (destructuring-bind (ff ms) *current-font-codes*
     (multiple-value-bind (descriptor mode) (font-descriptor-from-codes ff ms)
       (declare (ignore mode)) ; TODO: manage mode (:srcOr …)
       (let ((attributes (font-attributes descriptor)))
         ;; [context setCompositingOperation:(mode-to-compositing-operation (pen-mode pen))]
-        ;; (format-trace "draw-text" descriptor)
-        ;; (format-trace "draw-text" x y width height (subseq text 0 (min (length text) 10)) attributes)
+        [attributes setObject:(unwrap (make-paragraph-style
+                                       :alignment justification
+                                       :line-break-mode truncation
+                                       :tightening-factor (if compress-p 0.05 0.0)))
+                    forKey:#$NSParagraphStyleAttributeName]
         [(objcl:objc-string text)
          drawInRect: (nsrect x y width height)
          withAttributes:attributes])))

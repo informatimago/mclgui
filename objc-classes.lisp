@@ -56,9 +56,10 @@
 
 (defun nstimeinterval (value) (coerce value 'double-float))
 (defun cgfloat        (value) (coerce value 'ns:cgfloat))
+(defun sfloat         (value) (coerce value 'single-float))
 (defun fontsize       (value) (values (round  value)))
 (defun coord          (value) (values (round  value)))
-(declaim (inline nstimeinterval cgfloat fontsize coord))
+(declaim (inline nstimeinterval cgfloat sfloat fontsize coord))
 
 
 (defstruct (nspoint
@@ -401,34 +402,55 @@
 
 ;; (nsevent-to-event (make-key-nsevent "a"))
 
+
 ;;;------------------------------------------------------------
+;;;
 
 (defun print-backtrace (&optional (output *error-output*))
   #+ccl (format output "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~&"
                 (ccl::backtrace-as-list)))
+
+(defun error-file-pathname ()
+  (merge-pathnames (format nil "Desktop/~A-errors.txt" (application-name *application*))
+                   (user-homedir-pathname)))
+
+(defun date (&optional (date (get-universal-time)))
+  (format nil "~{~5*~4,'0D-~2:*~2,'0D-~2:*~2,'0D ~2:*~2,'0D:~2:*~2,'0D:~2:*~2,'0D~8*~}"
+          (multiple-value-list (decode-universal-time date))))
 
 (defmacro reporting-errors (&body body)
   (let ((vhandler (gensym)))
     `(block ,vhandler
        (handler-bind ((error (lambda (err)
                                (declare (stepper disable))
-                               (print-backtrace)
-                               (format *error-output* "~%ERROR while ~S:~%~A~2%"
-                                       ',(if (= 1 (length body)) body `(progn ,@body))
-                                       err)
-                               (finish-output *error-output*)
-                               (window-show (message-dialog (with-output-to-string (*standard-output*)
-                                                              (format t "~%ERROR ~A~%while ~S~2%"
-                                                                      err
-                                                                      ',(if (= 1 (length body)) body `(progn ,@body)))
-                                                              (print-backtrace *standard-output*))
-                                                            :size #@(768 1024)
-                                                            :modal nil
-                                                            :title (format nil "Lisp Error: ~A" err)))
+                               (let ((*print-length* nil)
+                                     (*print-level*  nil)
+                                     (*print-circle* t)
+                                     (*print-pretty* nil)
+                                     (*print-case*   :downcase))
+                                 (with-open-file (err (error-file-pathname)
+                                                      :direction :output
+                                                      :external-format :utf-8
+                                                      :if-exists :append
+                                                      :if-does-not-exist :create)
+                                   (let ((errs (make-broadcast-stream err *error-output*)))
+                                     (format errs "~%~A~2%" (date))
+                                     (print-backtrace errs)
+                                     (format errs "~%ERROR while ~S:~%~A~2%"
+                                             ',(if (= 1 (length body)) body `(progn ,@body))
+                                             err)
+                                     (finish-output errs)))
+                                 (window-show (message-dialog (with-output-to-string (*standard-output*)
+                                                                (format t "~%ERROR ~A~%while ~S~2%"
+                                                                        err
+                                                                        ',(if (= 1 (length body)) body `(progn ,@body)))
+                                                                (print-backtrace *standard-output*))
+                                                              :size #@(768 1024)
+                                                              :modal nil
+                                                              :title (format nil "Lisp Error: ~A" err))))
                                #+debug (invoke-debugger err)
                                (return-from ,vhandler nil))))
          ,@body))))
-
 
 ;;;------------------------------------------------------------
 ;;; coordinates 
@@ -468,7 +490,6 @@ The coordinates are in Cocoa coordinates."
   "
 RETURN:         x y w h of the main screen (in Cocoa rounded coordinates).
 "
-  
   (multiple-value-bind (x y w h) (frame [[NSScreen mainScreen] frame])
     (values (round x) (round y)
             (round w) (round h))))
@@ -602,6 +623,7 @@ DO:             Evaluates the BODY in a lexical environment where
            slots:((window :initform nil
                           :initarg :view
                           :reader nswindow-window))]
+
 
 (defmethod wrap ((nswindow mclgui-window))
   ;; (format-trace 'wrap nswindow)

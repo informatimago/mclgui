@@ -492,26 +492,6 @@ body is evaluated with VAR bound to that rectangle."
 ;;;---------------------------------------------------------------------
 
 
-(defgeneric local-to-global (view h &optional v))
-(defmethod local-to-global ((view simple-view) h &optional v)
-  (niy local-to-global view h v)
-  (with-focused-view view
-    ;; (rlet ((p :point))
-    ;;   (%put-long p (make-point h v))
-    ;;   (#_LocalToGlobal p)
-    ;;   (%get-long p))
-    ))
- 
-(defgeneric global-to-local (view h &optional v))
-(defmethod global-to-local ((view simple-view) h &optional v)
-  (niy global-to-local view h v)
-  (with-focused-view view
-    ;; (rlet ((p :point))
-    ;;   (%put-long p (make-point h v))
-    ;;   (#_GlobalToLocal p)
-    ;;   (%get-long p))
-    ))
-
 (defgeneric get-pixel (view h &optional v))
 (defmethod get-pixel ((view simple-view) h &optional v)
   (niy get-pixel view h v)

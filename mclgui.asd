@@ -51,6 +51,7 @@
   :components ((:file "cocoa"
                 :depends-on ())
 
+               #-ccl-1.10 
                (:file "cg"
                 :depends-on ())
 
@@ -96,12 +97,18 @@
                (:file "objc-classes"
                 :depends-on ("packages"
                              "macros" "wrapper" "variables" "point" "rect"
-                             "system" "mac-event"))
+                             "system" "mac-event" "debug"))
                
                (:file "graphics"
                 :depends-on ("packages"
-                             "macros" "variables" "point" "color" "font"))
+                             "macros" "variables" "point" "color" "font"
+                             "paragraph-style"))
                
+               (:file "paragraph-style"
+                      :depends-on ("packages"
+                                   "macros" "objc-classes"
+                                   "wrapper"))
+
                ;; Chapter 2:
 
                (:file "point"
@@ -112,6 +119,7 @@
                              "macros" "variables" "system"
                              "point" "objc-classes" "color"
                              "wrapper"))
+
                
                (:file "pattern"
                 :depends-on ("packages" 
@@ -141,7 +149,7 @@
                                        "macros" "variables" "color"
                                        "point" "region" "font" "pen" 
                                        "wrapper" "view-classes" "objc-classes"
-                                       "cg"))
+                                       #-ccl-1.10 "cg"))
 
                (:file "view-stream"
                 :depends-on ("packages" 
@@ -155,7 +163,7 @@
                                        "view-classes" "objc-classes"
                                        "wrapper" "view" "notification"
                                        "menu"
-                                       "cg"))
+                                       #-ccl-1.10 "cg"))
 
                (:file "fred-window"
                 :depends-on ("packages" 
@@ -221,12 +229,24 @@
                              "macros" "variables" "point" "system"
                              "view-classes" "view" "window"))
                
-               (:file "editable-text-dialog-item"
+               (:file "basic-editable-text-dialog-item"
                 :depends-on ("packages" 
                              "macros" "variables" "point" "system"
                              "view-classes" "view" "window" "event"
                              "dialog-item" "view-event" "key-handler-mixin"))
 
+               (:file "text-edit-dialog-item"
+                :depends-on ("packages" 
+                             "macros" "variables" "point" "system"
+                             "view-classes" "view" "window" "event"
+                             "dialog-item" "view-event" "key-handler-mixin"
+                             "basic-editable-text-dialog-item"
+                             "text-edit"))
+
+               (:file "editable-text-dialog-item"
+                      :depends-on ("packages"
+                                   "text-edit-dialog-item"))
+               
                (:file "table-dialog-item"
                 :depends-on ("packages" 
                              "macros" "variables" "point" "system" "region"
@@ -279,7 +299,7 @@
 
                (:file "message-dialog"
                 :depends-on ("packages" 
-                             "macros" "variables" "point" "system"
+                             "macros" "variables" "point" "system" "pen"
                              "view-classes" "view" "window" "event"
                              "dialog-item" "key-handler-mixin"
                              "button-dialog-item" 

@@ -94,9 +94,9 @@ own classes of dialog items.
    (dialog-item-text            :initarg :dialog-item-text
                                 :initform ""
                                 :accessor dialog-item-text)
-   ;; (dialog-item-handle          :initarg :dialog-item-handle
-   ;;                              :initform nil
-   ;;                              :accessor dialog-item-handle)
+   (dialog-item-handle          :initarg :dialog-item-handle
+                                :initform nil
+                                :accessor dialog-item-handle)
    (dialog-item-enabled-p       :initarg :dialog-item-enabled-p
                                 :initform t
                                 :accessor dialog-item-enabled-p)
@@ -153,10 +153,10 @@ CONTAINER:      The view focused on whose coordinate system body will
              (format *mclgui-trace* "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
              (format *mclgui-trace* "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
              (finish-output *mclgui-trace*))
-      ;;(erase-rect* x y w h)
+      (erase-rect* x y w h)
       ;; #+debug-view-colors
-      (with-fore-color *light-gray-color*
-        (fill-rect* x y w h))
+      ;; (with-fore-color *light-gray-color*
+      ;;   (fill-rect* x y w h))
       (draw-text x y w h (dialog-item-text item)))))
 
 
@@ -678,48 +678,14 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 (defgeneric set-view-level (item level))
 (defgeneric installed-item-p (item)
   (:method (item)
-    (declare (ignore item))
-    nil))
+    (view-window item)))
 
-(defgeneric make-text-item (item &key selectable editable bordered bezeled))
-(defmethod make-text-item ((item dialog-item) &key selectable editable bordered bezeled)
-  (let* ((pos (or (slot-value item 'view-position) #@(0   0)))
-         (siz (or (slot-value item 'view-size)     #@(10 10)))
-         (texth [[MclguiTextField alloc] initWithFrame:(ns:make-ns-rect (point-h pos) (point-v pos)
-                                                                        (point-h siz) (point-v siz))])) 
-    ;; -- NSControl attributes:
-    [texth setTarget:texth]
-    [texth setAction:(objc:@selector "mclguiAction:")]
-    [texth setStringValue:(objcl:objcl-string (dialog-item-text item))]
-    [texth setEnabled:(if (dialog-item-enabled-p item)
-                          YES
-                          NO)]
-    (multiple-value-bind (ff ms) (view-font-codes item)
-      (multiple-value-bind (font mode color other) (nsfont-from-codes ff ms)
-        (declare (ignore mode other))
-        (declare (ignore color))
-        ;;[texth setTextColor:color]
-        [texth setFont:font]))
-    [texth setAlignment:(case (slot-value item 'text-justification)
-                          (:left      #$NSLeftTextAlignment)
-                          (:right     #$NSRightTextAlignment)
-                          (:center    #$NSCenterTextAlignment)
-                          (:justified #$NSJustifiedTextAlignment)
-                          (:natural   #$NSNaturalTextAlignment)
-                          (otherwise  #$NSNaturalTextAlignment))]
-    ;; -- NSTextField attributes:
-    [texth setEditable:editable]
-    [texth setBordered:bordered]
-    [texth setSelectable:selectable]
-    ;; [texth setTextColor:] ;; set above
-    ;; [texth setBackgroundColor:]
-    ;; [texth setDrawBackground:]
-    [texth setBezeled:bezeled]
-    [texth setBezelStyle:#$NSTextFieldSquareBezel]
-    ;; #$NSTextFieldSquareBezel  = 0
-    ;; #$NSTextFieldRoundedBezel = 1
-    ;; --
-    (setf (nsview-view texth) item)
-    texth))
+(defmacro with-text-colors (item &body body)
+  (let ((item-var (gensym)))
+    `(let ((,item-var ,item))
+       (with-fore-and-back-color (part-color ,item-var :text)
+         (or (part-color ,item-var :body) *white-color*)
+         ,@body))))
+
 
 ;;;; THE END ;;;;

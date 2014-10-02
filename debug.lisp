@@ -99,6 +99,18 @@
 
 
 
+(defun object-identity (object)
+  "
+RETURN:         A string containing the object identity as printed by
+                PRINT-UNREADABLE-OBJECT.
+"
+  (declare (stepper disable))
+  (let ((*print-readably* nil))
+    (let ((ident
+           (with-output-to-string (stream)
+             (print-unreadable-object (object stream :type nil :identity t)))))
+      (subseq ident 3 (1- (length ident))))))
+
 
 (defun function-address (function)
   (read-from-string (object-identity function)))
@@ -112,6 +124,8 @@
           (push (cons (function-address function) function) functions))))
     (sort (coerce functions 'vector) (function <) :key (function car))))
 
+(defvar *all-functions* '())
+
 #-(and) (
          (defparameter *all-functions* (all-functions))
          (defparameter *p* #x3020045fa253)
@@ -121,7 +135,7 @@
 (defun find-function-from-address (address)
   (multiple-value-bind (found index order)
       (com.informatimago.common-lisp.cesarum.utility:dichotomy-search
-       *all-functions* address
+       (or *all-functions* (setf *all-functions* (all-functions))) address
        (lambda (a b) (cond ((< a b) -1) ((> a b) 1) (0)))
        :key (function car))
     (when (or found (plusp order))

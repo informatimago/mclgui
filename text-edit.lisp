@@ -88,7 +88,7 @@
   (caret-state 0   :type integer)
   (just        0   :type integer)
   (length      0   :type integer)
-  (text        nil)
+  ;; (text        nil)
   (recal-back  0   :type integer)
   (recal-lines 0   :type integer)
   (click-stuff nil)
@@ -884,7 +884,7 @@ Compare the base and new display states, and generates a list of display changes
 DO:    Draws the line number LINO, according to the current TeRec configuration.
 NOTE:  The focus should be already established.
 "
-  (format-trace 'te-redraw-line :lino lino)
+  ;; (format-trace 'te-redraw-line :lino lino)
   (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
     (erase-rect* (rect-left line-rect) (rect-top line-rect) (rect-width line-rect) (rect-height line-rect))
     (draw-string x base line))
@@ -896,7 +896,7 @@ NOTE:  The focus should be already established.
 DO:    Draws the line number LINO, according to the current TeRec configuration.
 NOTE:  The focus should be already established.
 "
-  (format-trace 'te-draw-line :lino lino)
+  ;; (format-trace 'te-draw-line :lino lino)
   (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
     (declare (ignore line-rect))
     (draw-string x base line))
@@ -916,13 +916,14 @@ RETURN: TE
           (with-clip-rect-intersect clip-rect
             (loop
               :for update = (pop updates)
-              :do (format-trace 'te-update-view :-> update)
+              ;; :do (format-trace 'te-update-view :-> update)
               :do (if (atom update)
                       (ecase update
                         (:display
                          (loop :for lino :below (te-nlines te)
                                :do (te-draw-line lino te)))
                         (:selection
+                         (assert (<= 0 (te-sel-start te) (te-sel-end te) (te-length te)))
                          (if (te-has-caret te)
                              (te-caret-transition (tick-count) te)
                              (multiple-value-bind (rects start-lino end-lino)
@@ -1038,7 +1039,7 @@ DO:     Erase the caret.
 DO:     Sort the start and end points, and clip them to text limits.
 RETURN: new-start, new-end
 "
-  (values (max (min start end) 0)
+  (values (max (min start end (te-length te)) 0)
           (min (max start end) (te-length te))))
 
 
@@ -1195,13 +1196,18 @@ DO:         Updates the dest-rect and the view-rect of the TeRec TE,
 DEST-RECT:  A non-empty rectangle.
 VIEW-RECT:  A non-empty rectangle.
 RETURN:     TE
+NOTE:       The rectangles are given in the *current-view* coordinates, and are converted to the window coordinates.
 "
   (assert (not (empty-rect-p dest-rect)) (dest-rect) "Destination rectangle must not be empty.")
   (assert (not (empty-rect-p view-rect)) (view-rect) "View rectangle must not be empty.")
   (with-mutex *te-mutex*
     (setf (te-rewrap te) (/= (rect-width dest-rect) (rect-width (te-%dest-rect te))))
-    (assign-rect (te-%dest-rect te) dest-rect)
-    (assign-rect (te-%view-rect te) view-rect)
+    (assign-rect (te-%dest-rect te) (if (and *current-view* (view-window *current-view*))
+                                        (convert-rectangle dest-rect *current-view* (view-window *current-view*))
+                                        dest-rect))
+    (assign-rect (te-%view-rect te) (if (and *current-view* (view-window *current-view*))
+                                        (convert-rectangle view-rect *current-view* (view-window *current-view*))
+                                        view-rect))
     (when (< (rect-width (te-%dest-rect te)) 20)
       (setf (rect-width (te-%dest-rect te)) 20))
     (setf (rect-bottom (te-%dest-rect te)) 16000)
@@ -1262,7 +1268,10 @@ RETURN: A copy of the text in the Text Edit record, as a STRING.
           (if newline
               (terpri)
               (setf newline t))
-          (write-string (cdr para)))))))
+          (write-string (tep-text para)))))))
+
+(defun te-text (te)
+  (te-get-text te))
 
 
 (defun te-new (dest-rect view-rect window)
@@ -1378,20 +1387,23 @@ RETURN: The start and end positions of the word that contains CHARPOS.
          (start      (- charpos line-start))
          (end        start)
          (line       (te-line lino te)))
-    (if (zerop (length line))
-        (values charpos charpos)
-        (progn
-          (format-trace 'te-word-at :charpos charpos :lino :lino
-                                    :start start :line line)
-          (loop
-            :until (or (minusp start) (funcall word-break line start))
-            :do (decf start)
-            :finally (incf start))
-          (loop
-            :until (or (<= (length line) end) (funcall word-break line end))
-            :do (incf end))
-          (format-trace 'te-word-at :word (nsubseq line start end))
-          (values (+ start line-start) (+ end line-start))))))
+    (cond
+      ((zerop (length line))
+       (values charpos charpos))
+      ((<= (length line) start) ; charpos is on the newline.
+       (values charpos charpos))
+      (t
+       (format-trace 'te-word-at :charpos charpos :lino :lino
+                                 :start start :line line)
+       (loop
+         :until (or (minusp start) (funcall word-break line start))
+         :do (decf start)
+         :finally (incf start))
+       (loop
+         :until (or (<= (length line) end) (funcall word-break line end))
+         :do (incf end))
+       (format-trace 'te-word-at :word (nsubseq line start end))
+       (values (+ start line-start) (+ end line-start))))))
 
 
 (defun te-default-click-loop ()
@@ -1758,8 +1770,10 @@ DO:     Takes the specified text and inserts it just before the
 
 
 (defun te-set-font-info (ff ms te)
-  (te-set-font (ldb (byte 16 16) ff)  (ldb (byte 16 0) ff)
-               (ldb (byte 16 16) ms)  (ldb (byte 16 0) ms) te))
+  (let ((ff (or ff 0))
+        (ms (or ms 0)))
+    (te-set-font (ldb (byte 16 16) ff)  (ldb (byte 16 0) ff)
+                 (ldb (byte 16 16) ms)  (ldb (byte 16 0) ms) te)))
 
 
 (defun te-wrapping (te)
@@ -1835,9 +1849,14 @@ DO:     TextBox draws the specified text in the rectangle indicated by
         it deletes when it's finished with it, so the text it draws
         cannot be edited.
 "
-  ;; TODO
-  )
-
+  (draw-string-in-rect text (if (and *current-view* (view-window *current-view*))
+                                (convert-rectangle box *current-view* (view-window *current-view*))
+                                box)
+                       :justification (cond
+                                        ((= just +te-just-right+)  :right)
+                                        ((= just +te-just-center+) :center)
+                                        (t                         :left))
+                       :truncation :word-wrapping))
 
 
 (defun %te-scroll (dh dv te)
@@ -2610,7 +2629,8 @@ DO:     Compute the new selection points from the current ones and the
 (defmethod view-draw-contents ((window te-test-window))
   (let ((te (test-window-te window)))
     (when te
-      (te-update (te-%view-rect te) te))))
+      (te-update (te-%view-rect te) te))
+    (call-next-method)))
 
 
 (defmethod view-key-event-handler ((window te-test-window) char)
@@ -3051,3 +3071,4 @@ monde!
           )
 
 
+;;;; THE END ;;;;

@@ -36,10 +36,30 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
 (in-package "MCLGUI")
 (objcl:enable-objcl-reader-macros)
 
+
+
+(defun string-start-end (string &optional start end)
+  (let* ((string (string string))
+         (len    (length string))
+         (start  (or start 0))
+         (end    (or end len)))
+    (check-type start fixnum "a start index in the string")
+    (check-type end   fixnum "an end position in the string")
+    (flet ((are (a i) (error "Array index ~S out of bounds for ~S." i a)))    
+      (unless (<= 0 end len)   (are string end))
+      (unless (<= 0 start len) (are string start))
+      (unless (<= start end)
+        (error "Start ~S exceeds end ~S for a string operation." start end))
+      (multiple-value-bind (str off) (array-displacement string)
+        (values (or str string) (+ off start) (+ off end))))))
+
+
+(declaim (inline nsubstring-start-end))
+(defun nsubstring-start-end (string start end)
+  (multiple-value-call (function nsubseq) (string-start-end string start end)))
 
 
 ;; On MacOSX 10.9, system fonts are not found in the normal font
@@ -270,9 +290,6 @@ EXAMPLE:        (style-to-font-traits '(:italic :bold :underline :outline :exten
 
 
 
-
-
-
 ;;;---------------------------------------------------------------------
 ;;; Macintosh font numbers (cf. Inside Macintosh I, page  I-219):
 ;;;---------------------------------------------------------------------
@@ -369,7 +386,9 @@ EXAMPLE:        (style-to-font-traits '(:italic :bold :underline :outline :exten
         (second *current-font-codes*) ms)
   (values ff ms))
 
-
+(defmacro with-font-codes (ff-code ms-code &body body)
+  `(let ((*current-font-codes* (list ,ff-code ,ms-code)))
+     ,@body))
 
 
 ;; Font-face layout:
@@ -434,12 +453,15 @@ MS-CODE:        The mode-size code, a 32-bit integer indicating the
                        style)
                    (list (list :color-index color))))))
 
+
 (defun sys-font-codes ()
-  (values 0 0))
+  ;; (values 0 0)
+  (multiple-value-bind (ff ms #|and more|#) (font-codes '("Helvetica" 14))
+    (values ff ms)))
+
 
 (defun sys-font-spec ()
-  (font-spec 0 0))
-
+  (multiple-value-call (function font-spec) (sys-font-codes)))
 
 
 (define-condition invalid-font-spec-error (error)
@@ -461,7 +483,6 @@ MS-CODE:        The mode-size code, a 32-bit integer indicating the
                         (:duplicate-text-mode "duplicate text-modes")
                         (:invalid-option      "invalid option" )
                         (otherwise (invalid-font-spec-reason err)))))))
-
 
 (defun font-codes (font-spec &optional old-ff old-ms)
   "
@@ -798,9 +819,7 @@ The valid value range is from -1.0 to 1.0. The value of 0.0 corresponds to 0 deg
 
 
 
-(defun font-codes-string-width (string ff ms &optional
-                                (start 0)
-                                (end (length string)))
+(defun font-codes-string-width (string ff ms &optional (start 0) (end (length string)))
   "
 RETURN:         The width in pixels of the substring of STRING from
                 START to END using the font specified by FF and MS.
@@ -811,7 +830,8 @@ MS:             Mode/Size code.
 "
   (check-type start fixnum "a start index in the string")
   (check-type end   fixnum "an end position in the string")
-  (let ((string (nsubseq string start end)))
+  ;; (format-trace 'font-codes-string-width [(font-descriptor-from-codes ff ms) fontAttributes])
+  (let ((string (nsubstring-start-end string start end)))
     (round (nssize-width
             (get-nssize [(objcl:objc-string string)
                          sizeWithAttributes:[(font-descriptor-from-codes ff ms) fontAttributes]])))))
@@ -829,9 +849,7 @@ FF:             Font/Face code.
 
 MS:             Mode/Size code.
 "
-  (check-type start fixnum "a start index in the string")
-  (check-type end   fixnum "an end position in the string")
-  (let* ((string               (nsubseq string start end))
+  (let* ((string               (nsubstring-start-end string start end))
          (width                (font-codes-string-width string ff ms))
          (pos                  (pen-position (view-pen *current-view*)))
          (*current-font-codes* (list ff ms)))
@@ -839,102 +857,6 @@ MS:             Mode/Size code.
       (draw-string (point-h pos) (point-v pos) string))
     (move *current-view* width 0)
     (values string width)))
-
-
-
-;; don't errchk - may get -8808 
-
-
-;; (defconstant #$kATSULineBreakInWord -8808)
-;; ;; This is not an error code but is returned by ATSUBreakLine to
-
-;;     indicate that the returned offset is within a word since there was
-;;     only less than one word that could fit the requested width.
-
-(defun atsu-line-break-given-layout (layout start width)
-  ;;  *    oLineBreak:
-  ;;  *      On return, the value specifies the soft line break as
-  ;;  *      determined by ATSUBreakLine. If the value returned is the same
-  ;;  *      value as specified in iLineStart , you have made an input
-  ;;  *      parameter error. In this case, check to make sure that the line
-  ;;  *      width specified in iLineWidth is big enough for ATSUBreakLine
-  ;;  *      to perform line breaking. ATSUBreakLine does not return an
-  ;;  *      error in this case.
-  (niy atsu-line-break-given-layout layout start width)
-  #-(and)
-  (rlet ((outoff :ptr))
-        (#_atsubreakline layout start (#_long2fix width) t outoff)
-        (let ((res (%get-unsigned-long outoff)))
-          (if (eql res start)(error "phooey"))
-          res)))
-
-(defun string-start-end (string &optional start end)
-  (let* ((string (string string))
-         (len    (length string))
-         (start  (or start 0))
-         (end    (or end len)))
-    (flet ((are (a i) (error "Array index ~S out of bounds for ~S." i a)))    
-      (unless (<= 0 end len)   (are string end))
-      (unless (<= 0 start len) (are string start))
-      (unless (<= start end)
-        (error "Start ~S exceeds end ~S for a string operation." start end))
-      (multiple-value-bind (str off) (array-displacement string)
-        (values (or str string) (+ off start) (+ off end))))))
-
-
-(defun draw-string-in-rect (string rect &key
-                                   truncation justification compress-p
-                                   (start 0) (end (length string))
-                                   ff ms color)
-  (when (not (and ff ms))
-    (multiple-value-setq (ff ms) (grafport-font-codes-with-color)))
-  (when color
-    (setf ff (logior (logand ff (lognot #xff)) (color->ff-index color))))
-  (niy draw-string-in-rect string rect truncation justification compress-p start end ff ms color)
-  (font-code-draw-string string ff ms start end color)
-  ;; (multiple-value-bind (line-ascent descent width leading) (font-codes-info ff ms)
-  ;;   (declare (ignore line-ascent descent width leading))
-  ;;   (niy draw-string-in-rect string rect truncation justification compress-p start end ff ms color)
-  ;;   #-(and)
-  ;;   (with-clip-rect-intersect rect ;; can we assume callers have done this? - nah let callers assume done here
-  ;;     (let* ((numchars (- end start))
-  ;;            (hpos (pref rect :rect.left))
-  ;;            (vpos (pref rect :rect.top))
-  ;;            (max-width (- (pref rect :rect.right) hpos)))
-  ;;       (unless (eql numchars 0)
-  ;;         (%stack-block ((ubuff (%i+ numchars numchars)))
-  ;;           (copy-string-to-ptr string start numchars ubuff)
-  ;;           (with-atsu-layout (layout ubuff numchars ff ms)
-  ;;             (when (and truncation (not (eql truncation :none)))
-  ;;               (set-layout-line-truncation-given-layout layout truncation (null compress-p))) ;; aha need no-squash-p                
-  ;;             (set-layout-line-width-given-layout layout max-width)
-  ;;             (when justification  ;; doesnt work - fixed now
-  ;;               (set-layout-line-justification-given-layout layout justification))
-  ;;             (cond
-  ;;              ((and truncation (not (eql truncation :none)))
-  ;;               (errchk (#_atsudrawtext layout 0 numchars
-  ;;                        (#_long2fix hpos)
-  ;;                        (#_long2fix (%i+ vpos line-ascent)))))
-  ;;              (t
-  ;;               (let* ((line-height (%i+ line-ascent descent leading))
-  ;;                      (rect-height (- (pref rect :rect.bottom) vpos))
-  ;;                      (now-height 0)
-  ;;                      (my-start 0))                      
-  ;;                 (loop
-  ;;                   (let ((next (atsu-line-break-given-layout layout my-start max-width)))
-  ;;                     ;(cerror "g" "h ~a ~a ~A ~a" my-start numchars next (- next my-start))
-  ;;                     (errchk (#_atsudrawtext layout my-start (- next my-start)
-  ;;                              (#_long2fix hpos)
-  ;;                              (#_long2fix (%i+ vpos line-ascent))))
-  ;;                     (setf my-start next)
-  ;;                     (when (%i>= my-start numchars)(return))
-  ;;                     (setf now-height (%i+ now-height line-height))
-  ;;                     (when (%i>= now-height rect-height)(return))
-  ;;                     (setf vpos (%i+ vpos line-height))))))))))))
-  ;;   nil)
-  )
-
-
 
 
 (defun color->ff-index (color)
@@ -945,6 +867,7 @@ MS:             Mode/Size code.
   (niy color->ff-index color)
   0)
 
+
 (defun grafport-font-codes-with-color ()
   #-(and)
   (multiple-value-bind (ff ms)(grafport-font-codes)
@@ -953,6 +876,7 @@ MS:             Mode/Size code.
           (setf ff (logior (logand ff (lognot #xff)) (fred-palette-closest-entry foo))))
       (values ff ms)))
   (current-font-codes))
+
 
 (defmacro grafport-write-string (string start end &optional ff ms color)
   (let ((vstart (gensym))
@@ -964,6 +888,21 @@ MS:             Mode/Size code.
            (,vff    ,ff)
            (,vms    ,ms))
        (font-code-draw-string ,string ,vff ,vms ,vstart ,vend ,color))))
+
+
+(defun draw-string-in-rect (string rect
+                            &key
+                              (truncation :clipping) (justification :natural) (compress-p nil)
+                              (start 0) (end (length string))
+                              ff ms color)
+  (when (not (and ff ms))
+    (multiple-value-setq (ff ms) (grafport-font-codes-with-color)))
+  (when color
+    (setf ff (logior (logand ff (lognot #xff)) (color->ff-index color))))
+  (let ((*current-font-codes* (list ff ms)))
+    (draw-text (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect)
+               (nsubstring-start-end string start end)
+               truncation justification compress-p)))
 
 
 (defun string-width (string &optional font-spec)

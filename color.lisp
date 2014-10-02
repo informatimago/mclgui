@@ -175,59 +175,81 @@ REDISPLAY-P:    If the value of this is true (the default), this
   (:documentation ""))
 
 
+(defvar *foreground-color*  nil)
+(defvar *background-color*  nil)
 
 
-(defun call-with-fore-color (color function)
-  (if (or (null color) (not *color-available*))
-    (funcall function)
+(defun call-with-fore-color (color thunk)
+  (if (or (null color)
+          (not *color-available*)
+          (null *current-view*)
+          (null (view-window *current-view*)))
+    (funcall thunk)
     (unwind-protect
          (progn
            [NSGraphicsContext saveGraphicsState]
-           (let ((color (unwrap color)
+           (let ((*foreground-color* color)
+                 (fore-color (unwrap color)
                    ;; [NSColor colorWithCalibratedRed: (color-red color)
                    ;;          green: (color-green color)
                    ;;          blue: (color-blue color)
                    ;;          alpha: (color-alpha color)]
                    ))
-             [color set]
-             [color setFill]
-             [color setStroke])
-           (funcall function))
+             [fore-color set]
+             [fore-color setFill]
+             [fore-color setStroke])
+           (funcall thunk))
       [NSGraphicsContext restoreGraphicsState])))
 
-(defvar *background-color*  nil)
 
-(defun call-with-back-color (color function)
+(defun call-with-back-color (color thunk)
   (if (or (null color)
           (not *color-available*)
           (null *current-view*)
           (null (view-window *current-view*)))
-    (funcall function)
-    (let ((*background-color* (unwrap color)
-            ;; [NSColor colorWithCalibratedRed: (color-red color)
-            ;;          green: (color-green color)
-            ;;          blue: (color-blue color)
-            ;;          alpha: (color-alpha color)]
-            )
-          (old-color (slot-value (view-window *current-view*) 'back-color)))
+    (funcall thunk)
+    (let ((*background-color* color)
+          (old-back-color (slot-value (view-window *current-view*) 'back-color)))
       (unwind-protect
           (progn
             (setf (slot-value (view-window *current-view*) 'back-color) *background-color*)
-            (funcall function))
-        (setf (slot-value (view-window *current-view*) 'back-color) old-color)))))
+            (funcall thunk))
+        (setf (slot-value (view-window *current-view*) 'back-color) old-back-color)))))
+
+
+(defun call-with-fore-and-back-color (fore back thunk)
+  (cond
+    ((or (and (null fore) (null back))
+         (not *color-available*)
+         (null *current-view*)
+         (null (view-window *current-view*)))
+     (funcall thunk))
+    ((null fore) (call-with-back-color back thunk))
+    ((null back) (call-with-fore-color fore thunk))
+    (t (let ((*foreground-color* fore)
+             (fore-color (unwrap fore))
+             (*background-color* back)
+             (old-back-color (slot-value (view-window *current-view*) 'back-color)))
+         (unwind-protect
+              (progn
+                [NSGraphicsContext saveGraphicsState]
+                [fore-color set]
+                [fore-color setFill]
+                [fore-color setStroke]
+                (setf (slot-value (view-window *current-view*) 'back-color) *background-color*)
+                (funcall thunk))
+           (setf (slot-value (view-window *current-view*) 'back-color) old-back-color)
+           [NSGraphicsContext restoreGraphicsState])))))
 
 
 (defmacro with-fore-color (color &body body)
-  (let  ((vcolor (gensym "color")))
-    `(let ((,vcolor ,color))
-       (call-with-fore-color ,vcolor (lambda () ,@body)))))
-
+  `(call-with-fore-color ,color (lambda () ,@body)))
 
 (defmacro with-back-color (color &body body)
-  (let  ((vcolor (gensym "color")))
-    `(let ((,vcolor ,color))
-       (call-with-back-color ,vcolor (lambda () ,@body)))))
+  `(call-with-back-color ,color (lambda () ,@body)))
 
+(defmacro with-fore-and-back-color (fore back &body body)
+  `(call-with-fore-and-back-color ,fore ,back (lambda () ,@body)))
 
 
 ;;;---------------------------------------------------------------------
