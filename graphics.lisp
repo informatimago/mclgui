@@ -89,7 +89,8 @@
 
 (defun draw-text (x y width height text
                   &optional (truncation :clipping) (justification :natural) (compress-p nil))
-  (format-trace "draw-text" (list x y width height) text truncation justification compress-p)
+  ;; (format-trace "draw-text" (list x y width height) text truncation justification compress-p)
+  ;; (print-backtrace *mclgui-trace*)
   #-(and) (draw-yellow-box)
   (destructuring-bind (ff ms) *current-font-codes*
     (multiple-value-bind (descriptor mode) (font-descriptor-from-codes ff ms)

@@ -139,6 +139,7 @@
                      (with-slot-values (dialog-item-handle line-height font-ascent text-justification) current-text
                        (setf (te-in-port hTE) w)
                        (te-set-just text-justification hTE)   ; JooFung Wong's fix
+                       ;; (format-trace '(dialog-te-handle window) :dialog-item-handle dialog-item-handle :current-text current-text)
                        (te-set-text dialog-item-handle hTE)
                        (setf (te-click-loc hTE) -1)
                        (multiple-value-bind (ff ms) (view-font-codes current-text)
@@ -208,7 +209,7 @@
 
 ;; Should never be called unless the item is contained in a window.
 (defmethod install-view-in-window ((item text-edit-dialog-item) view)
-  (declare (ignore view))
+  (declare (ignorable view))
   (let* ((text (ensure-simple-string (slot-value item 'dialog-item-text))))
     (setf (slot-value item 'dialog-item-handle) text
           (slot-value item 'dialog-item-text) nil))
@@ -216,13 +217,9 @@
 
 
 (defmethod remove-view-from-window ((item text-edit-dialog-item))
-  (dispose-text-edit-handle item))
-
-
-(defun dispose-text-edit-handle (item)
-  (setf (slot-value item 'dialog-item-text) (slot-value item 'dialog-item-handle)
+  (setf (slot-value item 'dialog-item-text) (te-get-text (dialog-te-handle (view-window item)))
         (slot-value item 'dialog-item-handle) nil)
-  (values))
+  (call-next-method))
 
 
 (defmethod remove-key-handler :after ((item text-edit-dialog-item)
@@ -241,7 +238,10 @@
 
 (defmethod set-view-font-codes :after ((item text-edit-dialog-item) ff ms
                                        &optional ff-mask ms-mask)
-  (declare (ignore ff ms ff-mask ms-mask))
+  (declare (ignorable ff ms ff-mask ms-mask))
+  #+debug-view (format-trace '(set-view-font-code :after text-edit-dialog-item)
+                             :ff-ms (list ff ms)
+                             :view-ff-ms (multiple-value-list (view-font-codes item)))
   (when (view-window item)
     (multiple-value-bind (ff ms) (view-font-codes item)
       (te-set-font-info ff ms (dialog-te-handle (view-window item))))))
@@ -336,7 +336,15 @@
   text)
 
 
+(defun update-dialog-item-handle (item)
+  (without-interrupts
+    (when (eql item *te-handle-dialog-item*)
+      ;;  (assert (eql item (current-key-handler (view-window item))))
+      (let ((hTE (get-*te-handle*)))
+        (setf (dialog-item-handle item) (te-get-text hTE))))))
+
 (defmethod dialog-item-text ((item text-edit-dialog-item))
+  (update-dialog-item-handle item)
   (let ((handle (dialog-item-handle item)))
     (if (and handle (wptr item))
         handle
