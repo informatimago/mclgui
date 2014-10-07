@@ -263,7 +263,7 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
                                       (set-window-layer dialog 0)
                                         ;(#_hidefloatingwindows)
                                       
-                                      #+REMOVE (setf (window-process dialog) *current-process*) ; do this first
+                                      #-(and) (setf (window-process dialog) *current-process*) ; do this first
                                       (setf *modal-dialog-on-top* (cons (list dialog *current-process* eventhook) *modal-dialog-on-top*)
                                         ;*eventhook* eventhook
                                             )
@@ -284,7 +284,7 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
                        (apply #'values ret))))
             (without-interrupts ; << maybe this helps - not really
               (without-event-processing ; delay events until the window-close is over
-                #+REMOVE (setf (window-process dialog) old-window-process)
+                #-(and) (setf (window-process dialog) old-window-process)
                                         ; if this one is still on top reset to nil, else leave alone
                 (setf *modal-dialog-on-top* (nremove (assq dialog *modal-dialog-on-top*) *modal-dialog-on-top*))
                 (let ((mdot *modal-dialog-on-top*))

@@ -63,7 +63,7 @@
     (let ((text (dialog-item-text button)))
       (when text
         (niy install-view-in-window :after button w)
-        #+ignore                       ;; done earlier
+        #-(and)                       ;; done earlier
         (when (not (7bit-ascii-p text)) ;; fix it
           (set-dialog-item-text button text))))))
 

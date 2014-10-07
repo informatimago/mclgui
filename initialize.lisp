@@ -164,7 +164,7 @@
 ;01/13/90 gz   WFind -> search-window-dialog.
 ;01/03/90 gz   enable print/page setup.
 ;              Made menu item actions be functions rather than symbols.
-;12/27/89 gz   Rearranged obsolete #-bccl conditionalizations.
+;12/27/89 gz   Rearranged obsolete #-ccl conditionalizations.
 ;              button -> default-button in about-ccl.
 ;              apple-menu-class -> apple-menu (another vestige of object lisp).
 ;09/16/89 bill Removed the last vestiges of object-lisp windows.
@@ -280,7 +280,7 @@
                 'do-about-dialog
                 :update-function (lds 'update-about-item)
                 :help-spec '(1000 1 1 1 2))
-  #+ignore
+  #-(and)
   (if (osx-p) (add-hide-menu-item? *application* menu))
   (add-new-item menu "-"))
 
@@ -341,7 +341,7 @@
 (let ((menu *file-menu*))
   (add-new-item menu "New" 'fred :command-key #\N :help-spec 1101)
   (add-new-item menu "Open…" 'edit-select-file :command-key #\O :help-spec 1102)
-  #+ignore
+  #-(and)
   (add-new-item *file-menu* "Open Unix…" (lambda ()
                                              (let ((*do-unix-hack* t))
                                                (edit-select-file))))
@@ -412,7 +412,7 @@
 #|
 (defun confirmed-quit ()
   (cond ((command-key-p)
-         (when (or #+ignore 
+         (when (or #-(and) 
                    (and (eql *break-level* 0)
                         (do-all-windows w 
                           (when (window-needs-saving-p w)

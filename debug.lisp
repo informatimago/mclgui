@@ -35,7 +35,7 @@
 (declaim (declaration stepper))
 
 
-(defvar *mclgui-trace* *trace-output*)
+(defvar *mclgui-trace*   (make-synonym-stream '*trace-output*))
 (defvar *mclgui-package* (load-time-value (find-package "MCLGUI")))
 
 (defmacro unfrequently (frequency &body body)

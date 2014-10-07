@@ -181,7 +181,7 @@
 ;;;;    1990-03-17 bill  add readers to menu-element and menu-item classes.
 ;;;;    1990-03-13 bill  menu-owner => menu-item-owner
 ;;;;    1990-02-27 bill  Add menu-owner method.
-;;;;    1989-12-27 gz    apple-menu-class -> apple-menu.  Remove obsolete #-bccl conditionals.
+;;;;    1989-12-27 gz    apple-menu-class -> apple-menu.  Remove obsolete #-ccl conditionals.
 ;;;;    1989-12-15 bill  set-command-key: fix error on setting to NIL.
 ;;;;    1989-10-11 as    MENU-ITEMS defaults class to MENU-ELEMENT
 ;;;;    1989-10-03 gz    with-menu-detached returns

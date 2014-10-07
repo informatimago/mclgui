@@ -9,7 +9,7 @@
 (defvar *search-dialog-pos* '(:bottom 130))
 
 (defun search-window-dialog (&aux (search-dialog (front-window :class 'search-dialog)))
-  #-bccl (require 'fred-misc)
+  #-ccl (require 'fred-misc)
   (unless search-dialog
     (setq search-dialog
           (make-instance 'search-dialog

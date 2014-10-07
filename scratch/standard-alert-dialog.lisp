@@ -79,7 +79,7 @@
           (setf (pref params :AlertStdCFStringAlertParamRec.defaultText) yes-str))
         (if help
           (setf (pref params :AlertStdCFStringAlertParamRec.helpButton) T))
-        ;; #+ignore  ;; dont know how to set the actual on screen position - now we know some options        
+        ;; #-(and)  ;; dont know how to set the actual on screen position - now we know some options        
         (setf (pref params :AlertStdCFStringAlertParamRec.position) position)
         (flet ((first-char (text)(if (characterp text) text (char text 0))))
           (let ((*yes-char* (and yes-text (char-downcase (first-char yes-text))))

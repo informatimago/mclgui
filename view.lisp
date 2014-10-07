@@ -471,7 +471,7 @@ NEW-CONTAINER:  The new container of the view.
     ;; If container is nil, removes view from container
     ;; Note: The dialog code depends on the fact that the view-container slot is
     ;; changed AFTER the WPTR is changed.
-    (format-trace 'set-view-container :view view :new-container new-container)
+    #+debug-views (format-trace 'set-view-container :view view :new-container new-container)
     (let ((old-container (view-container view)))
       (unless (eql new-container old-container)    
         (when new-container
@@ -495,7 +495,7 @@ NEW-CONTAINER:  The new container of the view.
             ;;       view-container (eg. to focus-view).
             (remove-view-from-superview view)
             (unless (eql new-window old-window)
-              (format-trace 'set-view-container 'remove-view-from-window :old-window old-window)
+              #+debug-views (format-trace 'set-view-container 'remove-view-from-window :old-window old-window)
               (remove-view-from-window view))
             (setf (slot-value view 'view-container) nil))
           ;; -
@@ -504,7 +504,7 @@ NEW-CONTAINER:  The new container of the view.
           (when new-container
             (add-view-to-container view new-container)
             (unless (eql new-window old-window)
-              (format-trace 'set-view-container 'install-view-in-window :new-window new-window)
+              #+debug-views (format-trace 'set-view-container 'install-view-in-window :new-window new-window)
               (install-view-in-window view new-window))
             (invalidate-view view)
             (when (eql view current-view)
@@ -989,12 +989,6 @@ RETURN:         (make-point h v)
       (refocus-view view)
       pos)))
 
-#+pjb-debug
-(defmethod (setf %view-position) :around (new-position view)
-  ;; (when (= 0 new-position) (break "set-view-position (0 0) !"))
-  (format-trace '(setf %view-position) (point-to-list new-position) view)
-  (prog1 (call-next-method)
-    (format-trace '(setf %view-position) (point-to-list (view-position view)) view)))
 
 (defgeneric set-view-size (view h &optional v)
   (:documentation "
@@ -1260,15 +1254,6 @@ DIRECT-SUBVIEWS-ONLY:
                    :include-windoids t)
       nil)))
 
-#+pjb-debug
-(defmethod find-view-containing-point :around (view h &optional v direct-subviews-only)
-  (declare (ignorable view h v direct-subviews-only))
-  (let ((result (call-next-method)))
-    (format-trace 'find-view-containing-point result)
-    (with-focused-view result
-      (with-pen-state (:pattern *black-pattern* :mode :srcCopy)
-        (fill-rect* 0 0 (point-h (view-size result)) (point-v (view-size result)))))
-    result))
 
 (defmethod find-view-containing-point :around (view h &optional v direct-subviews-only)
   (declare (ignorable view h v direct-subviews-only))
@@ -1277,9 +1262,6 @@ DIRECT-SUBVIEWS-ONLY:
     (format-trace 'find-view-containing-point result
                   (subviews result))
     result))
-
-
-
 
 
 (defgeneric point-in-click-region-p (view where)

@@ -405,7 +405,7 @@ NEW-SCROLLEE: The new scrollee of item.
                 (#_activatecontrol handle)
                 (#_deactivatecontrol handle)))        
           (progn
-            #+ignore
+            #-(and)
             (multiple-value-bind (tl br) (scroll-bar-and-splitter-corners item)          
               (rlet ((rect :rect :topLeft tl :botRight br))            
                     (#_FrameRect rect)))          
@@ -463,7 +463,7 @@ NEW-SCROLLEE: The new scrollee of item.
                                         ; #_ShowControl is similarly naughty - why needed  when opening a bunch of fred windows quickly ?
               (progn 
                 (#_showcontrol handle)
-                #+ignore
+                #-(and)
                 (multiple-value-bind (tl br) (scroll-bar-and-splitter-corners item)          
                   (rlet ((rect :rect :topLeft tl :botRight br))            
                         (#_FrameRect rect))))
@@ -1287,7 +1287,7 @@ NEW-VALUE:      The new width of item.
                                            (fred-margin view)
                                            (- hscroll (adjust-horizontal-wheel-speed w delta))))
                      (fred-update view)
-                     #+ignore
+                     #-(and)
                      (when (osx-p)
                        ;; work around crock - wish I knew why needed
                                         ;(view-draw-contents scroll-bar) ; doesn't seem needed here
@@ -1316,7 +1316,7 @@ NEW-VALUE:      The new width of item.
                       (if (eql the-axis #$kEventMouseWheelAxisY)
                           :vertical))))
           (when direction
-                                        ;#+ignore ;; wherep not used?
+                                        ;#-(and) ;; wherep not used?
             (#_GetEventParameter eventref #$kEventParamMouseLocation #$typeQDPoint (%null-ptr)
                                  (record-length :point) (%null-ptr) wherep)
             (rlet ((deltap :signed-long))

@@ -239,7 +239,7 @@
 (defmethod set-view-font-codes :after ((item text-edit-dialog-item) ff ms
                                        &optional ff-mask ms-mask)
   (declare (ignorable ff ms ff-mask ms-mask))
-  #+debug-view (format-trace '(set-view-font-code :after text-edit-dialog-item)
+  #+debug-views (format-trace '(set-view-font-code :after text-edit-dialog-item)
                              :ff-ms (list ff ms)
                              :view-ff-ms (multiple-value-list (view-font-codes item)))
   (when (view-window item)

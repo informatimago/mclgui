@@ -587,7 +587,7 @@ NEW-TITLE:      A string to be used as the new title.
 
 (defgeneric window-show (window)
   (:method ((window window))
-    (format-trace 'window-show window)
+    #+debug-views (format-trace 'window-show window)
     (unless (window-visiblep window)
       (setf (slot-value window 'visiblep) t)
       (window-bring-to-front window))
@@ -1226,7 +1226,7 @@ RETURN:         A BOOLEAN value indicating whether view can perform
   (unless  *deferred-drawing*
     (when (window-visiblep window)
       ;; time/stdout
-      #+debug-view (format-trace '(view-draw-contents window))
+      #+debug-views (format-trace '(view-draw-contents window))
       (with-focused-view window
         (call-next-method)
         ;; TODO: originally, it seems MCL didn't erase it, but relied on MacOS visrg/cliprgn/etc.

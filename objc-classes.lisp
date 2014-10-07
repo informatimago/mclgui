@@ -440,15 +440,17 @@
                                              ',(if (= 1 (length body)) body `(progn ,@body))
                                              err)
                                      (finish-output errs)))
-                                 (window-show (message-dialog (with-output-to-string (*standard-output*)
-                                                                (format t "~%ERROR ~A~%while ~S~2%"
-                                                                        err
-                                                                        ',(if (= 1 (length body)) body `(progn ,@body)))
-                                                                (print-backtrace *standard-output*))
-                                                              :size #@(768 1024)
-                                                              :modal nil
-                                                              :title (format nil "Lisp Error: ~A" err))))
-                               #+debug (invoke-debugger err)
+                                 #+report-error-in-dialog
+                                 (window-show
+                                  (message-dialog (with-output-to-string (*standard-output*)
+                                                    (format t "~%ERROR ~A~%while ~S~2%"
+                                                            err
+                                                            ',(if (= 1 (length body)) body `(progn ,@body)))
+                                                    (print-backtrace *standard-output*))
+                                                  :size #@(768 1024)
+                                                  :modal nil
+                                                  :title (format nil "Lisp Error: ~A" err))))
+                               #+debug-on-error (invoke-debugger err)
                                (return-from ,vhandler nil))))
          ,@body))))
 

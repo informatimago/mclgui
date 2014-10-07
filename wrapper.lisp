@@ -40,17 +40,17 @@
   (let ((min-length (reduce (function min)
                             (cons nsarray other-sequences)
                             :key (lambda (sequence)
-                                     (etypecase sequence
-                                       (ns:ns-array [sequence count])
-                                       (vector (length sequence))
-                                       (cons   (length sequence))
-                                       (null   0)))))
+                                   (etypecase sequence
+                                     (ns:ns-array [sequence count])
+                                     (vector (length sequence))
+                                     (cons   (length sequence))
+                                     (null   0)))))
         (enumerators  (mapcar (lambda (sequence)
-                                  (etypecase sequence
-                                    (ns:ns-array   (lambda (index) [sequence objectAtIndex:index]))
-                                    (vector        (lambda (index) (aref sequence index)))
-                                    (cons          (lambda (index) (declare (ignore index)) (pop sequence)))
-                                    (null          (constantly nil))))
+                                (etypecase sequence
+                                  (ns:ns-array   (lambda (index) [sequence objectAtIndex:index]))
+                                  (vector        (lambda (index) (aref sequence index)))
+                                  (cons          (lambda (index) (declare (ignore index)) (pop sequence)))
+                                  (null          (constantly nil))))
                               (cons nsarray other-sequences)))
         result setter postprocessing)
     (cond
@@ -180,11 +180,11 @@ STRING or NUMBER
 
 (defmethod wrap :around (object)
   (let ((*wrapping* t))
-   (if *circular-references*
-       (call-next-method)
-       (with-circular-references ()
-         (recursive-circular-register :root object)
-         (call-next-method)))))
+    (if *circular-references*
+        (call-next-method)
+        (with-circular-references ()
+          (recursive-circular-register :root object)
+          (call-next-method)))))
 
 (defun wrap-resolving-circular-references (object)
   (resolve-circular-reference object (wrap object)))
@@ -219,12 +219,12 @@ NOTE:           UNWRAPPING returns the handle or compute a new NS
   (let ((vobject (gensym "object")))
     `(let ((,vobject ,object))
        (if *wrapping*
-         (let ((handle (handle ,vobject)))
-           (unless handle
-             (cerror "Continue" "Called (UNWRAP ~S) while wrapping." ,vobject))
-           handle)
-         (progn
-           ,@body)))))
+           (let ((handle (handle ,vobject)))
+             (unless handle
+               (cerror "Continue" "Called (UNWRAP ~S) while wrapping." ,vobject))
+             handle)
+           (progn
+             ,@body)))))
 
 
 
@@ -232,7 +232,7 @@ NOTE:           UNWRAPPING returns the handle or compute a new NS
 
 (on-save clear-handles
   (mapcar (lambda (wrapper)
-              (format *trace-output* "~&clearing a ~A~%" (class-name (class-of wrapper)))
+            #+debug-wrapper (format *trace-output* "~&clearing a ~A~%" (class-name (class-of wrapper)))
             (setf (handle wrapper) nil))
           (weak-list-list *wrapper-instances*))
   (force-output *trace-output*))
@@ -240,7 +240,7 @@ NOTE:           UNWRAPPING returns the handle or compute a new NS
 #|on-restore|#
 (on-application-did-finish-launching reset-handles
   (dolist (wrapper (weak-list-list *wrapper-instances*))
-    (format *trace-output* "~&unwrapping a ~A~%" (class-name (class-of wrapper)))
+    #+debug-wrapper (format *trace-output* "~&unwrapping a ~A~%" (class-name (class-of wrapper)))
     (unwrap wrapper))
   (force-output *trace-output*))
 
@@ -253,8 +253,8 @@ NOTE:           UNWRAPPING returns the handle or compute a new NS
   #+ccl (ccl:terminate-when-unreachable self)
   (push self (weak-list-list *wrapper-instances*))
   (if (handle self)
-    [(handle self) retain]
-    (update-handle self))
+      [(handle self) retain]
+      (update-handle self))
   self)
 
 
@@ -314,14 +314,14 @@ RETURN:         NEW-HANDLE.
   (:method (new-handle (wrapper wrapper))
     (let ((old-handle (handle wrapper)))
       (if new-handle
-        (unless (eql old-handle new-handle)
+          (unless (eql old-handle new-handle)
+            (when old-handle
+              [old-handle release])
+            [new-handle retain]
+            (setf (slot-value wrapper 'handle) new-handle))
           (when old-handle
-            [old-handle release])
-          [new-handle retain]
-          (setf (slot-value wrapper 'handle) new-handle))
-        (when old-handle
-          [old-handle release]
-          (setf (slot-value wrapper 'handle) nil))))
+            [old-handle release]
+            (setf (slot-value wrapper 'handle) nil))))
     new-handle))
 
 
@@ -350,16 +350,16 @@ RETURN:         NEW-HANDLE.
       (if (or (functionp thunk)
               (and (symbolp thunk)
                    (fboundp thunk)))
-       (funcall thunk)   
-       (warn "Unwrapping an invalid anonymous wrapper ~S" wrapper)))))
+          (funcall thunk)   
+          (warn "Unwrapping an invalid anonymous wrapper ~S" wrapper)))))
 
 (defmacro awrap (&body body)
   (let ((thunk (gensym)))
     `(let ((,thunk (lambda () ,@body)))
        (make-instance 'anonymous-wrapper
-           :handle (funcall ,thunk)
-           :thunk ,thunk
-           :thunk-source (list* 'lambda '() ',body)))))
+                      :handle (funcall ,thunk)
+                      :thunk ,thunk
+                      :thunk-source (list* 'lambda '() ',body)))))
 
 
 
@@ -369,31 +369,31 @@ RETURN:         NEW-HANDLE.
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   
- @[NSObject subClass:MclguiReference
-            slots:((index  :initform nil
-                           :initarg :index
-                           :accessor reference-index))]
+  @[NSObject subClass:MclguiReference
+             slots:((index  :initform nil
+                            :initarg :index
+                            :accessor reference-index))]
 
- (defmethod print-object ((self mclgui-reference) stream)
-   (print-unreadable-object (self stream :identity t :type t)
-     (format stream "#~D#" (reference-index self)))
-   self)
+  (defmethod print-object ((self mclgui-reference) stream)
+    (print-unreadable-object (self stream :identity t :type t)
+      (format stream "#~D#" (reference-index self)))
+    self)
 
- @[NSObject subClass:MclguiReferenced
-            slots:((index  :initform nil
-                           :initarg :index
-                           :accessor referenced-index
-                           :accessor reference-index)
-                   (object :initform nil
-                           :initarg :object
-                           :accessor referenced-object))]
+  @[NSObject subClass:MclguiReferenced
+             slots:((index  :initform nil
+                            :initarg :index
+                            :accessor referenced-index
+                            :accessor reference-index)
+                    (object :initform nil
+                      :initarg :object
+                      :accessor referenced-object))]
 
- (defmethod print-object ((self mclgui-referenced) stream)
-  (print-unreadable-object (self stream :identity t :type t)
-    (format stream "#~D=~S" (reference-index self) (referenced-object self)))
-  self)
+  (defmethod print-object ((self mclgui-referenced) stream)
+    (print-unreadable-object (self stream :identity t :type t)
+      (format stream "#~D=~S" (reference-index self) (referenced-object self)))
+    self)
 
- );;eval-when
+  );;eval-when
 
 
 (defun make-reference (&key index)
@@ -410,12 +410,12 @@ RETURN:         NEW-HANDLE.
 (defun flatten-circular-reference (object)
   (let ((index (circular-reference object)))
     (if index
-      (if (cdr index)
-        (make-reference :index (car index))
-        (let ((referenced (make-referenced :index (car index) :object object)))
-          (setf (cdr index) referenced)
-          referenced))
-      object)))
+        (if (cdr index)
+            (make-reference :index (car index))
+            (let ((referenced (make-referenced :index (car index) :object object)))
+              (setf (cdr index) referenced)
+              referenced))
+        object)))
 
 
 
@@ -618,14 +618,14 @@ DO:             Keys that are NSString are converted to keywords,
 
 (defun nsarray-to-list (nsarray)
   (wrapping nsarray
-   (let ((result '()))
-     (do-nsarray (element nsarray (nreverse result))
-       (push (wrap element) result)))))
+    (let ((result '()))
+      (do-nsarray (element nsarray (nreverse result))
+        (push (wrap element) result)))))
 
 (defun list-to-nsarray (list)
   (if list
-    (unwrap list)
-    [NSMutableArray arrayWithCapacity:0]))
+      (unwrap list)
+      [NSMutableArray arrayWithCapacity:0]))
 
 
 ;;;; THE END ;;;;

@@ -147,14 +147,14 @@ CONTAINER:      The view focused on whose coordinate system body will
            (y (rect-top    frame))
            (w (rect-width  frame))
            (h (rect-height frame)))
-      #+debug-view
+      #+debug-views
       (progn (format *mclgui-trace* "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
              (format *mclgui-trace* "~&  text    = ~S~%" (dialog-item-text item))
              (format *mclgui-trace* "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
              (format *mclgui-trace* "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
              (finish-output *mclgui-trace*))
       (erase-rect* x y w h)
-      ;; #+debug-view-colors
+      ;; #+debug-views-colors
       ;; (with-fore-color *light-gray-color*
       ;;   (fill-rect* x y w h))
       (draw-text x y w h (dialog-item-text item)))))

@@ -1870,7 +1870,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                       (with-back-color back-color
                         (when back-color
                           (#_erasergn rgn)
-                          #+ignore
+                          #-(and)
                           (with-fore-color back-color
                             (#_paintrgn rgn)))
                         (when (and *updating* dialog-item-enabled-p)

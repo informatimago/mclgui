@@ -75,7 +75,7 @@
 
 (defgeneric draw-view-bounds (view)
   (:method   ((view simple-view))
-    #+debug-view
+    #+debug-views
     (progn (format t "~&view ~A~%" (view-nick-name view))
            (format t "~&  frame  = ~S~%" (rect-to-list (view-frame view)))
            (format t "~&  bounds = ~S~%" (rect-to-list (view-bounds view)))
@@ -90,7 +90,7 @@
 
 (defgeneric draw-view-frame (view)
   (:method   ((view simple-view))
-    #+debug-view
+    #+debug-views
     (progn (format t "~&frame  = ~S~%" (rect-to-list (view-frame view)))
            (format t "~&bounds = ~S~%" (rect-to-list (view-bounds view)))
            (finish-output))

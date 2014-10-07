@@ -266,10 +266,8 @@
       (funcall thunk)
       (let* ((*foreground-rgb-port* wptr))
         (rlet ((*foreground-rgb* :RGBColor))
-          #-ignore
-          (#_GetForeColor *foreground-rgb*)
-          #+ignore
-          (#_GetPortForeColor wptr *foreground-rgb*)
+          #+(and) (#_GetForeColor *foreground-rgb*)
+          #-(and) (#_GetPortForeColor wptr *foreground-rgb*)
           (let ((*default-foreground-rgb* *foreground-rgb*))
             (unwind-protect
               (funcall thunk)
@@ -494,7 +492,7 @@
 
 
 ;; which comes first - the chicken or the egg
-#+ignore
+#-(and)
 (defun get-wptr-marker (wptr)
   (%stack-block ((sp 256))
     (#_GetWTitle wptr sp)
@@ -867,7 +865,7 @@
                (lines (lines-in-buffer buf)))
           (let ((*print-circle* nil)
                 (*print-pretty* nil))
-            #+ignore
+            #-(and)
             (when (and (base-string-p string)(not (7bit-ascii-p string)))
               ;; fix ellipsis things
               (setq string (convert-string string #$kcfstringencodingmacroman #$kcfstringencodingunicode)))
@@ -1532,7 +1530,7 @@
                 (#_disposehandle the-alias)))))))))
 
 ;; or do this instead of stashing fsref?
-#+ignore
+#-(and)
 (defun get-proxy-filename (window)
   (let ((wptr (wptr window)))
     (rlet ((alias :pointer)
@@ -1586,7 +1584,7 @@
   (window-key-handler w))
 
 ; find a key handler that is not the mini-buffer
-#+ignore
+#-(and)
 (defun window-key-handler (w)
   (let ((key (current-key-handler w))
         (mini (view-mini-buffer w)))
@@ -1833,7 +1831,7 @@
     (values pos drawn)))
 |#
 
-#+ignore
+#-(and)
 (defun track-and-draw (container function pos direction delta min-pos max-pos)
   (let* ((mouse-pos (view-mouse-position container))
          (wait-ticks 1) ; (max 1 (floor internal-time-units-per-second 30))) ; why a (* 16 33) = 528 ms delay?
@@ -1874,7 +1872,7 @@
           (when drawn (funcall function pos)))))
     (values pos drawn)))
 
-#-ignore
+#+(and)
 (defun track-and-draw (container function pos direction delta min-pos max-pos)
   (let* ((mouse-pos (view-mouse-position container))
          ;(wait-ticks 1)
@@ -2324,7 +2322,7 @@
 ; this changes the order of subviews which changes the order in which subviews
 ; are drawn 
 ;; this gets nasty error in MCL versions after 5.0
-#+ignore
+#-(and)
 (defmethod ed-yank-file ((item window-fred-item))
   ; probably a bad idea to do this into the "mini-buffer"
   ; also need to check that it isn't already open here or elsewhere
