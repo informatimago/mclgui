@@ -97,7 +97,9 @@
                  (:view-position        (point-to-list (slot-value view 'view-position)))
                  (:view-size            (point-to-list (slot-value view 'view-size)))
                  (:view-scroll-position (point-to-list (slot-value view 'view-scroll-position)))
-                 view-nick-name view-font view-alist))
+                 view-nick-name
+                 (:view-font            (view-font view))
+                 view-alist))
 
 (defmethod object-slots append ((view view))
   (collect-slots view (:subviews (map 'list  (function dump-object-slots) (view-subviews view)))))
