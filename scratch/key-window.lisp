@@ -52,13 +52,19 @@
       (set-view-size text (rect-size bounds))
       (view-draw-contents window))))
 
+(defun char-name* (char)
+  (let ((entry (assoc (char-code char) ui::*ns-code-to-name*)))
+    (if entry
+        (string-downcase (cdr entry))
+        (char-name char))))
+
 (defmethod view-key-event-handler ((window key-window) char)
   (let ((text (key-window-text-item window)))
     (when text
       (setf (dialog-item-text text)
             (format nil "~A~%~A~%"
              (if (characterp char)
-                 (format nil "Key: .~D. ~C" (char-code char) char)
+                 (format nil "Key: .~D. ~@[~S~] ~C" (char-code char) (char-name* char) char)
                  (format nil "Key: ~S" char))
              (when *current-event*
                (format nil "Modifiers: ~S"
