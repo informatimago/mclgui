@@ -95,7 +95,8 @@
    "CLOSER-MOP"
    "SPLIT-SEQUENCE")
   (:use "COM.INFORMATIMAGO.COMMON-LISP.LISP-SEXP.SOURCE-FORM"
-        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY")
+        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY"
+        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.LIST")
   (:use "MCLGUI.DEBUGGING" "MCLGUI.SYSTEM" "MCLGUI.CIRCULAR" "MCLGUI.WRAPPER")
   (:nicknames "UI")
   (:shadowing-import-from "CLOSER-MOP"
@@ -642,7 +643,7 @@ LEGAL:
 
     GPL3
 
-    Copyright Pascal J. Bourguignon 2012 - 2012
+    Copyright Pascal J. Bourguignon 2012 - 2014
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

@@ -260,16 +260,6 @@ redisplays.
 
 
 
-(defun ensure-list (object)
-  "
-RETURN:         If OBJECT is a list then OBJECT, otherwise a fresh
-                list containing OBJECT.
-"
-  (if (listp object)
-      object
-      (list object)))
-
-
 (defun list-designator (object)
   "
 RETURN:         If the OBJECT is a list containing a single non-NIL

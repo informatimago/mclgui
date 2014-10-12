@@ -259,23 +259,45 @@ FORM:           A symbol, function or lisp form.
 (defvar *run-loop-modes*     nil)
 (defvar *run-loop-timer*     nil)
 (defvar *run-loop-evaluator* nil)
+(defvar *run-loop-bindings*  '())
 
 (defun run-loop-task ()
   (reporting-errors
    (let ((*idle* nil))
-    (event-dispatch))))
+     (progv
+         (mapcar (function car) *run-loop-bindings*)
+         (mapcar (function cdr) *run-loop-bindings*)
+       (event-dispatch)))))
 
 
 ;; (application-eval-enqueue *application* '(invoke-debugger (make-condition 'error)))
 ;; (setf (evaluator-thunk *run-loop-evaluator*) (function run-loop-task))
 
+
+(defun initialize-run-loop-bindings ()
+  "
+DO: Store the current stream special variable bindings into *RUN-LOOP-BINDINGS*.
+"
+  (setf (aget *run-loop-bindings* '*terminal-io*)     *terminal-io*
+        (aget *run-loop-bindings* '*standard-input*)  *standard-input*
+        (aget *run-loop-bindings* '*standard-output*) *standard-output*
+        (aget *run-loop-bindings* '*error-output*)    *error-output*
+        (aget *run-loop-bindings* '*trace-output*)    *trace-output*
+        (aget *run-loop-bindings* '*query-io*)        *query-io*
+        (aget *run-loop-bindings* '*debug-io*)        *debug-io*)
+  (values))
+
+
 (defun initialize-run-loop-evaluator ()
+  (when *run-loop-timer*
+    [*run-loop-timer* invalidate])
   (let* ((evaluator [[MclguiEvaluator alloc] init])
          (timer [NSTimer timerWithTimeInterval: (cgfloat 1/60)
                          target:evaluator
                          selector:(objc:@selector |evaluate|)
                          userInfo:*null*
                          repeats:t]))
+    (initialize-run-loop-bindings)
     (setf (evaluator-thunk evaluator) (function run-loop-task))
     (setf *run-loop-modes*    (list #$NSDefaultRunLoopMode
                                     #$NSRunLoopCommonModes

@@ -404,7 +404,12 @@
                ;; Managers:
                
                (:file "text-edit"
-                :depends-on ("packages" "window" "pen" "font" "point" "rect" "region" "color" "scrap"))
+                :depends-on ("packages"
+                             "window" "pen" "font" "point" "rect" "region" "color" "scrap"
+                             "ns-keys"))
+
+               (:file "ns-keys"
+                :depends-on ("packages"))
                
                #+has-appleevent
                (:file "apple-event"

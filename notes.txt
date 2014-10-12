@@ -162,6 +162,13 @@ Error Messages
 
    (step-notrace ui::object-identity ui::call-print-parseable-object)
 
+
+References
+================================
+
+`http://www.kreativekorp.com/charset/unicode.php?pua=appl&block=F700`_
+
+
 .. comment  
                     -----------------------------
                             -------------

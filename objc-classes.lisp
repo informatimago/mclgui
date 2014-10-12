@@ -422,18 +422,19 @@
   (let ((vhandler (gensym)))
     `(block ,vhandler
        (handler-bind ((error (lambda (err)
+                               (declare (ignorable err))
                                (declare (stepper disable))
                                (let ((*print-length* nil)
                                      (*print-level*  nil)
                                      (*print-circle* t)
                                      (*print-pretty* nil)
                                      (*print-case*   :downcase))
-                                 (with-open-file (err (error-file-pathname)
+                                 (with-open-file (errf (error-file-pathname)
                                                       :direction :output
                                                       :external-format :utf-8
                                                       :if-exists :append
                                                       :if-does-not-exist :create)
-                                   (let ((errs (make-broadcast-stream err *error-output*)))
+                                   (let ((errs (make-broadcast-stream errf *error-output*)))
                                      (format errs "~%~A~2%" (date))
                                      (print-backtrace errs)
                                      (format errs "~%ERROR while ~S:~%~A~2%"

@@ -178,7 +178,8 @@
         (cond (modeless
                (window-show dialog)
                dialog)
-              (t             
+              (t
+               (window-show dialog)
                (modal-dialog dialog)))))))
 
 (defmethod window-size-parts ((dialog get-string-dialog))

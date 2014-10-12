@@ -122,10 +122,11 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     ;; only needed for non-theme color background
     (setf (window-invalid-region window) (new-rgn)))
   (add-to-list *window-list* window)
-  #+debug-views
+  ;;#+debug-views
   (format-trace '(update-handle window)
                 :pos (point-to-list (view-position window))
                 :siz (point-to-list (view-size window))
+                :frame (rect-to-list (view-frame window))
                 :content-rect (nswindow-frame-from-window-frame (view-frame window)))
   (let ((winh [[MclguiWindow alloc]
                initWithContentRect:(nswindow-frame-from-window-frame (view-frame window))
@@ -784,10 +785,10 @@ DO:             Order the WINDOW above every other.
   (delete-from-list *window-list* window)
   (insert-into-list *window-list* 0 window)
   (setf (slot-value window 'visiblep) t)
-  (view-draw-contents window)
   (let ((handle (handle window)))
     (when handle
-      (on-main-thread [handle makeKeyAndOrderFront:handle]))))
+      (on-main-thread/sync [handle makeKeyAndOrderFront:handle])))
+  (view-draw-contents window))
 
 
 (defun window-send-behind (window other-window)
