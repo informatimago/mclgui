@@ -86,6 +86,7 @@
                             (point-in-click-region-p subview where))
                           (view-subviews view)
                           :from-end t)))
+    #+debug-views
     (format-trace '(view-click-event-handler view) :where (point-to-list where)  :view view :subview subview)
     (if subview
         (progn (view-convert-coordinates-and-click subview where view)

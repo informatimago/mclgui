@@ -450,7 +450,7 @@
         (with-fore-color (part-color item :text)
           (with-back-color (part-color item :body)
             (with-font-codes nil nil
-              (TE-Delete te-handle)
+              (TE-Delete te-handle) 
               (TE-Insert scrap te-handle)))))))
   (dialog-item-action item))
 
