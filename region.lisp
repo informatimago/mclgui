@@ -31,10 +31,7 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
 (in-package "MCLGUI")
-
-
 
 
 
@@ -88,6 +85,7 @@ NEW-REGION: a region or NIL."))
              ,@body)
          (set-clip ,rgn1)))))
 
+
 (defmacro with-clip-rect-intersect (rect &rest body)
   (let ((vrect (gensym)))
     `(let ((,vrect ,rect))
@@ -111,8 +109,52 @@ NEW-REGION: a region or NIL."))
          (set-clip ,old)))))
 
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Regions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; We represent regions as structures containing a bounds rectangle,
+;;; and a vector of segments.
+;;; Each segment is a cons cell containing the Y coordinate of the
+;;; segments, and a vector of even size, containing the X coordinates
+;;; of each vector in the line Y, sorted in increasing order.
+;;;
+;;;
+;;;
+;;; 0000000000111111111122222222223
+;;; 0123456789012345678901234567890
+;;;        *****************          0
+;;;        *****************          1
+;;; *******************************   2
+;;; *******************************   3
+;;; ********         **************   4
+;;; ********         **************   5
+;;; ****************************      6
+;;; ****************************      7
+;;;                  *******          8
+;;;                  *******          9
+;;;                                  10
+;;; 0123456789012345678901234567890
+;;; 0000000000111111111122222222223
+;;;
+;;;
+;;; #S(region :bounds #S(rect :topleft #@(0 0) :bottomright #@(30 9))
+;;;           :segments #((0 . #(7 24))
+;;;                       (2 . #(0 31))
+;;;                       (4 . #(0 8 17 31))
+;;;                       (6 . #(0 31))
+;;;                       (7 . #(17 23))
+;;;                       (9 . #(17 23))))
+
+#-(and) (expanded-segments #S(region :bounds #S(rect :topleft #@(0 0) :bottomright #@(30 9))
+           :segments #((0 . #(7 24))
+                       (2 . #(0 31))
+                       (4 . #(0 8 17 31))
+                       (6 . #(0 31))
+                       (7 . #(17 23))
+                       (9 . #(17 23)))))
+
+
 
 (eval-when (:compile-toplevel :load-toplevel :execute) ; to be able to use #S in the same file.
 
@@ -130,26 +172,6 @@ NEW-REGION: a region or NIL."))
                   :segments ,(region-segments object)))
 
   );;eval-when
-
-
-
-
-
-;; 0000000000111111111122222222223
-;; 0123456789012345678901234567890
-;;        *****************          0
-;;        *****************          1
-;; *******************************   2
-;; *******************************   3
-;; ********         **************   4
-;; ********         **************   5
-;; ****************************      6
-;; ****************************      7
-;;                  *******          8
-;;                  *******          9
-;;                                  10
-;; 0123456789012345678901234567890
-;; 0000000000111111111122222222223
 
 
 ;;----------------------------------------------------------------------
@@ -221,9 +243,9 @@ RETURN:    A function of no arguments, that returns two values: the
 (defun segments-operate (operator s1 s2)
   "
 OPERATOR:       A binary boolean function.
-S1:             A segments vector..
-S2:             A segments vector.
-RETURN:         A segments vector, that is the combination bythe
+S1:             A segments vector. #(x0 x1 … xn xn+1)
+S2:             A segments vector. #(x0 x1 … xm xm+1)
+RETURN:         A new segments vector, built as the combination by the
                 OPERATOR of the segments in S1 and S2.
 "
   (let* ((s  (make-array (+ (length s1) (length s2)) :adjustable t :fill-pointer 0))
@@ -319,8 +341,8 @@ INVERSION-POINTS:   A vector of inversion points (the first element is
 RETURN:             A new segment vector made from SEGMENTS and
                     INVERSION-POINTS.
 "
-  (if (zerop (length segments))
-    (loop
+  (if (zerop (length segments)) 
+   (loop
       :with len =  (length inversion-points)
       :with segments = (make-array (1- len))
       :for i :from 1 :below len :by 2
@@ -503,6 +525,10 @@ RETURN:    An inversion-points vector of vectors; bounds.
 ;;----------------------------------------------------------------------
 
 (defun segments-trim (segments)
+  "
+SEGMENTS:
+RETURN:      
+"
   (let ((start 0)
         (end (length segments)))
    (loop
@@ -569,7 +595,6 @@ RETURN:         The bounds rect.
 ;; union, difference, xor.
 ;;
 
-
 (defun region-operate-not-easy (op r1 r2 rd)
   "
 NOTE:           This function computes the operation on the inversion
@@ -593,6 +618,7 @@ DO:             Compute the operation OP between R1 and R2, and set RD
                       ;; (:horizontal-inset (segments-horizontal-inset s1 s2))
                       ))
             res)))
+    (declare (inline operate))
     (loop
       :with segs1 = (expanded-segments r1)
       :with segs2 = (expanded-segments r2)
@@ -783,6 +809,8 @@ DO:             Compute the operation OP between R1 and R2, and set RD
 
 ;;----------------------------------------------------------------------
 
+(declaim (inline new-region new-rgn dispose-region))
+
 (defun new-region ()
   "The new-region function allocates a new empty region and returns it."
   (make-region))
@@ -796,8 +824,6 @@ DO:             Compute the operation OP between R1 and R2, and set RD
   "The dispose-region function reclaims storage space used by region and returns NIL."
   (set-empty-region region)
   nil)
-
-(declaim (inline new-region new-rgn dispose-region))
 
 
 (defun copy-region (region &optional (dest-region (new-region)))
@@ -851,6 +877,7 @@ LEFT, TOP, RIGHT, BOTTOM:
   region)
 
 
+;;----------------------------------------------------------------------
 
 (defgeneric open-region (view)
   (:documentation "
@@ -862,6 +889,48 @@ CLOSE-REGION.
 
 VIEW:           A window or a view contained in a window.
 ")
+  #-(and) "
+
+OpenRgn tells QuickDraw to allocate temporary space and start saving
+lines and framed shapes for later processing as a region
+definition. While a region is open, all calls to Line, LineTo, and the
+procedures that draw framed shapes (except arcs) affect the outline of
+the region. Only the line endpoints and shape boundaries affect the
+region definition; the pen mode, pattern, and size do not affect
+it. In fact, OpenRgn calls HidePen, so no drawing occurs on the screen
+while the region is open (unless you called ShowPen just after
+OpenRgn, or you called ShowPen previously without balancing it by a
+call to HidePen). Since the pen hangs below and to the right of the
+pen location, drawing lines with even the smallest pen will change
+bits that lie outside the region you define.
+
+The outline of a region is mathematically defined and infinitely thin,
+and separates the bit image into two groups of bits: Those within the
+region and those outside it. A region should consist of one or more
+closed loops. Each framed shape itself constitutes a loop. Any lines
+drawn with Line or LineTo should connect with each other or with a
+framed shape. Even though the on screen presentation of a region is
+clipped, the definition of a region is not; you can define a region
+anywhere on the coordinate plane with complete disregard for the
+location of various grafPort entities on that plane.
+
+When a region is open, the current grafPort's rgnSave field contains a
+handle to information related to the region definition. If you want to
+temporarily disable the collection of lines and shapes, you can save
+the current value of this field, set the field to NIL, and later
+restore the saved value to resume the region definition.  Also,
+calling SetPort while a regionis being formed will discontinue
+formation of the region until another call to SetPort resets the
+region's original grafPort.
+
+Warning: Do not call OpenRgn while another region or polygon is
+already open. All open regions but the most recent will behave
+strangely.
+
+Note: Regions are limited to 32K bytes. You can determine the current
+size of a region by calling the Memory Manager function GetHandleSize.
+
+"
   (:method ((view simple-view))
     (when (window-open-region (view-window view))
       (error "Cannot call ~S twice in a row before calling ~S."
@@ -886,10 +955,35 @@ VIEW:           A window or a view contained in a window.
 
 DEST-REGION:    A region.
 ")
+  #-(and) "
+
+CloseRgn stops the collection of lines and framed shapes, organizes
+them into a region definition, and saves the resulting region in the
+region indicated by dstRgn. CloseRgn does not create the destination
+region; space must already have been allocated for it. You should
+perform one and only one CloseRgn for every OpenRgn. CloseRgn calls
+ShowPen, balancing the HidePen call made by OpenRgn.
+
+Here's an example of how to create and open a region, define a barbell
+shape, close the region, draw it, and dispose of it:
+
+    barbell := NewRgn;                   {create a new region}
+    OpenRgn;                             {begin collecting stuff}
+        SetRect(tempRect,20,20,30,50);   {form the left weight}
+        FrameOval(tempRect);
+        SetRect(tempRect,25,30,85,40);   {form the bar}
+        FrameRect(tempRect);
+        SetRect(tempRect,80,20,90,50);   {form the right weight}
+        FrameOval(tempRect);
+    CloseRgn(barbell);                   {we're done; save in barbell}
+    FillRgn(barbell,black);              {draw it on the screen}
+    DisposeRgn(barbell);                 {dispose of the region}
+
+"
   (:method ((view simple-view) &optional dest-region)
     (unless (window-open-region (view-window view))
       (error "Cannot call ~S without calling ~S before."
-             'close-region 'open-region))
+             'close-region 'open-region)) 
     (niy close-region view dest-region)
     (prog1 (if dest-region
              (copy-region (window-open-region (view-window view)) dest-region)
@@ -897,6 +991,8 @@ DEST-REGION:    A region.
       (setf (window-open-region (view-window view)) nil)
       (pen-show view))))
 
+
+;;----------------------------------------------------------------------
 
 (defun offset-region (region h &optional v)
   "
@@ -922,22 +1018,174 @@ V:              Vertical position.  If V is NIL (the default), H is
   region)
 
 
-(defun inset-region (region h &optional v)
+(defun inset-region (region dh &optional dv)
   "
-The INSET-REGION function destructively shrinks or expands region by H
-horizontally and V vertically and returns it. If only H is given, it
+The INSET-REGION function destructively shrinks or expands region by DH
+horizontally and DV vertically and returns it. If only DH is given, it
 is interpreted as an encoded point, and its coordinates are used.
 
 REGION:         A region.
 
-H:              Horizontal position.
+DH:             Horizontal inset.
 
-V:              Vertical position.  If V is NIL (the default), H is
+DV:             Vertical inset.  If DV is NIL (the default), DH is
                 assumed to represent a point.
 "
-  (niy inset-region region h v)
-  ;; This zooms in or out the region.
+  #-(and) "
+
+InsetRgn shrinks or expands the region. All points on the region
+boundary are moved inwards a distance of dv vertically and dh
+horizontally; if dh or dv is negative, the points are moved outwards
+in that direction. InsetRgn leaves the region \"centered\" at the same
+position, but moves the outline in (for positive values of dh and dv)
+or out (for negative values of dh and dv). InsetRgn of a rectangular
+region works just like InsetRect.
+
+Note: InsetRgn temporarily uses heap space that's twice the size of
+the original region.
+
+"
+  ;; Note: this is not a scaling transform!
+  (let* ((inset (make-point dh dv))
+         (dh (point-h inset))
+         (dv (point-v inset)))
+    (unless (and (zerop dh) (zerop dv))
+      (flet ((inset-line (segs center delta)
+               (if (plusp delta)
+                   (loop
+                     ;; remove or join the center segment
+                     :with center-delta = (- center delta)
+                     :with center+delta = (+ center delta)
+                     :with dst = 0
+                     :for i :from 0 :below (length segs) :by 2
+                     :for left  = (aref segs i)
+                     :for right = (aref segs (1+ i))
+                     :do (cond
+                           ((<= right center-delta) ; left-right [center]
+                            ;; before
+                            (setf (aref segs dst) (+ left  delta))
+                            (incf dst)
+                            (setf (aref segs dst) (+ right delta))
+                            (incf dst))
+                           ((< center+delta left) ; [center] left-right
+                            ;; after
+                            (setf (aref segs dst) (- left  delta))
+                            (incf dst)
+                            (setf (aref segs dst) (- right delta))
+                            (incf dst))
+                           ((<= left center-delta)
+                            ;; left-[-right]
+                            (cond
+                              ((and (< (+ i 2) (length segs)) (<= (aref segs (+ i 2)) center+delta))
+                               ;; left0-[-right0,left1-]-right1
+                               (setf (aref segs (+ i 2)) left))
+                              ((< center+delta right)
+                               ;; left-[]-right
+                               (setf (aref segs dst) (+ left  delta))
+                               (incf dst)
+                               (setf (aref segs dst) (- right delta))
+                               (incf dst))
+                              (t ;; left-[-right]
+                               (setf (aref segs dst) (+ left  delta))
+                               (incf dst)
+                               (setf (aref segs dst) center)
+                               (incf dst))))
+                           ((< center+delta right)
+                            ;; [left-]-right
+                            (setf (aref segs dst) center)
+                            (incf dst)
+                            (setf (aref segs dst) (- right delta))
+                            (incf dst))
+                           (t
+                            ;; [left-right]
+                            #|remove it entirely|#))
+                     :finally (cond
+                                ((array-has-fill-pointer-p segs)
+                                 (setf (fill-pointer segs) dst))
+                                ((adjustable-array-p segs)
+                                 (setf segs (adjust-array segs dst :fill-pointer t)))
+                                (t
+                                 (replace (make-array dst :adjustable t :fill-pointer dst) segs))))
+                   (loop
+                     ;; keep all segments:
+                     :for i :below (length segs)
+                     :for x = (aref segs i)
+                     :do (setf (aref segs i) (if (<= x center)
+                                                 (+ x delta)
+                                                 (- x delta)))))
+               segs))
+        (declare (inline inset-line))
+        (let* ((center (rect-center (region-bounds region)))
+               (cx     (point-h center))
+               (cy     (point-v center)))
+          (if (plusp dv)
+              (loop
+                :with cy-dv = (- cy dv)
+                :with cy+dv = (+ cy dv)
+                ;; remove the center lines.
+                :with lines = (region-segments region)
+                :with dst = 0
+                :for segs :across lines
+                :do (cond
+                      ((<= (car segs) cy-dv)
+                       ;; above
+                       (incf (car segs) dv)
+                       (setf (cdr segs) (inset-line (cdr segs) cx dh))
+                       (setf (aref lines dst) segs)
+                       (incf dst))
+                      ((< cy+dv (car segs))
+                       ;; below
+                       (decf (car segs) dv)
+                       (setf (cdr segs) (inset-line (cdr segs) cx dh))
+                       (setf (aref lines dst) segs)
+                       (incf dst))))
+              (loop
+                ;; keep all lines.
+                :with lines = (region-segments region)
+                :for segs :across lines
+                :do (if (<= (car segs) cy)
+                        (progn
+                          ;; above
+                          (incf (car segs) dv)
+                          (setf (cdr segs) (inset-line (cdr segs) cx dh)))
+                        (progn
+                          ;; below
+                          (decf (car segs) dv)
+                          (setf (cdr segs) (inset-line (cdr segs) cx dh))))))))
+      (inset-rect (region-bounds region) dh dv)))
   region)
+
+
+
+#-(and) (progn
+          
+          (values
+           (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20)
+           (rect-to-list (region-bounds (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20)))
+           (inset-region (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20) -5 -7)
+           (rect-to-list (region-bounds (inset-region (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20) -5 -7))))
+
+
+          (inset-region
+           (copy-region #S(region :bounds #S(rect :topleft #@(0 0) :bottomright #@(30 9))
+                                  :segments #((0 . #(7 24))
+                                              (2 . #(0 31))
+                                              (4 . #(0 8 17 31))
+                                              (6 . #(0 31))
+                                              (7 . #(17 23))
+                                              (9 . #(17 23)))))
+           
+           -10 -10)
+          #S(region :bounds #S(rect :topleft 4294377462 :bottomright 1245224)
+                    :segments #((-10 . #(-3 34))
+                                (-8 . #(-10 41))
+                                (-6 . #(-10 -2 27 41))
+                                (16 . #(-10 41))
+                                (17 . #(27 33))
+                                (19 . #(27 33))))
+
+          )
+
 
 
 (defun intersect-region (region1 region2 &optional (dest-region (new-region)))
@@ -1027,7 +1275,7 @@ LEFT, TOP, RIGHT, BOTTOM:
                 should be coordinates representing the LEFT, TOP,
                 RIGHT, and BOTTOM of the rectangle.
 "
-  (niy rect-in-region-p region left top right bot))
+  (empty-region-p (intersect-region region (set-rect-region (new-region) left top right bot))))
 
 
 (defun equal-region-p (region1 region2)
