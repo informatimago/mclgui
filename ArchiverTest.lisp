@@ -36,7 +36,7 @@
   method:(encodeObject:(:id)object forKey:(:id)key)
   resultType:(:void)
   body:
-  (format *trace-output* "~A encodeObject:~A forKey:~S~%" (as-string self) (as-string object) (objcl:lisp-string key))
+  (format-trace "-[TestKeyedArchiver encodeObject:forKey:]" (as-string self) (as-string object) (objcl:lisp-string key))
   [super encodeObject:object forKey:key]]
 
 ;; (defclass mclgui-keyed-archiver (ns:ns-keyed-archiver)
@@ -44,14 +44,14 @@
 ;;   (:metaclass ns:+ns-object))
 ;; 
 ;; (objc:define-objc-method ((:void :encode-object (:id object) :for-key (:id key)) mclgui-keyed-archiver)
-;;   (format *trace-output* "~A encodeObject:~A forKey:~S~%" (as-string self) (as-string object) (com.informatimago.objective-cl:lisp-string key))
+;;   (format-trace "-[MclguiKeyedArchiver encodeObject:forKey:]" (as-string self) (as-string object) (com.informatimago.objective-cl:lisp-string key))
 ;;   (objc:send-super :encode-object object :for-key key))
 
 @[TestKeyedArchiver
   method:(encodeConditionalObject:(:id)object forKey:(:id)key)
   resultType:(:void)
   body:
-  (format *trace-output* "~A encodeConditionalObject:~A forKey:~S~%" (as-string self) (as-string object) (objcl:lisp-string key))
+  (format-trace "-[TestKeyedArchiver encodeConditionalObject:forKey:]" (as-string self) (as-string object) (objcl:lisp-string key))
   [super encodeConditionalObject:object forKey:key]]
 
 

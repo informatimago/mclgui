@@ -728,7 +728,7 @@ DO:             Evaluates the BODY in a lexical environment where
 ;;   resultType:(:<NSR>ect)
 ;;   body:
 ;;   (let* ((window (nswindow-window self)))
-;;     (format *trace-output* "~&window should close     ~S~%" window)
+;;     (format-trace "window should close" window)
 ;;     (window-zoom-event-handler window :inZoomIn))]
 
 @[MclguiWindow

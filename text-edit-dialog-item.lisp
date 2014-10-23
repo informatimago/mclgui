@@ -148,6 +148,7 @@
                            (when line-height (setf (te-line-height hTE) line-height))
                            (when font-ascent (setf (te-font-ascent hTE) font-ascent))
                            (with-item-rect (rect current-text)
+                             (offset-rect rect 1 2)
                              (te-set-rects rect rect hTE))
                            (TE-Auto-View t hTE)
                            (TE-Cal-Text hTE)
@@ -251,19 +252,20 @@
   (let ((my-dialog (view-window item))
         (position  (view-position item))
         (new-pos   (make-point h v)))    
-    (when my-dialog
-      (if (eql item (current-key-handler my-dialog))
-          (let ((te-handle (dialog-te-handle my-dialog)))
-            (if position
-                (let* ((diff (subtract-points new-pos position))
-                       (view (offset-rect (te-view-rect te-handle) diff))
-                       (dest (offset-rect (te-dest-rect te-handle) diff)))
-                  (te-set-rects dest view te-handle))
-                (let ((view (te-view-rect te-handle))
-                      (dest (te-dest-rect te-handle)))
-                  (setf (rect-topleft view) position
-                        (rect-bottomright dest) (add-points position (view-size item)))
-                  (te-set-rects dest view te-handle))))))))
+    (when (and my-dialog (eql item (current-key-handler my-dialog)))
+      (let ((te-handle (dialog-te-handle my-dialog)))
+        (if position
+            (let* ((diff (subtract-points new-pos position))
+                   (view (offset-rect (te-view-rect te-handle) diff))
+                   (dest (offset-rect (te-dest-rect te-handle) diff)))
+              (offset-rect dest 1 2)
+              (te-set-rects dest view te-handle))
+            (let ((view (te-view-rect te-handle))
+                  (dest (te-dest-rect te-handle)))
+              (setf (rect-topleft view) position
+                    (rect-bottomright dest) (add-points position (view-size item)))
+              (offset-rect dest 1 2)
+              (te-set-rects dest view te-handle)))))))
 
 
 (defmethod set-view-size ((item text-edit-dialog-item) h &optional v)
@@ -282,6 +284,7 @@
                     (dest (te-dest-rect hTE)))
                 (setf (rect-bottomright view) new-corner
                       (rect-bottomright dest) new-corner)
+                (offset-rect dest 1 2)
                 (te-set-rects dest view hTE))
               (invalidate-view item))))))
     new-size))
@@ -355,7 +358,7 @@
   (length (dialog-item-text item)))      
 
 
-(defmethod view-draw-contents :after ((item text-edit-dialog-item))
+(defmethod view-draw-contents #|:after|# ((item text-edit-dialog-item))
   (let ((my-dialog     (view-window item))
         (item-position (view-position item))
         (item-size     (view-size item))
@@ -369,7 +372,7 @@
             (with-fore-and-back-color (if (and colorp (not enabled-p))
                                           *gray-color* 
                                           (part-color item :text))
-                (part-color item :body)
+                (prog1 *yellow-color* (part-color item :body))
               (if (eql item (current-key-handler my-dialog))
                   (progn
                     (multiple-value-bind (ff ms) (view-font-codes my-dialog)
