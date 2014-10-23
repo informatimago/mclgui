@@ -78,10 +78,9 @@
              (format stream "~&(~40A ~{~S~^ ~})~%" method arguments)
              (force-output stream)
              t))
+      (declare (ignore out))
+      (out *mclgui-trace*)
       ;; (patchwork.builder::print-streams)
-      (or (ignore-errors (out *mclgui-trace*))
-          (ignore-errors (out *trace-output*))
-          (ignore-errors (out *standard-output*)))
       (let ((listeners (gui::active-listener-windows)))
         (when listeners
           (let ((hi::*current-buffer* (hi:hemlock-view-buffer
@@ -90,6 +89,7 @@
                                                     'gui::echo-area-view)))))
             (hemlock::end-of-buffer-command nil)))))
     (first arguments)))
+
 
 (defmacro time/stdout (&body body)
   `(let ((trace-output *trace-output*))
@@ -151,5 +151,18 @@ RETURN:         A string containing the object identity as printed by
 ;;      ,@body))
 
 
+(defun pl (seq) (map nil (function print) seq) (values))
+(defun firste (seq) (elt seq 0))
+;; (import '(mclgui.debugging::pl mclgui.debugging::firste))
+
+
+#-(and)
+(defmethod view-draw-contents ((window (eql (front-window))))
+  (with-focused-view window
+    (let ((bounds (ui::view-bounds window)))
+      (with-fore-color *yellow-color*
+        (fill-rect* (rect-left bounds) (rect-top bounds)
+                    (rect-width bounds) (rect-height bounds)))
+      (call-next-method))))
 
 ;;;; THE END ;;;;
