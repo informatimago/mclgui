@@ -232,17 +232,15 @@ NOTE:           UNWRAPPING returns the handle or compute a new NS
 
 (on-save clear-handles
   (mapcar (lambda (wrapper)
-            #+debug-wrapper (format *trace-output* "~&clearing a ~A~%" (class-name (class-of wrapper)))
+            #+debug-wrapper (format-trace "clear-handles" "clearing a " (class-name (class-of wrapper)))
             (setf (handle wrapper) nil))
-          (weak-list-list *wrapper-instances*))
-  (force-output *trace-output*))
+          (weak-list-list *wrapper-instances*)))
 
 #|on-restore|#
 (on-application-did-finish-launching reset-handles
   (dolist (wrapper (weak-list-list *wrapper-instances*))
-    #+debug-wrapper (format *trace-output* "~&unwrapping a ~A~%" (class-name (class-of wrapper)))
-    (unwrap wrapper))
-  (force-output *trace-output*))
+    #+debug-wrapper (format-trace "did-finish-launching" "unwrapping a " (class-name (class-of wrapper)))
+    (unwrap wrapper)))
 
 
 #+ccl (defmethod ccl:terminate ((self wrapper))
