@@ -255,12 +255,11 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
                  [vtrans translateXBy:(cgfloat (point-h origin)) yBy:(cgfloat (point-v origin))]
                  [vtrans concat]
                  [vtrans release]
-                 ;; (setf *trace-output* cl-user::*to*)
-                 #+debug-views (format-trace 'call-with-focused-view (list (class-name (class-of view))
-                                                                           :origin (point-to-list origin)
-                                                                           :frame (rect-to-list (view-frame view))
-                                                                           :bounds (rect-to-list (view-bounds view)))
-                                             :ctm (get-ctm window))
+                 #+debug-focused-view (format-trace 'call-with-focused-view (list (class-name (class-of view))
+                                                                                  :origin (point-to-list origin)
+                                                                                  :frame (rect-to-list (view-frame view))
+                                                                                  :bounds (rect-to-list (view-bounds view)))
+                                                    :ctm (get-ctm window))
                  (unwind-protect
                       (call-it)
                    [wtrans set]))))
@@ -753,7 +752,7 @@ RETURN:  The VIEW rectangle in the view coordinates.
 (defun erase (window bounds)
   (with-focused-view window
     (with-back-color (or (slot-value window 'back-color) *white-color*)
-      (erase-rect* (rect-left bounds) (rect-top bounds) (rect-right bounds) (rect-bottom bounds)))))
+      (erase-rect* (rect-left bounds) (rect-top bounds) (rect-width bounds) (rect-height bounds)))))
 
 (defgeneric invalidate-region (view region &optional erase-p)
   (:documentation "
@@ -784,7 +783,6 @@ ERASE-P:        A value indicating whether or not to add the
     ;; TODO: for now we invalidate the region bounds or the view-bounds.
     (let ((window (view-window view)))
       (when window
-        
         (let ((bounds (convert-rectangle
                        (if region
                            (region-bounds region)
@@ -1630,12 +1628,6 @@ RETURN:         The cursor shape to display when the mouse is at
   (when (view-instance view)
     (with-focused-view view
       (with-view-handle (viewh view)
-        #-cocoa-10.6
-        [(handle (first (view-instance view)))
-         drawInRect:[viewh bounds]
-         fromRect:(unwrap (make-nsrect :x 0 :y 0 :size (view-size view)))
-         operation:#$NSCompositeCopy
-         fraction:(cgfloat 1.0)]
         #+debug-views
         (format-trace 'new-instance :before
                       :frame (get-nsrect [viewh frame])
@@ -1643,6 +1635,12 @@ RETURN:         The cursor shape to display when the mouse is at
         #+debug-views
         (format-trace 'new-instance
                       :instance (first (view-instance view)))
+        #-cocoa-10.6
+        [(handle (first (view-instance view)))
+         drawInRect:[viewh bounds]
+         fromRect:(unwrap (make-nsrect :x 0 :y 0 :size (view-size view)))
+         operation:#$NSCompositeCopy
+         fraction:(cgfloat 1.0)]
         #+cocoa-10.6
         [(handle (first (view-instance view)))
          drawInRect:[viewh bounds]
