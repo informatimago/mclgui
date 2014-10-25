@@ -42,11 +42,12 @@
 ;;;
 
 (defclass basic-editable-text-dialog-item (key-handler-mixin dialog-item)
-  ((width-correction   :allocation :class :initform 4)
-   (text-justification :allocation :class :initform 0)
-   (draw-outline :initarg :draw-outline :initform nil)
-   (line-height :initform nil)
-   (font-ascent :initform nil)))
+  ((width-correction   :allocation :class      :initform 4)
+   (text-justification :initarg :justification :initform :natural)
+   (text-truncation    :initarg :truncation    :initform :clipping)
+   (draw-outline       :initarg :draw-outline  :initform nil)
+   (line-height        :initform nil)
+   (font-ascent        :initform nil)))
 
 ;;;---- key-handler-mixin
 
@@ -70,6 +71,7 @@
          (width (point-h pt)))
     (make-point (- (ash width 1) (ash width -1)) (point-v pt))))
 
+
 (defmethod dialog-item-disable :before ((item basic-editable-text-dialog-item))
   (let ((window (view-window item)))
     (when window
@@ -79,17 +81,19 @@
         (set-selection-range item 0 0)
         (setf (%get-current-key-handler window) nil)))))
 
+
 (defmethod view-click-event-handler ((item basic-editable-text-dialog-item) where)
   (declare (ignorable where))
-  (format-trace '(view-click-event-handler basic-editable-text-dialog-item) :where (point-to-list where) :item item)
+  #+debug-view (format-trace '(view-click-event-handler basic-editable-text-dialog-item) :where (point-to-list where) :item item)
   ;; (with-handle (texth item)
   ;;   [texth superMouseDown])
   (call-next-method)
   item)
 
+
 (defmethod view-key-event-handler ((item basic-editable-text-dialog-item) key)
   (declare (ignorable key))
-  (format-trace 'view-key-event-handler item key)
+  #+debug-view (format-trace 'view-key-event-handler item key)
   (call-next-method)
   ;; (with-handle (texth item)
   ;;   [texth superKeyDown])
@@ -97,67 +101,23 @@
 
 
 (defmethod view-draw-contents ((item basic-editable-text-dialog-item))
-  (with-focused-dialog-item (item)
-   (let* ((frame (view-frame item))
-          (x (rect-left   frame))
-          (y (rect-top    frame))
-          (w (rect-width  frame))
-          (h (rect-height frame)))
-     #+debug-views
-     (progn (format t "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
-            (format t "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
-            (format t "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
-            (finish-output))
-     ;; (with-fore-color *red-color*
-     ;;   (fill-rect* x y w h))
-     (erase-rect* x y w h)
-     (draw-text x y w h (dialog-item-text item))
-     ;; (draw-rect* (1- x) (1- y) (+ 2 w) (+ 2 h))
-     ))
-  
-  ;; We shouldn't have to do anything really
-  #-(and)
   (when (installed-item-p item)
-    (without-interrupts
-     (with-focused-view (view-container item)
-       (let ((position           (view-position item))
-             (size               (view-size item))
-             (text-justification (slot-value item 'text-justification))
-             (truncation         (slot-value item 'text-truncation))
-             (enabled-p          (dialog-item-enabled-p item))
-             (compress-p         (compress-text item))
-             (old-state          nil))
-         (declare (ignorable position size text-justification truncation enabled-p compress-p old-state))
-         (let* ((rect (make-rect position (add-points position size)))
-                (theme-back nil ;; (theme-background-p item)
-                            )
-                (back (or (part-color item :body)
-                          (when (not theme-back)
-                            (slot-value (view-window item) 'back-color))))                          
-                (fore (if enabled-p
-                        (part-color item :text)
+    (with-focused-dialog-item (item)
+      (let* ((frame (view-frame item))
+             (x     (rect-left   frame))
+             (y     (rect-top    frame))
+             (w     (rect-width  frame))
+             (h     (rect-height frame))
+             (back  (or (part-color item :body) (get-back-color (view-window item))))
+             (fore  (if (dialog-item-enabled-p item)
+                        (or (part-color item :text) (get-fore-color (view-window item)))
                         *gray-color*)))
-           ;; (when (and (not back) theme-back) ; (not (dialog-item-enabled-p item)))  ;; sometimes background goes white??
-           ;; (rlet ((old-statep :ptr))
-           ;;   (#_getthemedrawingstate old-statep)
-           ;;   (setq old-state (%get-ptr old-statep)))
-           ;; (let* ((wptr (wptr item))
-           ;;        (depth (current-pixel-depth)))
-           ;;   (#_setthemebackground  #$kThemeBrushModelessDialogBackgroundActive depth (wptr-color-p wptr)))
-           ;; )
-           (with-back-color back
-             (multiple-value-bind (ff ms)(view-font-codes item)
-               (when t ;; or when back?
-                 (erase-rect* item
-                             (point-h position) (point-v position)
-                             (point-h size) (point-v size)))  
-               (draw-string-in-rect (dialog-item-text item) rect 
-                                    :justification text-justification
-                                    :compress-p compress-p
-                                    :truncation truncation
-                                    :ff ff :ms ms :color fore)))
-           ;; (if old-state (#_setthemedrawingstate old-state t))
-           ))))))
+        (with-fore-and-back-color fore back
+          (erase-rect* x y w h)
+          (draw-text x y w h (dialog-item-text item)
+                     :truncation    (slot-value item 'text-truncation)
+                     :justification (slot-value item 'text-justification)
+                     :compress-p    (compress-text item)))))))
 
 
 (defmethod frame-key-handler ((item basic-editable-text-dialog-item))
@@ -175,6 +135,7 @@
               (inset-rect rect -1 -1)
               (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
               (draw-rect*  (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))))))))
+
 
 (defmethod view-draw-contents :after ((item basic-editable-text-dialog-item))
   (let ((pos    (view-position item))
