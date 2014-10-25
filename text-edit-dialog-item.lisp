@@ -241,30 +241,33 @@
                                        &optional ff-mask ms-mask)
   (declare (ignorable ff ms ff-mask ms-mask))
   #+debug-views (format-trace '(set-view-font-code :after text-edit-dialog-item)
-                             :ff-ms (list ff ms)
-                             :view-ff-ms (multiple-value-list (view-font-codes item)))
+                              :ff-ms (list ff ms)
+                              :view-ff-ms (multiple-value-list (view-font-codes item)))
   (when (view-window item)
     (multiple-value-bind (ff ms) (view-font-codes item)
       (te-set-font-info ff ms (dialog-te-handle (view-window item))))))
 
 
 (defmethod set-view-position :before ((item text-edit-dialog-item) h &optional v)
-  (let ((my-dialog (view-window item))
-        (position  (view-position item))
-        (new-pos   (make-point h v)))    
+  (let ((my-dialog (view-window item)))    
     (when (and my-dialog (eql item (current-key-handler my-dialog)))
-      (let ((te-handle (dialog-te-handle my-dialog)))
-        (if position
-            (let* ((diff (subtract-points new-pos position))
+      (let ((te-handle (dialog-te-handle my-dialog))
+            (old-pos   (view-position item))
+            (new-pos   (make-point h v)))
+        (if old-pos
+            (let* ((diff (subtract-points new-pos old-pos))
                    (view (offset-rect (te-view-rect te-handle) diff))
                    (dest (offset-rect (te-dest-rect te-handle) diff)))
-              (offset-rect dest 1 2)
+              ;; (offset-rect dest 1 2)
               (te-set-rects dest view te-handle))
             (let ((view (te-view-rect te-handle))
                   (dest (te-dest-rect te-handle)))
-              (setf (rect-topleft view) position
-                    (rect-bottomright dest) (add-points position (view-size item)))
-              (offset-rect dest 1 2)
+              (setf
+               ;; ???
+               (rect-topleft view) new-pos
+               ;; ???
+               (rect-bottomright dest) (add-points new-pos (view-size item)))
+              ;; (offset-rect dest 1 2)
               (te-set-rects dest view te-handle)))))))
 
 
@@ -346,6 +349,7 @@
       (let ((hTE (get-*te-handle*)))
         (setf (dialog-item-handle item) (te-get-text hTE))))))
 
+
 (defmethod dialog-item-text ((item text-edit-dialog-item))
   (update-dialog-item-handle item)
   (let ((handle (dialog-item-handle item)))
@@ -353,33 +357,29 @@
         handle
         (slot-value item 'dialog-item-text))))
 
-(defgeneric dialog-item-text-length (item))
-(defmethod dialog-item-text-length ((item text-edit-dialog-item))
-  (length (dialog-item-text item)))      
 
-
-(defmethod view-draw-contents #|:after|# ((item text-edit-dialog-item))
-  (let ((my-dialog     (view-window item))
-        (item-position (view-position item))
-        (item-size     (view-size item))
-        (enabled-p     (dialog-item-enabled-p item))
-        (colorp        (color-or-gray-p item)))
-    (when (installed-item-p item)
+(defmethod view-draw-contents ((item text-edit-dialog-item))
+  (when (installed-item-p item)
+    (let* ((enabled-p  (dialog-item-enabled-p item))
+           (colorp     (color-or-gray-p       item))
+           (my-dialog  (view-window           item))
+           (te         (dialog-te-handle      my-dialog))
+           (rect       (view-frame item)))
       (with-slot-values (dialog-item-handle text-justification) item
         (without-interrupts
-          (let ((rect (make-rect item-position (add-points item-position item-size)))
-                (te   (dialog-te-handle my-dialog)))
+          (with-focused-view (view-container item)
             (with-fore-and-back-color (if (and colorp (not enabled-p))
                                           *gray-color* 
                                           (part-color item :text))
-                (prog1 *yellow-color* (part-color item :body))
+                #|PJB-DEBUG|# (prog1 *yellow-color* (part-color item :body))
               (if (eql item (current-key-handler my-dialog))
                   (progn
                     (multiple-value-bind (ff ms) (view-font-codes my-dialog)
                       (te-set-font-info ff ms te))
-                    (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
+                    ;; (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
                     (te-update rect te))
-                  (Text-Box dialog-item-handle rect text-justification)))))))))
+                  (Text-Box dialog-item-handle rect text-justification))
+              (validate-corners item (rect-topleft rect) (rect-bottomright rect)))))))))
 
 
 (defmethod view-key-event-handler ((item text-edit-dialog-item) char)

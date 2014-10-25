@@ -884,7 +884,7 @@ Compare the base and new display states, and generates a list of display changes
 DO:    Draws the line number LINO, according to the current TeRec configuration.
 NOTE:  The focus should be already established.
 "
-  ;; (format-trace 'te-redraw-line :lino lino)
+  ;; #+debug-text (format-trace 'te-redraw-line :lino lino)
   (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
     (erase-rect* (rect-left line-rect) (rect-top line-rect) (rect-width line-rect) (rect-height line-rect))
     (draw-string x base line))
@@ -896,7 +896,7 @@ NOTE:  The focus should be already established.
 DO:    Draws the line number LINO, according to the current TeRec configuration.
 NOTE:  The focus should be already established.
 "
-  ;; (format-trace 'te-draw-line :lino lino)
+  #+debug-text (format-trace 'te-draw-line :lino lino)
   (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
     (declare (ignore line-rect))
     (draw-string x base line))
@@ -916,12 +916,15 @@ RETURN: TE
           (with-clip-rect-intersect clip-rect
             (loop
               :for update = (pop updates)
-              ;; :do (format-trace 'te-update-view :-> update)
-              :do (if (atom update)
+              :do #+debug-text (format-trace 'te-update-view :-> update)
+                  (if (atom update)
                       (ecase update
                         (:display
                          (loop :for lino :below (te-nlines te)
-                               :do (te-draw-line lino te)))
+                               :do (te-draw-line lino te))
+                         (validate-corners (te-in-port te)
+                                           (rect-topleft (te-%view-rect te))
+                                           (rect-bottomright (te-%view-rect te))))
                         (:selection
                          (assert (<= 0 (te-sel-start te) (te-sel-end te) (te-length te)))
                          (if (te-has-caret te)
@@ -964,7 +967,7 @@ RETURN: TE
                (invalidate-corners (te-in-port ,vte)
                                    (rect-topleft (te-%view-rect ,vte))
                                    (rect-bottomright (te-%view-rect ,vte))
-                                   #|already erased:|#nil))
+                                   #|already erased:|#t));;DEBUG-PJB
              (te-update-view (te-%view-rect ,vte) ,vte)))))))
 
 
@@ -980,7 +983,7 @@ RETURN:  the rectangle where a caret at CHARPOS would be drawn; the lino where t
   (let* ((lino (te-line-at charpos te)))
     (multiple-value-bind (x base line-rect line) (te-line-coordinates lino te)
       (declare (ignore base))
-      ;; (format-trace 'te-compute-caret-rect (list (rect-left line-rect) (rect-top line-rect) (rect-right line-rect) (rect-bottom line-rect)))
+      ;; #+debug-text (format-trace 'te-compute-caret-rect (list (rect-left line-rect) (rect-top line-rect) (rect-right line-rect) (rect-bottom line-rect)))
       (let ((caret-x (+ x (te-string-width line te 0 (- charpos (te-line-start lino te))))))
         (values (make-rect (1- caret-x) (rect-top line-rect) (1+ caret-x) (rect-bottom line-rect))
                 lino)))))
@@ -1012,7 +1015,7 @@ RETURN:  the rectangle where a caret at CHARPOS would be drawn; the lino where t
 DO:     Performs a caret transition when times has come.
 "
   (when (<= (te-caret-time te) tick)
-    ;; (format-trace 'te-caret-transition :tick tick :time (te-caret-time te) :has-caret  (te-has-caret te))
+    ;; #+debug-text (format-trace 'te-caret-transition :tick tick :time (te-caret-time te) :has-caret  (te-has-caret te))
     (when (te-has-caret te)
       (let ((period (round *caret-time* 2)))
         (setf (te-caret-time  te) (* (1+ (truncate tick period)) period)
@@ -1045,10 +1048,10 @@ RETURN: new-start, new-end
 
 (defun te-default-high-hook (rects start-lino end-lino te)
   "The default selection highlight hook function."
-  ;; (format-trace 'te-default-high-hook :start-lino start-lino :end-lino end-lino :rects (mapcar (function rect-to-list) rects))
+  #+debug-text (format-trace 'te-default-high-hook :start-lino start-lino :end-lino end-lino :rects (mapcar (function rect-to-list) rects))
   ;; TODO: add a visibility test.
   (flet ((highlight (rect start-lino end-lino)
-           (format-trace 'highlight :rect (rect-to-list rect) :start start-lino :end end-lino)
+           #+debug-text (format-trace 'highlight :rect (rect-to-list rect) :start start-lino :end end-lino)
            (with-clip-rect-intersect rect
              (with-fore-color (if (te-is-active te)
                                   *selection-color-active*
@@ -1198,6 +1201,7 @@ VIEW-RECT:  A non-empty rectangle.
 RETURN:     TE
 NOTE:       The rectangles are given in the *current-view* coordinates, and are converted to the window coordinates.
 "
+  ;; #|DEBUG-PJB|#(print-backtrace *standard-output*)
   (assert (not (empty-rect-p dest-rect)) (dest-rect) "Destination rectangle must not be empty.")
   (assert (not (empty-rect-p view-rect)) (view-rect) "View rectangle must not be empty.")
   (with-mutex *te-mutex*
@@ -1211,11 +1215,11 @@ NOTE:       The rectangles are given in the *current-view* coordinates, and are 
     (when (< (rect-width (te-%dest-rect te)) 20)
       (setf (rect-width (te-%dest-rect te)) 20))
     (setf (rect-bottom (te-%dest-rect te)) 16000)
-    (format-trace 'te-set-rects :rewrap  (te-rewrap te)
-                                :new-dest-rect (rect-to-list dest-rect)
-                                :dest-rect (rect-to-list (te-%dest-rect te))
-                                :new-view-rect (rect-to-list view-rect)
-                                :view-rect (rect-to-list (te-%view-rect te)))
+    #+debug-text (format-trace 'te-set-rects :rewrap  (te-rewrap te)
+                                             :new-dest-rect (rect-to-list dest-rect)
+                                             :dest-rect (rect-to-list (te-%dest-rect te))
+                                             :new-view-rect (rect-to-list view-rect)
+                                             :view-rect (rect-to-list (te-%view-rect te)))
     (te-calculate-text te))
   te)
 
@@ -1393,8 +1397,7 @@ RETURN: The start and end positions of the word that contains CHARPOS.
       ((<= (length line) start) ; charpos is on the newline.
        (values charpos charpos))
       (t
-       (format-trace 'te-word-at :charpos charpos :lino :lino
-                                 :start start :line line)
+       #+debug-text (format-trace 'te-word-at :charpos charpos :lino :lino :start start :line line)
        (loop
          :until (or (minusp start) (funcall word-break line start))
          :do (decf start)
@@ -1402,7 +1405,7 @@ RETURN: The start and end positions of the word that contains CHARPOS.
        (loop
          :until (or (<= (length line) end) (funcall word-break line end))
          :do (incf end))
-       (format-trace 'te-word-at :word (nsubseq line start end))
+       #+debug-text (format-trace 'te-word-at :word (nsubseq line start end))
        (values (+ start line-start) (+ end line-start))))))
 
 
@@ -1423,7 +1426,7 @@ RETURN: The start and end positions of the word that contains CHARPOS.
               :until (funcall click-loop)
               :do (let ((pt (get-mouse)))
                     (multiple-value-bind (new-charpos new-lino) (%te-coordinates-at-point pt te)
-                      (format-trace 'click-loop :pt (point-to-list pt) :new-charpos new-charpos)
+                      #+debug-text (format-trace 'click-loop :pt (point-to-list pt) :new-charpos new-charpos)
                       (when (/= current-charpos new-charpos)
                         (setf current-charpos new-charpos
                               current-lino new-lino)
@@ -1571,6 +1574,7 @@ that the window containing the edit record has become active.
     (with-te-update-display te
       (setf (te-active te) 1
             (te-caret-time te) (tick-count))
+      (push :display   (te-updates te))
       (push :selection (te-updates te)))))
 
 
@@ -1587,6 +1591,7 @@ that the window containing the edit record has become inactive.
   (with-mutex *te-mutex*
     (with-te-update-display te
       (setf (te-active te) 0)
+      (push :display   (te-updates te))
       (push :selection (te-updates te)))))
 
 
@@ -1648,7 +1653,7 @@ the Shift key.
         (mods (if *current-event*
                   (event-modifiers *current-event*)
                   0)))
-    (format-trace 'te-key :modifiers mods :code code :char char)
+    #+debug-text (format-trace 'te-key :modifiers mods :code code :char char)
     (with-mutex *te-mutex*
       (te-invariant te)
       (with-te-update-display te
@@ -1666,7 +1671,7 @@ DO:     Removes the selection range from the text specified by TE and
         the selection range is an insertion point, the scrap is
         emptied.
 "
-  (format-trace 'te-cut)
+  #+debug-text (format-trace 'te-cut)
   (with-mutex *te-mutex*
     (te-invariant te)
     (with-te-update-display te
@@ -1683,7 +1688,7 @@ DO:     Copies the selection range from the text specified by TE into
         deleted.  The selection range is not deleted.  If the
         selection range is an insertion point, the scrap is emptied.
 "
-  (format-trace 'te-copy)
+  #+debug-text (format-trace 'te-copy)
   (with-mutex *te-mutex*
     (te-invariant te)
     (%te-copy (te-sel-start te) (te-sel-end te) te)))
@@ -1698,7 +1703,7 @@ DO:     Replaces the selection range in the text specified by TE with
         deleted. If the selection range is an insertion point,
         TE-PASTE just inserts the scrap there.
 "
-  (format-trace 'te-paste)
+  #+debug-text (format-trace 'te-paste)
   (with-mutex *te-mutex*
     (te-invariant te)
     (with-te-update-display te
@@ -1715,7 +1720,7 @@ DO:     removes the selection range from the text specified by TE,
         range to the scrap.  If the selection range is an insertion
         point, nothing happens.
 "
-  (format-trace 'te-delete)
+  #+debug-text (format-trace 'te-delete)
   (with-mutex *te-mutex*
     (te-invariant te)
     (with-te-update-display te
@@ -2055,11 +2060,11 @@ RETURN: The position after the last character inserted.
   (assert (<= 0 charpos (te-length te)))
   (te-invariant te)
   (te-split-paragraph-at charpos te)
-  (format-trace '%te-insert 1) (te-invariant te)
+  #+debug-text (format-trace '%te-insert 1) #+debug-text (te-invariant te)
   (let* ((paragraphs (split-sequence #\Newline text))
          (nparas     (length paragraphs))
          (plen       (length (first paragraphs))))
-    (format-trace '%te-insert :text text :charpos charpos)
+    #+debug-text (format-trace '%te-insert :text text :charpos charpos)
     (when (<= (te-gap-size te) nparas)
       (te-adjust-gap nparas te))
     (let* ((after   (te-current-paragraph-after-point   te)) ; keep after the insertion point
@@ -2097,10 +2102,10 @@ RETURN: The position after the last character inserted.
             :for parapos = (te-startpos-of-paragraph parno te) :then (+ parapos plen 1)
             :do (setf (tep-startpos para) parapos)
             :finally (setf (te-length te) (1- parapos)))
-      (format-trace '%te-insert 2) (te-invariant te)
+      #+debug-text (format-trace '%te-insert 2) #+debug-text (te-invariant te)
       (setf (te-line-starts-dirty te) t)
       (te-calculate-text te) ; TODO: do it more efficiently!
-      (format-trace '%te-insert 3) (te-invariant te)
+      #+debug-text (format-trace '%te-insert 3) #+debug-text  (te-invariant te)
       npos)))
 
 
@@ -2208,6 +2213,7 @@ RETURN: The position after the last character inserted.
   (let* ((start (te-sel-current te))
          (lino  (te-line-at start te))
          (end   (te-line-end lino te)))
+    #+debug-text
     (format-trace 'te-kill-line-command
                   :start start :end end :lino lino
                   :length (te-length te)
@@ -2307,8 +2313,7 @@ DO:     Compute the new selection points from the current ones and the
               (t
                (values start end current)))
             (values new-point new-point new-point))
-      (format-trace 'te-change-selection :extend extend :new-point new-point
-                                         :start new-start :end new-end :current new-current)
+      #+debug-text (format-trace 'te-change-selection :extend extend :new-point new-point :start new-start :end new-end :current new-current)
       (te-set-select new-start new-end te)
       (setf (te-sel-current te) new-current)))
   te)
@@ -2434,7 +2439,7 @@ DO:     Compute the new selection points from the current ones and the
   (values (truncate (- (rect-top (te-%view-rect te)) (rect-top (te-%dest-rect te))) (te-line-height te))))
 
 (defun te-bottom-line (te)
-  (1- (truncate
+  (1- (ceiling
        (- (rect-bottom (te-%view-rect te))
           (rect-top    (te-%dest-rect te)))
        (te-line-height te))))
@@ -2595,7 +2600,7 @@ DO:     Compute the new selection points from the current ones and the
       (let ((bounds    (view-bounds window))
             (dest-rect (te-dest-rect te))
             (top-char  (te-line-start  (te-top-line te) te)))
-        (format-trace 'window-size-part :bounds (rect-to-list bounds))
+        #+debug-text (format-trace 'window-size-part :bounds (rect-to-list bounds))
         (setf (rect-width dest-rect) (rect-width bounds))
         (te-set-rects dest-rect bounds te)
         (te-set-top-line (te-line-at top-char te) te)
