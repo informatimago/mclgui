@@ -43,9 +43,6 @@
 
 (defclass basic-editable-text-dialog-item (key-handler-mixin dialog-item)
   ((width-correction   :allocation :class      :initform 4)
-   (text-justification :initarg :justification :initform :natural)
-   (text-truncation    :initarg :truncation    :initform :clipping)
-   (draw-outline       :initarg :draw-outline  :initform nil)
    (line-height        :initform nil)
    (font-ascent        :initform nil)))
 
@@ -101,6 +98,8 @@
 
 
 (defmethod view-draw-contents ((item basic-editable-text-dialog-item))
+  (call-next-method)
+  #-(and)
   (when (installed-item-p item)
     (with-focused-dialog-item (item)
       (let* ((frame (view-frame item))
@@ -115,9 +114,9 @@
         (with-fore-and-back-color fore back
           (erase-rect* x y w h)
           (draw-text x y w h (dialog-item-text item)
-                     :truncation    (slot-value item 'text-truncation)
-                     :justification (slot-value item 'text-justification)
-                     :compress-p    (compress-text item)))))))
+                     (slot-value item 'text-truncation)
+                     (slot-value item 'text-justification)
+                     (compress-text item)))))))
 
 
 (defmethod frame-key-handler ((item basic-editable-text-dialog-item))

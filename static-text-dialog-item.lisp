@@ -40,15 +40,7 @@
 
 
 (defclass static-text-dialog-item (dialog-item)
-  ((width-correction   :allocation :class
-                       :initform    4)
-   (text-justification :initform   nil
-                       :initarg    :text-justification)
-   (text-truncation    :initform   nil
-                       :initarg    :text-truncation)
-   (compress-text      :initform   nil
-                       :initarg    :compress-text
-                       :reader     compress-text))
+  ((width-correction :allocation :class :initform 4))
   (:default-initargs :dialog-item-text "Untitled"))
 
 
@@ -62,61 +54,6 @@
       (multiple-value-bind (string-width nlines) (font-codes-string-width-with-eol text ff ms)
         (make-point (+ (dialog-item-width-correction dialog-item) string-width)
                     (* nlines (font-codes-line-height ff ms)))))))
-
-
-(defmethod set-dialog-item-text :after ((item static-text-dialog-item) text)
-  (declare (ignore text))
-  (invalidate-view item t))
-
-
-(defmethod view-draw-contents ((item static-text-dialog-item))
-  (call-next-method))
-
-  
-  ;; ;; We shouldn't have to do anything really
-  ;; #-(and)
-  ;; (when (installed-item-p item)
-  ;;   (without-interrupts
-  ;;    (with-focused-view (view-container item)
-  ;;      (let ((position           (view-position item))
-  ;;            (size               (view-size item))
-  ;;            (text-justification (slot-value item 'text-justification))
-  ;;            (truncation         (slot-value item 'text-truncation))
-  ;;            (enabled-p          (dialog-item-enabled-p item))
-  ;;            (compress-p         (compress-text item))
-  ;;            (old-state          nil))
-  ;;        (declare (ignorable position size text-justification truncation enabled-p compress-p old-state))
-  ;;        (let* ((rect (make-rect position (add-points position size)))
-  ;;               (theme-back nil ;; (theme-background-p item)
-  ;;                           )
-  ;;               (back (or (part-color item :body)
-  ;;                         (when (not theme-back)
-  ;;                           (slot-value (view-window item) 'back-color))))                          
-  ;;               (fore (if enabled-p
-  ;;                       (part-color item :text)
-  ;;                       *gray-color*)))
-  ;;          ;; (when (and (not back) theme-back) ; (not (dialog-item-enabled-p item)))  ;; sometimes background goes white??
-  ;;          ;; (rlet ((old-statep :ptr))
-  ;;          ;;   (#_getthemedrawingstate old-statep)
-  ;;          ;;   (setq old-state (%get-ptr old-statep)))
-  ;;          ;; (let* ((wptr (wptr item))
-  ;;          ;;        (depth (current-pixel-depth)))
-  ;;          ;;   (#_setthemebackground  #$kThemeBrushModelessDialogBackgroundActive depth (wptr-color-p wptr)))
-  ;;          ;; )
-  ;;          (with-back-color back
-  ;;            (multiple-value-bind (ff ms)(view-font-codes item)
-  ;;              (when t ;; or when back?
-  ;;                (erase-rect* item
-  ;;                            (point-h position) (point-v position)
-  ;;                            (point-h size) (point-v size)))  
-  ;;              (draw-string-in-rect (dialog-item-text item) rect 
-  ;;                                   :justification text-justification
-  ;;                                   :compress-p compress-p
-  ;;                                   :truncation truncation
-  ;;                                   :ff ff :ms ms :color fore)))
-  ;;          ;; (if old-state (#_setthemedrawingstate old-state t))
-  ;;          )))))
-
 
 
 ;;;; THE END ;;;;
