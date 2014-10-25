@@ -49,6 +49,7 @@
   "Initialize the MCL GUI.
 Must be called on the main thread."
   (unless *initialized*
+    (initialize-event-environment-bindings)
     (initialize/process)
     (initialize/paragraph-style)
     (initialize/screen)
