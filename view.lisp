@@ -1588,6 +1588,7 @@ RETURN:         The cursor shape to display when the mouse is at
 
 
 (defun focused-screenshot (view)
+  #|DEBUG-PJB|#(print-backtrace *standard-output*)
   (with-focused-view (view-window view)
     (with-view-handle (viewh view)
       (let ((image [[[NSImage alloc] initWithSize:(unwrap (size-to-nssize (view-size view)))] autorelease])
@@ -1625,6 +1626,7 @@ RETURN:         The cursor shape to display when the mouse is at
 
 
 (defun new-instance (view)
+  ;; #|DEBUG-PJB|#(print-backtrace *standard-output*)
   (when (view-instance view)
     (with-focused-view view
       (with-view-handle (viewh view)

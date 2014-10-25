@@ -1203,24 +1203,24 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 
 ;; TODO: use get-fore-color when drawing in the window…
 (defmethod set-fore-color ((window window) color)
-  (setf (slot-value window 'fore-color) color))
+  (setf (slot-value window 'fore-color) color)
+  (%set-fore-color (or color *foreground-color*)))
 
 
 (defmethod set-back-color ((window window) color &optional (redisplay-p t))
   (setf (slot-value window 'back-color) color)
   (when *color-available*
-    (with-handle (winh window)
-      [winh setBackgroundColor:(unwrap color)])
+    (%set-back-color window (or color *background-color*))
     (when redisplay-p
       (invalidate-view window t))))
 
 
 (defmethod get-fore-color ((window window))
-  (slot-value window 'fore-color))
+  (or (slot-value window 'fore-color) *foreground-color*))
 
 
 (defmethod get-back-color ((window window))
-  (slot-value window 'back-color))
+  (or (slot-value window 'back-color) *background-color*))
 
 
 (defmethod view-draw-contents ((window window))
