@@ -58,15 +58,15 @@
                (:file "packages"
                 :depends-on ("cocoa"))
 
-               (:file "debug"
+               (:file "mutex"
                 :depends-on ("packages"))
+
+               (:file "debug"
+                :depends-on ("packages" "mutex"))
 
                (:file "macros"
                 :depends-on ("packages" "debug"))
 
-               (:file "mutex"
-                :depends-on ("packages"))
-               
                (:file "mailbox"
                 :depends-on ("packages"))
 
@@ -101,8 +101,12 @@
                
                (:file "graphics"
                 :depends-on ("packages"
-                             "macros" "variables" "point" "color" "font"
+                             "macros" "variables" "point" "font"
                              "paragraph-style"))
+
+               (:file "graphics-low"
+                :depends-on ("packages"
+                             "macros" "variables" "point"))
                
                (:file "paragraph-style"
                       :depends-on ("packages"
@@ -237,7 +241,7 @@
 
                (:file "text-edit-dialog-item"
                 :depends-on ("packages" 
-                             "macros" "variables" "point" "system"
+                             "macros" "variables" "point" "system" 
                              "view-classes" "view" "window" "event"
                              "dialog-item" "view-event" "key-handler-mixin"
                              "basic-editable-text-dialog-item"
@@ -327,10 +331,12 @@
                ;; Chapter 6: Color
 
                (:file "color"
-                :depends-on ("packages" "wrapper"))
+                :depends-on ("packages"
+                             "wrapper" "graphics-low"))
 
                (:file "color-dialog"
-                :depends-on ("packages" "wrapper" "color" "dialog"))
+                :depends-on ("packages"
+                             "wrapper" "color" "dialog"))
 
                ;; Chapter 8: File System Interface
 
@@ -376,9 +382,10 @@
                ;; Chapter 11: Apple Events
 
                (:file "application"
-                :depends-on ("packages" "process"
-                                       "macros" "variables" "wrapper"
-                                       "objc-classes"))
+                :depends-on ("packages"
+                             "process"
+                             "macros" "variables" "wrapper"
+                             "objc-classes"))
                
                ;; Appendix D: Quickdraw Graphics:
 
@@ -386,26 +393,31 @@
                 :depends-on ("packages" "point"))
 
                (:file "region"
-                :depends-on ("packages" "macros" "variables" "point" "rect"
-                                       "view-classes"))
+                :depends-on ("packages"
+                             "macros" "variables" "point" "rect"
+                             "graphics"
+                             "view-classes"))
 
                (:file "pen"
                 :depends-on ("packages"
                              "macros" "variables" "point" 
                              "objc-classes" "view-classes"
                              "pattern"
-                             "rect"))
+                             "rect" "graphics"))
 
                (:file "quickdraw"
-                :depends-on ("packages" "macros" "variables" "point"
-                                       "objc-classes" "view-classes"
-                                       "pattern" "rect" "region" "pen"))
+                :depends-on ("packages"
+                             "macros" "variables" "point"
+                             "objc-classes" "view-classes"
+                             "pattern" "rect" "region" "pen"))
 
                ;; Managers:
                
                (:file "text-edit"
                 :depends-on ("packages"
-                             "window" "pen" "font" "point" "rect" "region" "color" "scrap"
+                             "mutex"
+                             "window" "pen" "font" "point" "rect"
+                             "region" "color" "scrap"
                              "ns-keys"))
 
                (:file "ns-keys"

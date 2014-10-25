@@ -41,16 +41,6 @@
 (objcl:enable-objcl-reader-macros)
 (enable-sharp-at-reader-macro)
 
-
-(defun draw-yellow-box ()
-  (with-fore-color *yellow-color*
-    (let* ((r (if (and *current-view* (view-window *current-view*))
-                  (convert-rectangle (view-bounds *current-view*)
-                                     *current-view* (view-window *current-view*))
-                  (view-bounds *current-view*))))
-      (fill-rect* (rect-left r) (rect-top r) (rect-width r) (rect-height r)))))
-
-
 (defun clip-rect* (x y w h)
   [NSBezierPath clipRect: (nsrect x y w h)])
 
@@ -90,8 +80,6 @@
 (defun draw-text (x y width height text
                   &optional (truncation :clipping) (justification :natural) (compress-p nil))
   ;; (format-trace "draw-text" (list x y width height) text truncation justification compress-p)
-  ;; (print-backtrace *mclgui-trace*)
-  #-(and) (draw-yellow-box)
   (destructuring-bind (ff ms) *current-font-codes*
     (multiple-value-bind (descriptor mode) (font-descriptor-from-codes ff ms)
       (declare (ignore mode)) ; TODO: manage mode (:srcOr …)
@@ -139,20 +127,20 @@
               (rotatef x1 x2)
               (rotatef y1 y2))
             (if (< y1 y2)
-              (progn
-                [path moveToPoint:(ns:make-ns-point x1 y1)]
-                [path lineToPoint:(ns:make-ns-point (+ x1 sx) y1)]
-                [path lineToPoint:(ns:make-ns-point (+ x2 sx) y2)]
-                [path lineToPoint:(ns:make-ns-point (+ x2 sx) (+ y2 sy))]
-                [path lineToPoint:(ns:make-ns-point x2 (+ y2 sy))]
-                [path lineToPoint:(ns:make-ns-point x1 (+ y1 sy))])
-              (progn
-                [path moveToPoint:(ns:make-ns-point x1 y1)]
-                [path lineToPoint:(ns:make-ns-point x2 y2)]
-                [path lineToPoint:(ns:make-ns-point (+ x2 sx) y2)]
-                [path lineToPoint:(ns:make-ns-point (+ x2 sx) (+ y2 sy))]
-                [path lineToPoint:(ns:make-ns-point (+ x1 sx) (+ y1 sy))]
-                [path lineToPoint:(ns:make-ns-point x1 (+ y1 sy))]))
+                (progn
+                  [path moveToPoint:(ns:make-ns-point x1 y1)]
+                  [path lineToPoint:(ns:make-ns-point (+ x1 sx) y1)]
+                  [path lineToPoint:(ns:make-ns-point (+ x2 sx) y2)]
+                  [path lineToPoint:(ns:make-ns-point (+ x2 sx) (+ y2 sy))]
+                  [path lineToPoint:(ns:make-ns-point x2 (+ y2 sy))]
+                  [path lineToPoint:(ns:make-ns-point x1 (+ y1 sy))])
+                (progn
+                  [path moveToPoint:(ns:make-ns-point x1 y1)]
+                  [path lineToPoint:(ns:make-ns-point x2 y2)]
+                  [path lineToPoint:(ns:make-ns-point (+ x2 sx) y2)]
+                  [path lineToPoint:(ns:make-ns-point (+ x2 sx) (+ y2 sy))]
+                  [path lineToPoint:(ns:make-ns-point (+ x1 sx) (+ y1 sy))]
+                  [path lineToPoint:(ns:make-ns-point x1 (+ y1 sy))]))
             [path closePath]
             [path fill]))))))
 
@@ -169,25 +157,25 @@
                (size (pen-size pen)))
           (if (and nil (= #@(1 1) size)
                    (eql *black-pattern* (pen-state-pattern pen)))
-            (#_NSFrameRect (ns:make-ns-rect x y w h))
-            (let ((path [NSBezierPath bezierPath])
-                  (sx (point-h size))
-                  (sy (point-v size)))
-              [path setLineCapStyle:#$NSSquareLineCapStyle]
-              ;; external border
-              [path moveToPoint:(ns:make-ns-point x y)]
-              [path lineToPoint:(ns:make-ns-point (+ x w) y)]
-              [path lineToPoint:(ns:make-ns-point (+ x w) (+ y h))]
-              [path lineToPoint:(ns:make-ns-point x (+ y h))]
-              [path lineToPoint:(ns:make-ns-point x y)]
-              ;; internal border
-              [path moveToPoint:(ns:make-ns-point (+ x sx)       (+ y sy))]
-              [path lineToPoint:(ns:make-ns-point (+ x sx)       (- (+ y h) sy))]
-              [path lineToPoint:(ns:make-ns-point (- (+ x w) sx) (- (+ y h) sy))]
-              [path lineToPoint:(ns:make-ns-point (- (+ x w) sx) (+ y sy))]
-              [path lineToPoint:(ns:make-ns-point (+ x sx)       (+ y sy))]
-              [path closePath]
-              [path fill])))))))
+              (#_NSFrameRect (ns:make-ns-rect x y w h))
+              (let ((path [NSBezierPath bezierPath])
+                    (sx (point-h size))
+                    (sy (point-v size)))
+                [path setLineCapStyle:#$NSSquareLineCapStyle]
+                ;; external border
+                [path moveToPoint:(ns:make-ns-point x y)]
+                [path lineToPoint:(ns:make-ns-point (+ x w) y)]
+                [path lineToPoint:(ns:make-ns-point (+ x w) (+ y h))]
+                [path lineToPoint:(ns:make-ns-point x (+ y h))]
+                [path lineToPoint:(ns:make-ns-point x y)]
+                ;; internal border
+                [path moveToPoint:(ns:make-ns-point (+ x sx)       (+ y sy))]
+                [path lineToPoint:(ns:make-ns-point (+ x sx)       (- (+ y h) sy))]
+                [path lineToPoint:(ns:make-ns-point (- (+ x w) sx) (- (+ y h) sy))]
+                [path lineToPoint:(ns:make-ns-point (- (+ x w) sx) (+ y sy))]
+                [path lineToPoint:(ns:make-ns-point (+ x sx)       (+ y sy))]
+                [path closePath]
+                [path fill])))))))
 
 
 #-(and)(loop
@@ -225,12 +213,9 @@
                                 (view-window *current-view*)
                                 (slot-value (view-window *current-view*) 'back-color))
                            *background-color*))))
-    [NSGraphicsContext saveGraphicsState]
-    (unwind-protect
-        (progn
-          [color setFill]
-          (#_NSRectFill (ns:make-ns-rect x y w h)))
-      [NSGraphicsContext restoreGraphicsState])))
+    (with-saved-graphic-state
+      [color setFill]
+      (#_NSRectFill (ns:make-ns-rect x y w h)))))
 
 
 (defun draw-rect (rect)
@@ -300,14 +285,11 @@
                                   *background-color*))))
           ;; TODO: deal with rectangular pen sizes.
           [NSBezierPath setDefaultLineWidth:(cgfloat (average (point-h size) (point-v size)))]
-          [NSGraphicsContext saveGraphicsState]
-          (unwind-protect
-               (progn
-                 [color setFill]
-                 [[NSBezierPath bezierPathWithRoundedRect:(ns:make-ns-rect x y w h)
-                                xRadius:(cgfloat (/ oval-width  2.0))
-                                yRadius:(cgfloat (/ oval-height 2.0))] fill])
-            [NSGraphicsContext restoreGraphicsState]))))))
+          (with-saved-graphic-state
+            [color setFill]
+            [[NSBezierPath bezierPathWithRoundedRect:(ns:make-ns-rect x y w h)
+                           xRadius:(cgfloat (/ oval-width  2.0))
+                           yRadius:(cgfloat (/ oval-height 2.0))] fill]))))))
 
 
 (defun draw-round-rect (oval-width oval-height rect)
@@ -326,18 +308,18 @@
                (size (pen-size pen)))
           (if (and (= #@(1 1) size)
                    (eql *black-pattern* (pen-state-pattern pen)))
-            [[NSBezierPath bezierPathWithOvalInRect: (ns:make-ns-rect x y w h)] stroke]
-            (let ((path [NSBezierPath bezierPath])
-                  (sx (point-h size))
-                  (sy (point-v size)))
-              ;; TODO: use the pen-pattern
-              [path setWindingRule:#$NSEvenOddWindingRule]
-              ;; external border
-              [path appendBezierPathWithOvalInRect:(ns:make-ns-rect x y w h)]
-              ;; internal border
-              [path appendBezierPathWithOvalInRect:(ns:make-ns-rect (+ x sx) (+ y sy)
-                                                                    (- w sx sx) (- h sy sy))]
-              [path fill])))))))
+              [[NSBezierPath bezierPathWithOvalInRect: (ns:make-ns-rect x y w h)] stroke]
+              (let ((path [NSBezierPath bezierPath])
+                    (sx (point-h size))
+                    (sy (point-v size)))
+                ;; TODO: use the pen-pattern
+                [path setWindingRule:#$NSEvenOddWindingRule]
+                ;; external border
+                [path appendBezierPathWithOvalInRect:(ns:make-ns-rect x y w h)]
+                ;; internal border
+                [path appendBezierPathWithOvalInRect:(ns:make-ns-rect (+ x sx) (+ y sy)
+                                                                      (- w sx sx) (- h sy sy))]
+                [path fill])))))))
 
 
 (defun fill-ellipse (x y w h)
