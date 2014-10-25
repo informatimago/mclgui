@@ -177,6 +177,9 @@ This variable should never be changed by a program.
 ")
 
 
+(defvar *foreground-color*  nil)
+(defvar *background-color*  nil)
+
 (defvar *black-color*        nil) 
 (defvar *white-color*        nil) 
 (defvar *pink-color*         nil) 

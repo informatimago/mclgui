@@ -331,3 +331,12 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
 
 
 
+
+
+(in-package :pw)
+
+(in-package :ui)
+
+(%set-fore-color (get-fore-color (view-window view)))
+(unwind-protect
+     (%set-fore-color (get-fore-color (view-window view))))

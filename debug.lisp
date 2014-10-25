@@ -69,25 +69,28 @@
      (format *mclgui-trace* "~&(~?)~%" ',control-string (list ,@args))
      (force-output *mclgui-trace*)))
 
-
+(defvar *format-trace-mutex* nil)
 (defun format-trace (method &rest arguments)
   (declare (stepper disable))
-  (let ((*print-case* :downcase)
-        (*package*    *mclgui-package*))
-    (flet ((out (stream)
-             (format stream "~&(~40A ~{~S~^ ~})~%" method arguments)
-             (force-output stream)
-             t))
-      (declare (ignore out))
-      (out *mclgui-trace*)
-      ;; (patchwork.builder::print-streams)
-      (let ((listeners (gui::active-listener-windows)))
-        (when listeners
-          (let ((hi::*current-buffer* (hi:hemlock-view-buffer
-                                       (gui::hemlock-view
-                                        (slot-value (first listeners)
-                                                    'gui::echo-area-view)))))
-            (hemlock::end-of-buffer-command nil)))))
+  (unless *format-trace-mutex*
+    (setf *format-trace-mutex* (make-mutex "FORMAT-TRACE Mutex")))
+  (flet ((out (message)
+           (with-mutex *format-trace-mutex*
+             (fresh-line *mclgui-trace*)
+             (write-string message *mclgui-trace*)
+             (terpri *mclgui-trace*)
+             (force-output *mclgui-trace*)
+             (let ((listeners (gui::active-listener-windows)))
+               (when listeners
+                 (let ((hi::*current-buffer* (hi:hemlock-view-buffer
+                                              (gui::hemlock-view
+                                               (slot-value (first listeners)
+                                                           'gui::echo-area-view)))))
+                   (hemlock::end-of-buffer-command nil)))))))
+    (declare (inline out))
+    (let ((*print-case* :downcase)
+          (*package*    *mclgui-package*))
+      (out (format nil "(~40A ~{~S~^ ~})" method arguments)))
     (first arguments)))
 
 
@@ -151,18 +154,25 @@ RETURN:         A string containing the object identity as printed by
 ;;      ,@body))
 
 
+
 (defun pl (seq) (map nil (function print) seq) (values))
 (defun firste (seq) (elt seq 0))
 ;; (import '(mclgui.debugging::pl mclgui.debugging::firste))
 
 
+(in-package :ui)
 #-(and)
 (defmethod view-draw-contents ((window (eql (front-window))))
   (with-focused-view window
-    (let ((bounds (ui::view-bounds window)))
-      (with-fore-color *yellow-color*
+    (let ((bounds (view-bounds window)))
+      (with-fore-color *green-color*
         (fill-rect* (rect-left bounds) (rect-top bounds)
-                    (rect-width bounds) (rect-height bounds)))
+                       (rect-width bounds) (rect-height bounds)))
       (call-next-method))))
+
+
+;; (print-backtrace *mclgui-trace*)
+;; (with-fore-color *yellow-color* (fill-rect* x y width height))
+
 
 ;;;; THE END ;;;;

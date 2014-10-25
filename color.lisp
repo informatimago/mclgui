@@ -37,8 +37,8 @@
 
 
 (defstruct (color
-             (:constructor %make-color)
-             (:conc-name %color-))
+            (:constructor %make-color)
+            (:conc-name %color-))
   red green blue (alpha 1.0f0))
 
 
@@ -130,10 +130,10 @@ RGB colors into Macintosh color-table entries, see Inside Macintosh.
 
 (defmethod unwrap ((self color))
   (unwrapping self
-              [NSColor colorWithCalibratedRed: (cgfloat (%color-red self))
-                       green: (cgfloat (%color-green self))
-                       blue:  (cgfloat (%color-blue self))
-                       alpha: (cgfloat (%color-alpha self))]))
+    [NSColor colorWithCalibratedRed: (cgfloat (%color-red self))
+             green: (cgfloat (%color-green self))
+             blue:  (cgfloat (%color-blue self))
+             alpha: (cgfloat (%color-alpha self))]))
 
 
 
@@ -175,71 +175,81 @@ REDISPLAY-P:    If the value of this is true (the default), this
   (:documentation ""))
 
 
-(defvar *foreground-color*  nil)
-(defvar *background-color*  nil)
+(defun %set-fore-color (color)
+  (let ((fore-color (unwrap color)
+                    #-(and) [NSColor colorWithCalibratedRed: (color-red color)
+                                     green: (color-green color)
+                                     blue: (color-blue color)
+                                     alpha: (color-alpha color)]))
+    (format-trace '%set-fore-color color fore-color)
+    [fore-color set]
+    [fore-color setFill]
+    [fore-color setStroke]))
+
+(defun %set-back-color (window color)
+  (let ((back-color (unwrap color)))
+    (format-trace '%set-back-color color back-color)
+    (with-handle (winh window)
+      [winh setBackgroundColor:back-color])))
 
 
 (defun call-with-fore-color (color thunk)
-  (if (or (null color)
-          (not *color-available*)
-          (null *current-view*)
-          (null (view-window *current-view*)))
-    (funcall thunk)
-    (unwind-protect
-         (progn
-           [NSGraphicsContext saveGraphicsState]
-           (let ((*foreground-color* color)
-                 (fore-color (unwrap color)
-                   ;; [NSColor colorWithCalibratedRed: (color-red color)
-                   ;;          green: (color-green color)
-                   ;;          blue: (color-blue color)
-                   ;;          alpha: (color-alpha color)]
-                   ))
-             [fore-color set]
-             [fore-color setFill]
-             [fore-color setStroke])
-           (funcall thunk))
-      [NSGraphicsContext restoreGraphicsState])))
+  (let ((window (and *current-view* (view-window *current-view*))))
+    (if (or (null color)
+            (not *color-available*)
+            (null window))
+        (funcall thunk)
+        (let ((*foreground-color* color)
+              (old-fore-color (slot-value window 'fore-color)))
+          (with-saved-graphic-state
+            (%set-fore-color color)
+            (unwind-protect
+                 (progn
+                   (setf (slot-value window 'fore-color) *foreground-color*)
+                   (funcall thunk))
+              (setf (slot-value window 'fore-color) old-fore-color)))))))
 
 
 (defun call-with-back-color (color thunk)
-  (if (or (null color)
-          (not *color-available*)
-          (null *current-view*)
-          (null (view-window *current-view*)))
-    (funcall thunk)
-    (let ((*background-color* color)
-          (old-back-color (slot-value (view-window *current-view*) 'back-color)))
-      (unwind-protect
-          (progn
-            (setf (slot-value (view-window *current-view*) 'back-color) *background-color*)
-            (funcall thunk))
-        (setf (slot-value (view-window *current-view*) 'back-color) old-back-color)))))
+  (let ((window (and *current-view* (view-window *current-view*))))
+    (if (or (null color)
+            (not *color-available*)
+            (null window))
+        (funcall thunk)
+        (let ((*background-color* color)
+              (old-back-color (slot-value window 'back-color)))
+          (%set-back-color window color)
+          (unwind-protect
+               (progn
+                 (setf (slot-value (view-window *current-view*) 'back-color) *background-color*)
+                 (funcall thunk))
+            (setf (slot-value (view-window *current-view*) 'back-color) old-back-color))))))
 
 
 (defun call-with-fore-and-back-color (fore back thunk)
-  (cond
-    ((or (and (null fore) (null back))
-         (not *color-available*)
-         (null *current-view*)
-         (null (view-window *current-view*)))
-     (funcall thunk))
-    ((null fore) (call-with-back-color back thunk))
-    ((null back) (call-with-fore-color fore thunk))
-    (t (let ((*foreground-color* fore)
-             (fore-color (unwrap fore))
-             (*background-color* back)
-             (old-back-color (slot-value (view-window *current-view*) 'back-color)))
-         (unwind-protect
-              (progn
-                [NSGraphicsContext saveGraphicsState]
-                [fore-color set]
-                [fore-color setFill]
-                [fore-color setStroke]
-                (setf (slot-value (view-window *current-view*) 'back-color) *background-color*)
-                (funcall thunk))
-           (setf (slot-value (view-window *current-view*) 'back-color) old-back-color)
-           [NSGraphicsContext restoreGraphicsState])))))
+  (let ((window (and *current-view* (view-window *current-view*))))
+    (cond
+      ((or (and (null fore) (null back))
+           (not *color-available*)
+           (null window))
+       (funcall thunk))
+      ((null fore) (call-with-back-color back thunk))
+      ((null back) (call-with-fore-color fore thunk))
+      (t (let ((*foreground-color* fore)
+               (*background-color* back)
+               (old-fore-color (slot-value window 'fore-color))
+               (old-back-color (slot-value window 'back-color)))
+           (with-saved-graphic-state
+             (%set-fore-color fore)
+             (unwind-protect
+                  (progn
+                    (%set-back-color window back)
+                    (setf (slot-value (view-window *current-view*) 'fore-color) *foreground-color*
+                          (slot-value (view-window *current-view*) 'back-color) *background-color*)
+                    (funcall thunk))
+               (%set-back-color window (or old-back-color *background-color*))
+               (setf (slot-value window 'fore-color) old-fore-color
+                     (slot-value window 'back-color) old-back-color))))))))
 
 
 (defmacro with-fore-color (color &body body)
@@ -360,9 +370,9 @@ RETURN:         A list of key parts that can be colored in the THING.
         *light-gray-color*   (make-color 49152 49152 49152) 
         *lighter-gray-color* (make-color 56576 56576 56576) 
         *dark-gray-color*    (make-color 16384 16384 16384)
-        *background-color*   *white-color*
         *tool-back-color*    *yellow-color* ; what is this?
-        )) 
+        *background-color*   *white-color*
+        *foreground-color*   *black-color*)) 
 
 (defgeneric color-or-gray-p (item)
   (:method (item)
