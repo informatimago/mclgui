@@ -133,8 +133,7 @@ body is evaluated with VAR bound to that rectangle."
 (defmethod clip-rect ((view simple-view) left &optional top right bottom)
   (with-rectangle-arg (r left top right bottom)
     (with-focused-view view
-      [NSBezierPath clipRect: (unwrap r)]))
-  nil)
+      (clip-rect* left top (rect-left r) (rect-top r) (rect-width r) (rect-height r)))))
 
 ;;;---------------------------------------------------------------------
 ;;; Drawing Rectangles
