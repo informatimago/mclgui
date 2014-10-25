@@ -35,7 +35,88 @@
 (objcl:enable-objcl-reader-macros)
 
 
-;; event what:
+
+;;;--------------------------------------------------------------------
+;;; events may be processing in various threads.
+;;; we need to use a common environment, for consitent output.
+
+(defvar *event-environment-bindings*  '())
+
+(defun initialize-event-environment-bindings ()
+  "
+DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-BINDINGS*.
+"
+  (setf (aget *event-environment-bindings* '*terminal-io*)     *terminal-io*
+        (aget *event-environment-bindings* '*standard-input*)  *standard-input*
+        (aget *event-environment-bindings* '*standard-output*) *standard-output*
+        (aget *event-environment-bindings* '*error-output*)    *error-output*
+        (aget *event-environment-bindings* '*trace-output*)    *trace-output*
+        (aget *event-environment-bindings* '*query-io*)        *query-io*
+        (aget *event-environment-bindings* '*debug-io*)        *debug-io*)
+  (values))
+
+
+(defun print-backtrace (&optional (output *error-output*))
+  #+ccl (format output "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~&"
+                (ccl::backtrace-as-list)))
+
+(defun error-file-pathname ()
+  (merge-pathnames (format nil "Desktop/~A-errors.txt" (application-name *application*))
+                   (user-homedir-pathname)))
+
+(defun date (&optional (date (get-universal-time)))
+  (format nil "~{~5*~4,'0D-~2:*~2,'0D-~2:*~2,'0D ~2:*~2,'0D:~2:*~2,'0D:~2:*~2,'0D~8*~}"
+          (multiple-value-list (decode-universal-time date))))
+
+(defmacro reporting-errors (&body body)
+  (let ((vhandler (gensym)))
+    `(block ,vhandler
+       (handler-bind ((error (lambda (err)
+                               (declare (ignorable err))
+                               (declare (stepper disable))
+                               (let ((*print-length* nil)
+                                     (*print-level*  nil)
+                                     (*print-circle* t)
+                                     (*print-pretty* nil)
+                                     (*print-case*   :downcase))
+                                 (with-open-file (errf (error-file-pathname)
+                                                      :direction :output
+                                                      :external-format :utf-8
+                                                      :if-exists :append
+                                                      :if-does-not-exist :create)
+                                   (let ((errs (make-broadcast-stream errf *error-output*)))
+                                     (format errs "~%~A~2%" (date))
+                                     (print-backtrace errs)
+                                     (format errs "~%ERROR while ~S:~%~A~2%"
+                                             ',(if (= 1 (length body)) body `(progn ,@body))
+                                             err)
+                                     (finish-output errs)))
+                                 #+report-error-in-dialog
+                                 (window-show
+                                  (message-dialog (with-output-to-string (*standard-output*)
+                                                    (format t "~%ERROR ~A~%while ~S~2%"
+                                                            err
+                                                            ',(if (= 1 (length body)) body `(progn ,@body)))
+                                                    (print-backtrace *standard-output*))
+                                                  :size #@(768 1024)
+                                                  :modal nil
+                                                  :title (format nil "Lisp Error: ~A" err))))
+                               #+debug-on-error (invoke-debugger err)
+                               (return-from ,vhandler nil))))
+         ,@body))))
+
+
+(defmacro with-event-environment (&body body)
+  `(let ((*idle* nil))
+     (progv
+         (mapcar (function car) *event-environment-bindings*)
+         (mapcar (function cdr) *event-environment-bindings*)
+       (reporting-errors
+         ,@body))))
+
+
+;;;------------------------------------------------------------
+;;; event what:
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant null-event    0)
   (defconstant mouse-down    1)
