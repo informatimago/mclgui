@@ -110,6 +110,10 @@ dialog items. It is built on SIMPLE-VIEW.
 "))
 
 
+(defgeneric dialog-item-text-length (item)
+  (:method ((item dialog-item))
+    (length (dialog-item-text item))))
+
 
 (defgeneric call-with-focused-dialog-item (item fn &optional container)
   (:method (item fn &optional container)
@@ -140,24 +144,23 @@ CONTAINER:      The view focused on whose coordinate system body will
                                       ,@body)
                                     ,@(when container `(,container)))))
 
+
 (defmethod view-draw-contents ((item dialog-item))
+  #+debug-views
+  (progn (format *mclgui-trace* "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
+         (format *mclgui-trace* "~&  text    = ~S~%" (dialog-item-text item))
+         (format *mclgui-trace* "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
+         (format *mclgui-trace* "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
+         (finish-output *mclgui-trace*))
   (with-focused-dialog-item (item)
     (let* ((frame (view-frame item))
            (x (rect-left   frame))
            (y (rect-top    frame))
            (w (rect-width  frame))
            (h (rect-height frame)))
-      #+debug-views
-      (progn (format *mclgui-trace* "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
-             (format *mclgui-trace* "~&  text    = ~S~%" (dialog-item-text item))
-             (format *mclgui-trace* "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
-             (format *mclgui-trace* "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
-             (finish-output *mclgui-trace*))
-      (erase-rect* x y w h)
-      ;; #+debug-views-colors
-      ;; (with-fore-color *light-gray-color*
-      ;;   (fill-rect* x y w h))
-      (draw-text x y w h (dialog-item-text item)))))
+;;      (erase-rect* x y w h)
+      (draw-text (1+ x) (1+ y) (- w 2) (- h 2) (dialog-item-text item))
+      (draw-rect* x y w h))))
 
 
 (defmacro reference-method (generic-function (&rest classes))

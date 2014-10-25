@@ -36,20 +36,7 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
 (in-package "MCLGUI")
-
-
-(defgeneric dialog-item-text-length (item)
-  (:method ((item dialog-item))
-    (length (dialog-item-text item)))
-  (:method ((item static-text-dialog-item))
-    (niy dialog-item-text-length item)
-    #-(and)
-    (let ((h (dialog-item-handle item)))
-      (if h
-        (#_GetHandleSize h)
-        (length (slot-value item 'dialog-item-text))))))
 
 
 (defun message-dialog (message &key (ok-text "OK")
