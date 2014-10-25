@@ -89,11 +89,11 @@ NEW-REGION: a region or NIL."))
 (defmacro with-clip-rect-intersect (rect &rest body)
   (let ((vrect (gensym)))
     `(let ((,vrect ,rect))
-       [NSGraphicsContext saveGraphicsState]
-       [NSBezierPath clipRect: (nsrect (rect-left ,vrect) (rect-top ,vrect)
-                                        (rect-width ,vrect) (rect-height ,vrect))]
-       (unwind-protect (progn ,@body)
-         [NSGraphicsContext restoreGraphicsState]))))
+       (with-saved-graphic-state
+         (progn
+           (clip-rect* (rect-left ,vrect) (rect-top ,vrect)
+                       (rect-width ,vrect) (rect-height ,vrect))
+           ,@body)))))
 
 #-(and)
 (defmacro with-clip-rect-intersect (rect &rest body)
