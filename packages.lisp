@@ -33,8 +33,14 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 
-(defpackage "MCLGUI.DEBUGGING"
+(defpackage "MCLGUI.MUTEX"
   (:use "COMMON-LISP")
+  (:export "WITH-MUTEX" "MAKE-MUTEX"))
+
+
+(defpackage "MCLGUI.DEBUGGING"
+  (:use "COMMON-LISP"
+        "MCLGUI.MUTEX")
   (:export "FORMAT-TRACE" "*MCLGUI-TRACE*" "*MCLGUI-PACKAGE*"
            "UNFREQUENTLY" "NIY" "UIWARN" "TIME/STDOUT"
            "OBJECT-IDENTITY" "FUNCTION-ADDRESS"
@@ -43,7 +49,8 @@
 (defpackage "MCLGUI.SYSTEM"
   (:use "COMMON-LISP")
   (:use "COM.INFORMATIMAGO.COMMON-LISP.LISP-SEXP.SOURCE-FORM")
-  (:use "MCLGUI.DEBUGGING")
+  (:use "MCLGUI.DEBUGGING"
+        "MCLGUI.MUTEX")
   #+ccl (:import-from "CCL"
                       "*LISP-CLEANUP-FUNCTIONS*" "*SAVE-EXIT-FUNCTIONS*"
                       "*RESTORE-LISP-FUNCTIONS*" "DEF-LOAD-POINTERS"
@@ -98,7 +105,7 @@
   (:use "COM.INFORMATIMAGO.COMMON-LISP.LISP-SEXP.SOURCE-FORM"
         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY"
         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.LIST")
-  (:use "MCLGUI.DEBUGGING" "MCLGUI.SYSTEM" "MCLGUI.CIRCULAR" "MCLGUI.WRAPPER")
+  (:use "MCLGUI.MUTEX" "MCLGUI.DEBUGGING" "MCLGUI.SYSTEM" "MCLGUI.CIRCULAR" "MCLGUI.WRAPPER")
   (:nicknames "UI")
   (:shadowing-import-from "CLOSER-MOP"
                           "STANDARD-CLASS" "STANDARD-METHOD" "STANDARD-GENERIC-FUNCTION"
@@ -402,7 +409,7 @@
    "REAL-COLOR-EQUAL" "USER-PICK-COLOR"
 
    "SET-FORE-COLOR" "SET-BACK-COLOR" "GET-FORE-COLOR" "GET-BACK-COLOR"
-   "WITH-FORE-COLOR" "WITH-BACK-COLOR"
+   "WITH-FORE-COLOR" "WITH-BACK-COLOR" "WITH-FORE-AND-BACK-COLOR"
 
    "PART-COLOR-LIST" "PART-COLOR" "SET-PART-COLOR"
    ;; 5.1
@@ -562,7 +569,7 @@
    ;; graphics:
    
    "DRAW-CHAR"
-   "DRAW-STRING"
+   "DRAW-STRING" "DRAW-TEXT"
    "DRAW-POINT"
    "DRAW-LINE"
    "DRAW-RECT"    "FILL-RECT"    "ERASE-RECT"

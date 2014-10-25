@@ -31,7 +31,7 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-(in-package "MCLGUI")
+(in-package "MCLGUI.MUTEX")
 (declaim (declaration stepper))
 
 (defun make-mutex (&optional (name "mutex"))
