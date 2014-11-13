@@ -91,9 +91,17 @@ own classes of dialog items.
   ((width-correction            :allocation :class
                                 :initform 0 
                                 :accessor dialog-item-width-correction)
-   (text-justification :initarg :justification :initform :natural)
-   (text-truncation    :initarg :truncation    :initform :clipping)
-   (draw-outline       :initarg :draw-outline  :initform nil)
+   (text-justification          :initarg  :justification
+                                :initform :natural
+                                :accessor text-justification)
+   (text-truncation             :initarg  :truncation
+                                :initform :clipping
+                                :accessor text-truncation)
+   (compress-text               :initarg :compress-text
+                                :initform nil
+                                :accessor compress-text)
+   (draw-outline                :initarg :draw-outline
+                                :initform nil)
    (dialog-item-text            :initarg :dialog-item-text
                                 :initform ""
                                 :accessor dialog-item-text)
@@ -169,8 +177,8 @@ CONTAINER:      The view focused on whose coordinate system body will
         (with-fore-and-back-color fore back
           (erase-rect* x y w h)
           (draw-text (1+ x) (1+ y) (- w 2) (- h 2) (dialog-item-text item)
-                     (or (slot-value item 'text-truncation) :clipping)
-                     (or (slot-value item 'text-justification) :natural)
+                     (or (text-truncation item ) :clipping)
+                     (or (text-justification item) :natural)
                      (compress-text item))
           (when (slot-value item 'draw-outline)
             (draw-rect* x y w h))))))
