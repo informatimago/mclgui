@@ -181,14 +181,14 @@ REDISPLAY-P:    If the value of this is true (the default), this
                                      green: (color-green color)
                                      blue: (color-blue color)
                                      alpha: (color-alpha color)]))
-    (format-trace '%set-fore-color color fore-color)
+    ;; PJB-DEBUG (format-trace '%set-fore-color color fore-color)
     [fore-color set]
     [fore-color setFill]
     [fore-color setStroke]))
 
 (defun %set-back-color (window color)
   (let ((back-color (unwrap color)))
-    (format-trace '%set-back-color color back-color)
+    ;; PJB-DEBUG (format-trace '%set-back-color color back-color)
     (with-handle (winh window)
       [winh setBackgroundColor:back-color])))
 
