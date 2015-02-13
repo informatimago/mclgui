@@ -109,9 +109,6 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
 
 
 
-(defun make-affine-transform ()
-  ;; A bug in ccl prevents this to work: [NSAffineTransform transform]
-  [[[NSAffineTransform class] performSelector:(objc:@selector |transform|)] retain])
 
 (defmethod update-handle ((window window))
   (setf (%view-position window) (center-window (view-size window) (view-position window)))
@@ -173,9 +170,7 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     ;; [winh setDelegate:(make-instance 'mclgui-window-delegate :window window)]
     [winh setDelegate:winh]
     [winh setTitle:(objcl:objc-string (window-title window))]
-    (let ((trans (make-affine-transform)))
-      [trans setTransformStruct:(cg:context-get-ctm [[winh graphicsContext] graphicsPort])]
-      (setf (window-affine-transform window) trans))
+    (setf (window-affine-transform window) (current-affine-transform window))
     #+debug-views
     (format-trace '(update-handle window)
                   :wintitle (window-title window)
@@ -1228,6 +1223,7 @@ RETURN:         A BOOLEAN value indicating whether view can perform
     (when (window-visiblep window)
       ;; time/stdout
       #+debug-views (format-trace '(view-draw-contents window))
+      ;; #+debug-views #|DEBUG-PJB|#(print-backtrace *standard-output*)
       (with-focused-view window
         (call-next-method)
         ;; TODO: originally, it seems MCL didn't erase it, but relied on MacOS visrg/cliprgn/etc.
