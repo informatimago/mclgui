@@ -1,4 +1,3 @@
-
 ;;;; -*- mode:lisp;coding:utf-8 -*-
 ;;;;**************************************************************************
 ;;;;FILE:               application.lisp
@@ -42,6 +41,7 @@
 (objcl:enable-objcl-reader-macros)
 
 (defgeneric application-name (application))
+(defgeneric (setf application-name) (new-name application))
 
 #+ccl
 (progn
