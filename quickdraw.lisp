@@ -132,8 +132,8 @@ body is evaluated with VAR bound to that rectangle."
 (defgeneric clip-rect (view left &optional top right bottom))
 (defmethod clip-rect ((view simple-view) left &optional top right bottom)
   (with-rectangle-arg (r left top right bottom)
-    (with-focused-view view
-      (clip-rect* left top (rect-left r) (rect-top r) (rect-width r) (rect-height r)))))
+   (with-focused-view view
+     (clip-rect* (rect-left r) (rect-top r) (rect-width r) (rect-height r)))))
 
 ;;;---------------------------------------------------------------------
 ;;; Drawing Rectangles
