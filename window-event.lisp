@@ -187,7 +187,16 @@ Called by -[MclguiWindow zoom:] which is called from WINDOW-ZOOM-EVENT-HANDLER."
 (defmethod window-update-event-handler ((window window))
   (unless *deferred-drawing*
     (with-focused-view window
-      (view-draw-contents window))))
+      (let ((erase (window-erase-region window)))
+        (when (and erase (not (empty-region-p erase)))
+          (erase-region window erase)
+          (setf (window-erase-region window) (new-region))))
+      (let ((invalid (window-invalid-region window)))
+        (if (and invalid (not (empty-region-p invalid)))
+            (progn
+              (setf (window-invalid-region window) (new-region))
+              (view-focus-and-draw-contents window invalid invalid))
+            (view-draw-contents window))))))
 
 ;;; --- window select ----
 
