@@ -269,13 +269,8 @@ recent outstanding catch-cancel.
 
 
 (defmacro with-item-rect ((var the-item) &body body)
-  (let ((pos (gensym))
-        (size (gensym))
-        (item (gensym)))
-    `(let* ((,item ,the-item)
-            (,pos (view-position ,item))
-            (,size (view-size ,item))
-            (,var (make-rect ,pos (add-points ,pos ,size))))
-       ,@body)))
+  `(let ((,var (view-frame ,the-item)))
+     ,@body))
+
 
 ;;;; THE END ;;;;
