@@ -51,25 +51,25 @@
 
   (setf *test-menu-title-handle*
         (or *test-menu-title-handle*
-            [[NSMenuItem alloc] initWithTitle:@"Test"
+            [[NSMenuItem alloc] initWithTitle:(objcl:objc-string "Test")
              action:*null*
-             keyEquivalent:@"T"]))
+             keyEquivalent:(objcl:objc-string "T")]))
 
   (setf *test-menu-handle*
         (or *test-menu-handle*
-            [[NSMenu alloc] initWithTitle:@"Test"]))
+            [[NSMenu alloc] initWithTitle:(objcl:objc-string "Test")]))
   [*test-menu-title-handle* setSubmenu:*test-menu-handle*]
   
   (setf *test-menu-item-handle*
         (or *test-menu-item-handle*
-            [[NSMenuItem alloc] initWithTitle:@"Test Item"
+            [[NSMenuItem alloc] initWithTitle:(objcl:objc-string "Test Item")
              action:*null*
-             keyEquivalent:@"T"]))
+             keyEquivalent:(objcl:objc-string "T")]))
   [*test-menu-handle* addItem:*test-menu-item-handle*]
   
   [[*application-handle* mainMenu] addItem:*test-menu-title-handle*]
   
-  [*test-menu-item-handle* setKeyEquivalent: @"t"]
+  [*test-menu-item-handle* setKeyEquivalent:(objcl:objc-string "t")]
   [*test-menu-item-handle* setState:1]
 
   :success)
@@ -102,6 +102,13 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defgeneric (setf spring-view-top-spring)        (new-value view))        
+(defgeneric (setf spring-view-vertical-spring)   (new-value view))   
+(defgeneric (setf spring-view-bottom-spring)     (new-value view))     
+(defgeneric (setf spring-view-left-spring)       (new-value view))       
+(defgeneric (setf spring-view-horizontal-spring) (new-value view)) 
+(defgeneric (setf spring-view-right-spring)      (new-value view))      
 
 
 (defclass spring-view (view)
@@ -697,14 +704,17 @@
 
 ||#
 
+#-(and)
 (defmethod view-draw-contents :after ((view simple-view))
   (setf *color-available* t)
   (with-focused-view view
    (with-fore-color *blue-color*
      (let* ((b (view-bounds view))
-            (x (- (point-h (rect-origin b))))
-            (y (- (point-v (rect-origin b))))
+            (x (- (rect-left b)))
+            (y (- (rect-top b)))
             (s (rect-size b))
             (w (point-h s))
             (h (point-v s)))
        (draw-rect* x y w h)))))
+
+;;;; THE END ;;;;
