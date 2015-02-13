@@ -61,7 +61,9 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
                 (ccl::backtrace-as-list)))
 
 (defun error-file-pathname ()
-  (merge-pathnames (format nil "Desktop/~A-errors.txt" (application-name *application*))
+  (merge-pathnames (format nil "Desktop/~A-errors.txt" (if *application*
+                                                           (application-name *application*)
+                                                           "MclGui"))
                    (user-homedir-pathname)))
 
 (defun date (&optional (date (get-universal-time)))
