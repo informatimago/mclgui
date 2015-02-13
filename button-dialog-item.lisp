@@ -228,6 +228,7 @@ dialog-item-action method for button.
                                                 *black-pattern*))
                     (draw-round-rect*  12 12 x y w h)
                     (let ((text (dialog-item-text item)))
+                      #+debug-view (format-trace '(view-draw-contents button-dialog-item) (dialog-item-text item))
                       (draw-text (+ x (truncate  (- w (string-width text)) 2)) (+ y 2) w h text)))))))
           (maybe-draw-default-button-outline item)))))
 
