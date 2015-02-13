@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Colors.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -351,28 +351,50 @@ RETURN:         A list of key parts that can be colored in the THING.
 
 
 
-
+(defvar *specified-colors* '())
 (defun initialize/color ()
   (setf *black-color*        (make-color 0 0 0)
-        *white-color*        (make-color 65280 65280 65280) 
-        *pink-color*         (make-color 61952 2048 33792) 
-        *red-color*          (make-color 56576 2048 1536) 
-        *orange-color*       (make-color 65280 25600 512) 
-        *yellow-color*       (make-color 64512 62208 1280) 
-        *green-color*        (make-color 7936 46848 5120) 
-        *dark-green-color*   (make-color 0 25600 4352) 
-        *light-blue-color*   (make-color 512 43776 59904) 
-        *blue-color*         (make-color 0 0 54272) 
-        *purple-color*       (make-color 17920 0 42240) 
-        *brown-color*        (make-color 22016 11264 1280) 
-        *tan-color*          (make-color 36864 28928 14848) 
-        *gray-color*         (make-color 32768 32768 32768) 
-        *light-gray-color*   (make-color 49152 49152 49152) 
-        *lighter-gray-color* (make-color 56576 56576 56576) 
+        *white-color*        (make-color 65280 65280 65280)
+        *pink-color*         (make-color 61952 2048 33792)
+        *red-color*          (make-color 56576 2048 1536)
+        *orange-color*       (make-color 65280 25600 512)
+        *yellow-color*       (make-color 64512 62208 1280)
+        *green-color*        (make-color 7936 46848 5120)
+        *dark-green-color*   (make-color 0 25600 4352)
+        *light-blue-color*   (make-color 512 43776 59904)
+        *blue-color*         (make-color 0 0 54272)
+        *cyan-color*         (make-color 7836 46848 54272)
+        *magenta-color*      (make-color 46848 7836 54272)
+        *purple-color*       (make-color 17920 0 42240)
+        *brown-color*        (make-color 22016 11264 1280)
+        *tan-color*          (make-color 36864 28928 14848)
+        *gray-color*         (make-color 32768 32768 32768)
+        *light-gray-color*   (make-color 49152 49152 49152)
+        *lighter-gray-color* (make-color 56576 56576 56576)
         *dark-gray-color*    (make-color 16384 16384 16384)
         *tool-back-color*    *yellow-color* ; what is this?
         *background-color*   *white-color*
-        *foreground-color*   *black-color*)) 
+        *foreground-color*   *black-color*)
+  (setf *specified-colors* (list *black-color*
+                                 *white-color*
+                                 *pink-color*
+                                 *red-color*
+                                 *orange-color*
+                                 *yellow-color*
+                                 *green-color*
+                                 *dark-green-color*
+                                 *light-blue-color*
+                                 *blue-color*
+                                 *purple-color*
+                                 *brown-color*
+                                 *tan-color*
+                                 *cyan-color*
+                                 *magenta-color*
+                                 *gray-color*
+                                 *light-gray-color*
+                                 *lighter-gray-color*
+                                 *dark-gray-color*)))
+;; (initialize/color)
 
 (defgeneric color-or-gray-p (item)
   (:method (item)
@@ -383,5 +405,6 @@ RETURN:         A list of key parts that can be colored in the THING.
   (:method (item)
     (declare (ignore item))
     nil))
+
 
 ;;;; THE END ;;;;
