@@ -50,7 +50,7 @@
 
 
 (defun draw-string (x y str)
-  ;; (format-trace "draw-string" x y str *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "draw-string" x y str *current-view* (when *current-view* (view-window *current-view*)))
   (destructuring-bind (ff ms) *current-font-codes*
     (multiple-value-bind (descriptor mode) (font-descriptor-from-codes ff ms)
       (declare (ignore mode)) ; TODO: manage mode (:srcOr …)
@@ -79,7 +79,7 @@
 
 (defun draw-text (x y width height text
                   &optional (truncation :clipping) (justification :natural) (compress-p nil))
-  ;; (format-trace "draw-text" (list x y width height) text truncation justification compress-p)
+  #+debug-graphics (format-trace "draw-text" (list x y width height) text truncation justification compress-p)
   (destructuring-bind (ff ms) *current-font-codes*
     (multiple-value-bind (descriptor mode) (font-descriptor-from-codes ff ms)
       (declare (ignore mode)) ; TODO: manage mode (:srcOr …)
@@ -97,7 +97,7 @@
 
 
 (defun draw-point (x y)
-  ;; (format-trace "draw-point" x y *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "draw-point" x y *current-view* (when *current-view* (view-window *current-view*)))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -106,7 +106,7 @@
 
 
 (defun draw-line (x1 y1 x2 y2)
-  ;; (format-trace "draw-line" x1 y1 x2 y2 *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "draw-line" x1 y1 x2 y2 *current-view* (when *current-view* (view-window *current-view*)))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -149,7 +149,7 @@
 ;;;--------------------------------------------------------------------
 
 (defun draw-rect* (x y w h)
-  ;; (format-trace "draw-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "draw-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -199,7 +199,7 @@
 
 
 (defun fill-rect* (x y w h)
-  ;; (format-trace "fill-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "fill-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -208,7 +208,7 @@
                                       (mode-to-compositing-operation (pen-mode pen))))))))
 
 (defun erase-rect* (x y w h)
-  ;; (format-trace "erase-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "erase-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
   (let ((color (unwrap (or (and *current-view*
                                 (view-window *current-view*)
                                 (slot-value (view-window *current-view*) 'back-color))
@@ -245,7 +245,7 @@
 (defun average (a b) (round (+ a b) 2))
 
 (defun draw-round-rect* (oval-width oval-height x y w h)
-  ;; (format-trace "draw-round-rect*" oval-width oval-height x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "draw-round-rect*" oval-width oval-height x y w h *current-view* (when *current-view* (view-window *current-view*)))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -259,7 +259,7 @@
 
 
 (defun fill-round-rect* (oval-width oval-height x y w h)
-  ;; (format-trace "fill-round-rect*" oval-width oval-height x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "fill-round-rect*" oval-width oval-height x y w h *current-view* (when *current-view* (view-window *current-view*)))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -273,7 +273,7 @@
 
 
 (defun erase-round-rect* (oval-width oval-height x y w h)
-  ;; (format-trace "erase-round-rect*" oval-width oval-height x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "erase-round-rect*" oval-width oval-height x y w h *current-view* (when *current-view* (view-window *current-view*)))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -300,7 +300,7 @@
 ;;;--------------------------------------------------------------------
 
 (defun draw-ellipse (x y w h)
-  ;; (format-trace "draw-ellipse-rect" x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "draw-ellipse-rect" x y w h *current-view* (when *current-view* (view-window *current-view*)))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -323,7 +323,7 @@
 
 
 (defun fill-ellipse (x y w h)
-  ;; (format-trace "fill-ellipse-rect" x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  #+debug-graphics (format-trace "fill-ellipse-rect" x y w h *current-view* (when *current-view* (view-window *current-view*)))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -331,5 +331,6 @@
         [[NSBezierPath bezierPathWithOvalInRect: (ns:make-ns-rect x y w h)] fill]))))
 
 
+;; (push :debug-graphics *features*)
 
 ;;;; THE END ;;;;
