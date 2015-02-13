@@ -542,11 +542,11 @@ DO:             Evaluates the BODY in a lexical environment where
   body:
   (declare (ignore sender))
   (with-event-environment
-   (block nil
-     (catch :cancel
-       (mapc (function funcall) *application-should-terminate-functions*)
-       (return #$NSTerminateNow))
-     #$NSTerminateCancel))]
+    (block nil
+      (catch :cancel
+        (mapc (function funcall) *application-should-terminate-functions*)
+        (return #$NSTerminateNow))
+      #$NSTerminateCancel))]
 
 
 ;;;------------------------------------------------------------
@@ -743,49 +743,55 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (with-event-environment
-   (let ((*current-ns-event* event))
-     #+debug-objc (format-trace '|-[MclguiWindow keyDown:]| self event)
-     (post-event (nsevent-to-event event))))]
+    (let ((*current-ns-event* event))
+      #+debug-objc (format-trace '|-[MclguiWindow keyDown:]| self event)
+      (post-event (nsevent-to-event event))))]
 
 @[MclguiWindow
   method:(keyUp:(:id)event)
   resultType:(:void)
   body:
   (with-event-environment
-   (let ((*current-ns-event* event))
-     #+debug-objc (format-trace '|-[MclguiWindow keyUp:]| self event)
-     (post-event (nsevent-to-event event))))]
-
-(defun needs-to-draw-rect (window rect)
-  #+(and debug-objc debug-view)
-  (format-trace 'needs-to-draw-rect :posi (point-to-list (rect-topleft rect)) :size (point-to-list (rect-size rect)) :win window)
-  (with-event-environment
-   (with-handle (winh window)
-     [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]
-     [winh setViewsNeedDisplay:yes])))
-
-(defun needs-to-display (window)
-  (with-event-environment
-   (with-handle (winh window)
-     [winh setViewsNeedDisplay:yes])))
+    (let ((*current-ns-event* event))
+      #+debug-objc (format-trace '|-[MclguiWindow keyUp:]| self event)
+      (post-event (nsevent-to-event event))))]
 
 @[MclguiWindow
   method:(mouseDown:(:id)event)
   resultType:(:void)
   body:
   (with-event-environment
-   (let ((*current-ns-event* event))
-     #+debug-objc (format-trace '|-[MclguiWindow mouseDown:]| self event)
-     (post-event (nsevent-to-event event))))]
+    (let ((*current-ns-event* event))
+      #+debug-objc (format-trace '|-[MclguiWindow mouseDown:]| self event)
+      (post-event (nsevent-to-event event))))]
 
 @[MclguiWindow
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
   (with-event-environment
-   (let ((*current-ns-event* event))
-     #+debug-objc (format-trace '|-[MclguiWindow mouseUp:]| self event)
-     (post-event (nsevent-to-event event))))]
+    (let ((*current-ns-event* event))
+      #+debug-objc (format-trace '|-[MclguiWindow mouseUp:]| self event)
+      (post-event (nsevent-to-event event))))]
+
+(defun needs-to-draw-rect (window rect)
+  (with-event-environment
+    #+(and debug-objc debug-view) (format-trace 'needs-to-draw-rect :posi (point-to-list (rect-topleft rect)) :size (point-to-list (rect-size rect)) :win window)
+    (with-handle (winh window)
+      [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]
+      [winh setViewsNeedDisplay:yes])))
+
+(defun does-not-need-to-display (window)
+  (with-event-environment
+    #+(and debug-objc debug-view) (format-trace 'does-not-need-to-display :win window)
+    (with-handle (winh window)
+      [winh setViewsNeedDisplay:no])))
+
+(defun needs-to-display (window)
+  (with-event-environment
+    #+(and debug-objc debug-view) (format-trace 'needs-to-display :win window)
+    (with-handle (winh window)
+      [winh setViewsNeedDisplay:yes])))
 
 ;;;------------------------------------------------------------
 ;;; MclguiView
@@ -802,43 +808,48 @@ DO:             Evaluates the BODY in a lexical environment where
   body:YES]
 
 (defun *nsrect-to-nsrect (prect)
-  #+ccl
-  (make-nsrect 
-   :x (ccl:pref prect :<nsr>ect.origin.x)
-   :y (ccl:pref prect :<nsr>ect.origin.y) 
-   :width (ccl:pref prect :<nsr>ect.size.width) 
-   :height (ccl:pref prect :<nsr>ect.size.height))
+  #+ccl (make-nsrect 
+         :x (ccl:pref prect :<nsr>ect.origin.x)
+         :y (ccl:pref prect :<nsr>ect.origin.y) 
+         :width (ccl:pref prect :<nsr>ect.size.width) 
+         :height (ccl:pref prect :<nsr>ect.size.height))
   #-ccl prect)
 
 @[MclguiView
   method:(drawRect:(:<NSR>ect)rect)
   resultType:(:void)
   body:
-  (declare (ignore rect))
-  #+debug-objc (format-trace "-[MclguiView drawRect:]" (*nsrect-to-nsrect rect) self)
+  (declare (ignorable rect))
   (with-event-environment
-   (let ((view (nsview-view self)))
-     (when view
-       (view-draw-contents view))))]
-
+    #+debug-objc (format-trace "progn (-[MclguiView drawRect:]" (*nsrect-to-nsrect rect) self)
+    (let ((view (nsview-view self)))
+      (when view
+        (let ((cliprgn (rect-region (nsrect-to-rect (*nsrect-to-nsrect rect)))))
+          #+debug-objc (format-trace ":rect"    (rect-to-list (region-bounds cliprgn)))
+          #+debug-objc (format-trace ":invalid" (rect-to-list (region-bounds (window-invalid-region (view-window view)))))
+          #+debug-objc (format-trace ":erase"   (rect-to-list (region-bounds (window-erase-region   (view-window view)))))
+          (view-focus-and-draw-contents view cliprgn cliprgn))))
+    #+debug-objc (if [self needsDisplay]
+                     (format-trace "-[MclguiView drawRect:])" "still needsDisplay")
+                     (format-trace "-[MclguiView drawRect:])" "done")))]
 
 @[MclguiView
   method:(mouseDown:(:id)event)
   resultType:(:void)
   body:
   (with-event-environment
-   (let ((*current-ns-event* event))
-     #+debug-objc (format-trace "-[MclguiView mouseDown:]" self event)
-     (post-event (nsevent-to-event event))))]
+    (let ((*current-ns-event* event))
+      #+debug-objc (format-trace "-[MclguiView mouseDown:]" self event)
+      (post-event (nsevent-to-event event))))]
 
 @[MclguiView
   method:(mouseUp:(:id)event)
   resultType:(:void)
   body:
   (with-event-environment
-   (let ((*current-ns-event* event))
-     #+debug-objc (format-trace "-[MclguiView mouseUp:]" self event)
-     (post-event (nsevent-to-event event))))]
+    (let ((*current-ns-event* event))
+      #+debug-objc (format-trace "-[MclguiView mouseUp:]" self event)
+      (post-event (nsevent-to-event event))))]
 
 
 @[MclguiView
@@ -846,13 +857,13 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (with-event-environment
-   ;; (format-trace "-[MclguiView mouseMoved:]" self (nsview-view self) event)
-   (when (nsview-view self)
-     (let ((*current-ns-event* event)
-           (*current-event* (nsevent-to-event event))
-           (*multi-click-count* [event clickCount]))
-       ;;(unfrequently 1/10 (format-trace '|mouseMoved:| *current-event*))
-       (window-null-event-handler (view-window (nsview-view self))))))]
+    #+(and debug-objc debug-view) (format-trace "-[MclguiView mouseMoved:]" self (nsview-view self) event)
+    (when (nsview-view self)
+      (let ((*current-ns-event* event)
+            (*current-event* (nsevent-to-event event))
+            (*multi-click-count* [event clickCount]))
+        ;; (unfrequently 1/10 (format-trace '|mouseMoved:| *current-event*))
+        (window-null-event-handler (view-window (nsview-view self))))))]
 
 
 @[MclguiView
@@ -860,13 +871,13 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (with-event-environment
-   ;; (format-trace "-[MclguiView mouseDragged]" self (nsview-view self) event)
-   (when (nsview-view self)
-     (let ((*current-ns-event* event)
-           (*current-event* (nsevent-to-event event))
-           (*multi-click-count* [event clickCount]))
-       #+debug-objc (unfrequently 1/10 (format-trace "mouseDragged:" *current-event*))
-       (window-null-event-handler (view-window (nsview-view self))))))]
+    #+(and debug-objc debug-view) (format-trace "-[MclguiView mouseDragged]" self (nsview-view self) event)
+    (when (nsview-view self)
+      (let ((*current-ns-event* event)
+            (*current-event* (nsevent-to-event event))
+            (*multi-click-count* [event clickCount]))
+        #+debug-objc (unfrequently 1/10 (format-trace "mouseDragged:" *current-event*))
+        (window-null-event-handler (view-window (nsview-view self))))))]
 
 
 
@@ -888,8 +899,8 @@ DO:             Evaluates the BODY in a lexical environment where
   body:
   (declare (ignore sender))
   (with-event-environment
-   (when (nscontroller-dialog-item self)
-     (dialog-item-action (nscontroller-dialog-item self))))]
+    (when (nscontroller-dialog-item self)
+      (dialog-item-action (nscontroller-dialog-item self))))]
 
 
 ;;;------------------------------------------------------------
