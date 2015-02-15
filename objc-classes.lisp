@@ -978,5 +978,6 @@ DO:             Evaluates the BODY in a lexical environment where
 
 ;; (class-get-subclasses 'ns:ns-object)
 
-
+;; (pushnew :debug-objc *features*)
+;; (setf *features* (remove :debug-objc *features*))
 ;;;; THE END ;;;;
