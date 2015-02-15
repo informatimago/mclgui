@@ -31,7 +31,6 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-;;;;    
 (in-package :ui)
 
 ;; (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -743,8 +742,18 @@
 
 (defvar *w* nil)
 (defvar *speed* 0.0)
+;; (setf *speed* :infinite)
 ;; (setf *speed* 0.0)
 ;; (setf *speed* 1.0)
+(defun trace-path-pause (how path)
+  (case *speed*
+    (:infinite
+     (format *query-io*  "~&pause ~S ~S" how path)
+     (finish-output *query-io*)
+     (read-line *query-io*))
+    (otherwise
+     (sleep *speed*))))
+
 (defun trace-path (how path)
   (with-focused-view (or *current-view* *w*)
     (with-fore-color (case how
@@ -752,10 +761,10 @@
                        (:open           *yellow-color*)
                        (:above          *green-color*)
                        (:below          *light-blue-color*)
-                       (:bottom         *magenta-color*)
+                       (:merged         *magenta-color*)
                        (otherwise       *black-color*))
       (case how
-        ((:above :below :bottom)  [(bezier-path-from-tpath path) fill])
+        ;; ((:above :below :bottom)  [(bezier-path-from-tpath path) fill])
         (otherwise                [(bezier-path-from-tpath path) stroke]))
       (with-fore-color *purple-color*
         (loop
@@ -768,8 +777,8 @@
           :for bottom :in (tpath-new-bottom-lines path)
           :for from = (tline-from-point bottom)
           :for to   = (tline-to-point bottom)
-          :do (draw-line (tpoint-x from) (tpoint-y from) (tpoint-x to) (tpoint-y to))))
-      (sleep *speed*))))
+          :do (draw-line (tpoint-x from) (tpoint-y from) (tpoint-x to) (tpoint-y to))))))
+      (trace-path-pause how path))
 
 
 (defun segments-from-region (region)

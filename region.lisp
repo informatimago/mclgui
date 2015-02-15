@@ -73,20 +73,7 @@ NEW-REGION: a region or NIL."))
      ,@body))
 
 
-(defmacro with-clip-region (region &body body)
-  (let ((rgn1 (gensym))
-        (rgn2 (gensym)))    
-    `(with-temp-rgns (,rgn1 ,rgn2)
-       (get-clip ,rgn1)
-       (intersect-region ,rgn1 ,region ,rgn2)
-       (unwind-protect
-           (progn
-             (set-clip ,rgn2)
-             ,@body)
-         (set-clip ,rgn1)))))
-
-
-(defmacro with-clip-rect-intersect (rect &rest body)
+(defmacro with-clip-rect-intersect (rect &body body)
   (let ((vrect (gensym)))
     `(let ((,vrect ,rect))
        (with-saved-graphic-state
@@ -94,6 +81,22 @@ NEW-REGION: a region or NIL."))
            (clip-rect* (rect-left ,vrect) (rect-top ,vrect)
                        (rect-width ,vrect) (rect-height ,vrect))
            ,@body)))))
+
+
+(defmacro with-clip-region (region &body body)
+  `(with-clip-rect-intersect (region-bounds ,region)
+     ,@body)
+  #-(and)
+  (let ((rgn1 (gensym))
+        (rgn2 (gensym)))    
+    `(with-temp-rgns (,rgn1 ,rgn2)
+       (get-clip ,rgn1)
+       (intersect-region ,rgn1 ,region ,rgn2)
+       (unwind-protect
+            (progn
+              (set-clip ,rgn2)
+              ,@body)
+         (set-clip ,rgn1)))))
 
 #-(and)
 (defmacro with-clip-rect-intersect (rect &rest body)
@@ -324,6 +327,19 @@ RETURN:         A new segments vector, built as the combination by the
                                     #(1 3 5 7 9 10 11 13 14 15)
                                     #(0 2 4 6 8 11 12 13))
                   #(2 3 6 7 11 12 14 15)))
+
+  (assert (equalp (segments-operate (lambda (a b) (and a (not b)))
+                                    #(62 138)
+                                    #(85 115))
+                  #(62 85 115 138)))
+
+  (assert (equalp (segments-operate (lambda (a b) (and a (not b)))
+                                    #(62 138) #())
+                  #(62 138)))
+
+  (assert (equalp (segments-operate (lambda (a b) (and a (not b)))
+                                    #() #(62 138))
+                  #()))
 
   :success)
 
@@ -591,8 +607,8 @@ RETURN:         The bounds rect.
 
 
 ;;----------------------------------------------------------------------
-;; region-operate implements the region operations: intersection,
-;; union, difference, xor.
+;; region-operate implements the region operations: :intersection,
+;; :union, :difference, :xor.
 ;;
 
 (defun region-operate-not-easy (op r1 r2 rd)
@@ -610,7 +626,7 @@ DO:             Compute the operation OP between R1 and R2, and set RD
   (check-type op (member :intersection :difference :union :xor :horizontal-inset))
   (flet ((operate (op v s1 s2 res)
            (vector-push-extend
-            (cons v (case op
+            (cons v (ecase op
                       (:intersection     (segments-operate (lambda (a b) (and a b))        s1 s2))
                       (:difference       (segments-operate (lambda (a b) (and a (not b)))  s1 s2))
                       (:union            (segments-operate (lambda (a b) (or a b))         s1 s2))
@@ -637,35 +653,36 @@ DO:             Compute the operation OP between R1 and R2, and set RD
              (operate op v1 s1 s2 r)
              (incf i1)
              (if (< i1 (length segs1))
-               (setf ip1 (aref segs1 i1)
-                     v1  (car ip1))
-               (setf v1 nil)))
+                 (setf ip1 (aref segs1 i1)
+                       v1  (car ip1))
+                 (setf v1 nil)))
             ((or (null v1) (< v2 v1))
              (setf s2 (cdr ip2))
              (operate op v2 s1 s2 r)
              (incf i2)
              (if (< i2 (length segs2))
-               (setf ip2 (aref segs2 i2)
-                     v2  (car ip2))
-               (setf v2 nil)))
-            (t
+                 (setf ip2 (aref segs2 i2)
+                       v2  (car ip2))
+                 (setf v2 nil)))
+            (t ;; (and v1 v2 (= v1 v2))
              (setf s1 (cdr ip1)
                    s2 (cdr ip2))
              (operate op v2 s1 s2 r)
              (incf i1)
              (if (< i1 (length segs1))
-               (setf ip1 (aref segs1 i1)
-                     v1  (car ip1))
-               (setf v1 nil))
+                 (setf ip1 (aref segs1 i1)
+                       v1  (car ip1))
+                 (setf v1 nil))
              (incf i2)
              (if (< i2 (length segs2))
-               (setf ip2 (aref segs2 i2)
-                     v2  (car ip2))
-               (setf v2 nil))))
+                 (setf ip2 (aref segs2 i2)
+                       v2  (car ip2))
+                 (setf v2 nil))))
       :finally (let ((r (segments-trim r)))
                  (setf (region-bounds   rd) (segments-bounds r)
                        (region-segments rd) r)
                  (return rd)))))
+
 
 
 #-(and)
@@ -753,30 +770,30 @@ DO:             Compute the operation OP between R1 and R2, and set RD
 "
   (check-type op (member :intersection :difference :union :xor))
   (if (equal-region-p r1 r2)
-    (if (or (eql op :intersection)
-            (eql op :union))
-      (copy-region r1 rd)
-      (set-empty-region rd))
-    (cond
-      ((and (eql op :difference) (empty-region-p r2))
-       (copy-region r1 rd))
-      ((or (eql op :intersection) (eql op :difference))
-       (let ((bounds.intersection (intersect-rect (region-bounds r1) (region-bounds r2)
-                                                  (make-rect 0 0 0 0))))
-         (if (empty-rect-p bounds.intersection)
-           (if (eql op :intersection)
-             (set-empty-region rd)
-             (copy-region r1 rd))
-           (if (and (rectangular-region-p r1) (rectangular-region-p r2))
-             (set-rect-region rd bounds.intersection)
-             (region-operate-not-easy op r1 r2 rd)))))
-      ;; (or (eql op :union) (eql op :xor))
-      ((empty-region-p r2)
-       (copy-region r1 rd))
-      ((empty-region-p r1)
-       (copy-region r2 rd))
-      (t
-       (region-operate-not-easy op r1 r2 rd))))
+      (if (or (eql op :intersection) (eql op :union))
+          (copy-region r1 rd)
+          ;; (or (eql op :difference) (eql op :xor))
+          (set-empty-region rd))
+      (if (or (eql op :intersection) (eql op :difference))
+          (let ((bounds.intersection (intersect-rect (region-bounds r1) (region-bounds r2)
+                                                     (make-rect 0 0 0 0))))
+            (if (eql op :intersection)
+                (cond
+                  ((empty-rect-p bounds.intersection)
+                   (set-empty-region rd))
+                  ((and (rectangular-region-p r1) (rectangular-region-p r2))
+                   (set-rect-region rd bounds.intersection))
+                  (t 
+                   (region-operate-not-easy op r1 r2 rd)))
+                ;; :difference
+                (if (empty-rect-p bounds.intersection)
+                    (copy-region r1 rd)
+                    (region-operate-not-easy op r1 r2 rd))))
+          ;; (or (eql op :union) (eql op :xor))
+          (cond
+            ((empty-region-p r2)  (copy-region r1 rd))
+            ((empty-region-p r1)  (copy-region r2 rd))
+            (t  (region-operate-not-easy op r1 r2 rd)))))
   rd)
 
 
@@ -786,7 +803,7 @@ DO:             Compute the operation OP between R1 and R2, and set RD
                                   (set-rect-region (new-region) 50 20 250 120)
                                   (new-region))
                   #S(region :bounds #S(rect :topleft 1310770 :bottomright 6553800)
-                            :segments #((20 . #(50 200)) (100 . #())))))
+                            :segments #())))
   (assert (equalp
            (region-operate
             :difference
@@ -836,8 +853,19 @@ REGION:         A region.
 
 DEST-REGION:    Another region.
 "
-  (setf (region-bounds   dest-region) (make-rect (region-bounds   region))
-        (region-segments dest-region) (copy-seq  (region-segments region)))
+  (setf (region-bounds   dest-region) (make-rect (region-bounds region))
+        (region-segments dest-region)
+        (let* ((v  (region-segments region))
+               (l  (length v)))
+          (map-into (make-array l :adjustable t :fill-pointer l)
+                    (lambda (c)
+                      (cons (car c)
+                            (let* ((v (cdr c))
+                                   (l (length v)))
+                              (make-array l
+                                          :adjustable t :fill-pointer l
+                                          :initial-contents v))))
+                    v)))
   dest-region)
 
 
@@ -871,11 +899,29 @@ LEFT, TOP, RIGHT, BOTTOM:
                 should be coordinates representing the LEFT, TOP,
                 RIGHT, and BOTTOM of the rectangle.
 "
-  (setf (region-bounds    region) (make-rect left top right bot)
-        (region-segments  region) (vector (cons top (vector left right))
-                                          (cons bot #())))
+  (setf (region-bounds region) (make-rect left top right bot))
+  (let ((r (region-bounds region)))
+    (region-segments  region) (vector (cons (rect-top r) (vector (rect-left r) (rect-right r)))
+                                      (cons (rect-bottom r)  #())))
   region)
 
+
+(defun rect-region (rect-or-left &optional top right bottom)
+  (assert (or (and (integerp rect-or-left)
+                   (integerp top)
+                   (integerp right)
+                   (integerp bottom))
+              (and (typep rect-or-left 'rect)
+                   (null top)
+                   (null right)
+                   (null bottom))))
+  (if bottom
+      (set-rect-region (new-region)
+                       rect-or-left top
+                       right bottom)
+      (set-rect-region (new-region)
+                       (rect-left rect-or-left) (rect-top rect-or-left)
+                       (rect-right rect-or-left) (rect-bottom rect-or-left))))
 
 ;;----------------------------------------------------------------------
 
@@ -1052,7 +1098,7 @@ the original region.
     (unless (and (zerop dh) (zerop dv))
       (flet ((inset-line (segs center delta)
                (if (plusp delta)
-                   (loop
+                   (loop 
                      ;; remove or join the center segment
                      :with center-delta = (- center delta)
                      :with center+delta = (+ center delta)
@@ -1119,27 +1165,35 @@ the original region.
                (cx     (point-h center))
                (cy     (point-v center)))
           (if (plusp dv)
-              (loop
-                :with cy-dv = (- cy dv)
-                :with cy+dv = (+ cy dv)
-                ;; remove the center lines.
-                :with lines = (region-segments region)
-                :with dst = 0
-                :for segs :across lines
-                :do (cond
-                      ((<= (car segs) cy-dv)
-                       ;; above
-                       (incf (car segs) dv)
-                       (setf (cdr segs) (inset-line (cdr segs) cx dh))
-                       (setf (aref lines dst) segs)
-                       (incf dst))
-                      ((< cy+dv (car segs))
-                       ;; below
-                       (decf (car segs) dv)
-                       (setf (cdr segs) (inset-line (cdr segs) cx dh))
-                       (setf (aref lines dst) segs)
-                       (incf dst))))
-              (loop
+              (loop ;; moving inside vertically: we'll have less lines.
+                    :with cy-dv = (- cy dv)
+                    :with cy+dv = (+ cy dv)
+                    ;; remove the center lines.
+                    :with lines = (region-segments region)
+                    :with dst = 0
+                    :for segs :across lines
+                    :do (cond
+                          ((<= (car segs) cy-dv)
+                           ;; above
+                           (incf (car segs) dv)
+                           (setf (cdr segs) (inset-line (cdr segs) cx dh))
+                           (setf (aref lines dst) segs)
+                           (incf dst))
+                          ((< cy+dv (car segs))
+                           ;; below
+                           (decf (car segs) dv)
+                           (setf (cdr segs) (inset-line (cdr segs) cx dh))
+                           (setf (aref lines dst) segs)
+                           (incf dst)))
+                    :finally (if (array-has-fill-pointer-p lines)
+                                 (setf (fill-pointer lines) dst)
+                                 (setf (region-segments region)
+                                       (replace (make-array dst
+                                                            :element-type (array-element-type lines)
+                                                            :fill-pointer dst
+                                                            :adjustable t)
+                                                lines))))
+              (loop ;; moving outside vertically: we'll have more lines
                 ;; keep all lines.
                 :with lines = (region-segments region)
                 :for segs :across lines
@@ -1240,6 +1294,7 @@ DEST-REGION:    A region.
   (region-operate :xor region1 region2 dest-region))
 
 
+
 (defun point-in-region-p (region h &optional v)
   "
 The POINT-IN-REGION-P function returns T if the point specified by H
@@ -1307,5 +1362,113 @@ REGION:         A region.
   (test/region-operate)
   (setf *temp-rgn* (new-region)))
 
-;;;; THE END ;;;;
+;;--------------------
 
+
+
+
+(defun set-disc-region (region cx cy radius)
+  "
+RETURN: REGION
+DO:     Sets REGION to a disc of center CX CY and given RADIUS.
+"
+  (let ((box (new-region)))
+    (set-empty-region region)
+    (loop
+      :with radius^2 = (* radius radius)
+      :for dy :from 0 :to (1- radius)
+      :for dx = (round (sqrt (- radius^2 (* dy dy))))
+      :do (set-rect-region box (- cx dx) (- cy dy 1) (+ cx dx) (+ cy dy 1))
+          (union-region region box region))
+    region))
+
+(defun disc-region (cx cy radius)
+  (set-disc-region (new-region) cx cy radius))
+
+#-(and) (progn
+          
+          (inset-region (set-disc-region (new-region) 0 0 10) 1 1)
+          #S(region :bounds #S(rect :topleft 4294442999 :bottomright 589833)
+                    :segments #((-9 . #(-3 3))
+                                (-8 . #(-5 5))
+                                (-7 . #(-6 6))
+                                (-6 . #(-7 7))
+                                (-5 . #(-8 8))
+                                (-4 . #(-8 8))
+                                (-3 . #(-9 9))
+                                (-2 . #(-9 9))
+                                (-1 . #(-9 9))
+                                (0 . #(-9 9))
+                                (1 . #(-9 9))
+                                (2 . #(-9 9))
+                                (3 . #(-8 8))
+                                (4 . #(-8 8))
+                                (5 . #(-7 7))
+                                (6 . #(-6 6))
+                                (7 . #(-5 5))
+                                (8 . #(-3 3))
+                                #1=(9 . #())
+                                #1#))
+
+          #S(region :bounds #S(rect :topleft 4294377462 :bottomright 655370)
+                    :segments #((-10 . #(-4 4))
+                                (-9 . #(-6 6))
+                                (-8 . #(-7 7))
+                                (-7 . #(-8 8))
+                                (-6 . #(-9 9))
+                                (-5 . #(-9 9))
+                                (-4 . #(-10 10))
+                                (-3 . #(-10 10))
+                                (-2 . #(-10 10))
+                                (-1 . #(-10 10))
+                                (1 . #(-10 10))
+                                (2 . #(-10 10))
+                                (3 . #(-10 10))
+                                (4 . #(-9 9))
+                                (5 . #(-9 9))
+                                (6 . #(-8 8))
+                                (7 . #(-7 7))
+                                (8 . #(-6 6))
+                                (9 . #(-4 4))
+                                (10 . #())))
+          )
+
+(defun test/xor-region ()
+  (let ((circle (set-disc-region (new-region) 0 0 10)))
+    (assert (equal-region-p
+             (xor-region circle (inset-region (copy-region circle) 1 1) (new-region))
+             (xor-region (inset-region (copy-region circle) 1 1) circle (new-region)))))
+  :success)
+
+
+#-(and) (progn
+          
+         (let ((circle (set-disc-region (new-region) 0 0 10)))
+           (list    
+            (xor-region circle (inset-region (copy-region circle) 1 1) (new-region))
+            (xor-region (inset-region (copy-region circle) 1 1) circle (new-region))))
+
+         (#S(region :bounds #S(rect :topleft 131062 :bottomright 65546)
+                    :segments #((1 . #(-10 -9 9 10))
+                                (1 . #())))
+           #S(region :bounds #S(rect :topleft 65526 :bottomright 524298)
+                     :segments #((0 . #(-9 -8 8 9))
+                                 (1 . #(-10 -8 8 10))
+                                 (1 . #(-9 -8 8 9))
+                                 (1 . #())
+                                 (2 . #())
+                                 (3 . #())
+                                 (4 . #())
+                                 (5 . #())
+                                 (6 . #())
+                                 (7 . #())
+                                 (8 . #())
+                                 (6 . #(-4 4))
+                                 (7 . #(-2 2))
+                                 (8 . #()))))
+
+         )
+
+
+#+not-yet
+(test/xor-region)

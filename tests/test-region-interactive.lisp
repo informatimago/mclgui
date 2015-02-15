@@ -293,16 +293,6 @@
                                            (rect-region 230 130 270 170)))
                  (rect-region 90 170 310 200))
 
-   *z*
-   *hole*
-   *f*
-
-   (union-region      *hole* *f*)
-   (intersect-region  *hole* *f*)
-   (difference-region *hole* *f*)
-   (difference-region *hole* *f*)
-   (xor-region        *hole* *f*)
-   
    (disc-region 100 100 70)
    
    (let ((circle (disc-region 100 100 70)))     
@@ -326,22 +316,65 @@
 
    *c* *i*
    (xor-region *c* *i*)
+
+
+   ;; ######   ##
+   ;; ##  ###########
+   
+   (reduce (function union-region)
+           (list (rect-region  50  50 140  70)
+                 (rect-region 150  50 170  70)
+                 (rect-region  50  70  70  90)
+                 (rect-region  90  70 200  90)
+                 (rect-region  50  90 170 110)))
+
+   ;; #########
+   ;; ##   ####
+   ;; #####   #
+   (reduce (function union-region)
+           (list (rect-region 50 50 200 70)
+                 (rect-region 50 70  70 90)
+                 (rect-region 150 70 200 90)
+                 (rect-region 50 90 150 110)))
+
+   (reduce (function union-region)
+           (list (rect-region 50 50 200 70)
+                 (rect-region 50 70  70 90)
+                 (rect-region 150 70 200 90)
+                 (rect-region 50 90 150 110)
+                 (rect-region 160 90 180 110)))
+
+   (reduce (function union-region)
+           (list (rect-region 50 50 200 70)
+                 (rect-region 50 70  70 90)
+                 (rect-region 150 70 200 90)
+                 (rect-region 50 90 150 110)
+                 (rect-region 160 90 180 110)
+                 (rect-region 50 110 200 130)))
+
+   (reduce (function union-region)
+           (list (rect-region  50 50 100 70)
+                 (rect-region 150 50 200 70)
+                 (rect-region  50 70  70 90)
+                 (rect-region 100 70 200 90)
+                 (rect-region 50 90 150 110)
+                 (rect-region 160 90 180 110)
+                 (rect-region 50 110 200 130)))
+   *z*
+   *hole*
+   *f*
+
+   (union-region      *hole* *f*)
+   (intersect-region  *hole* *f*)
+   (difference-region *hole* *f*)
+   (difference-region *f* *hole*)
+   (xor-region        *hole* *f*)
+   
    ))
 
-
-#-(and) (#S(region :bounds #S(rect :topleft 5242980 :bottomright 14418230)
-           :segments
-           #((80 . #(100 190 200 210))
-             (100 . #(100 120 150 250 290 310))
-             (120 . #(100 150 160 170 230 250 290 310))
-             (140 . #(100 120 130 170 190 210 230 270 290 310))
-             (160 . #(100 120 150 170 230 250 290 310))
-             (180 . #(150 250 290 310))
-             (200 . #(190 210))
-             (220 . #())))
-  (stroke-region (offset-region (xor-region        *hole* *f*) 50 50))
-  nil)
+;; (setf *speed* 0)
 ;; (setf (test-regions *w*) *test/regions*)
+;; (debug-region (current-region *w*))
 
 (defun debug-region (r)
   (with-focused-view *w*
@@ -457,5 +490,23 @@
                                 (1+ (test-region-index self))
                                 (length (test-regions self))))
   (setf (region-view-region (region-view self)) (current-region self)))
+
+
+#-(and) (progn
+
+          (cd #P"~/works/patchwork/src/mclgui/")
+          (pushnew (pwd) asdf:*central-registry* :test (function equal))
+          (ql:quickload :mclgui)
+          (in-package :ui)
+          (initialize)
+          (ql:quickload :mclgui-test)
+          (when (front-window) (window-close (front-window)))
+          (defparameter *w* (make-instance 'region-test-window))
+          (setf (coordinates-filter (find-subview-of-type *w* 'coordinates-view))
+                (lambda (x y) (values (* 10 (round x 10)) (* 10 (round y 10)))))
+          (debug-region (current-region *w*))
+          (setf *speed* 1.0)
+
+          );;progn
 
 ;;;; THE END ;;;;
