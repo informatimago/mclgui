@@ -31,13 +31,7 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
-(ql:quickload :mclgui)
 (in-package :ui)
-(initialize)
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (load (print (merge-pathnames "../layout.lisp" (or *compile-file-pathname* *load-pathname* #P"")))))
-
 
 ;;;---------------------------------------------------------------------
 ;;; The window
@@ -64,6 +58,7 @@
 
 
 (defvar *w* (make-instance 'sdi-window :window-title "Test"))
+
 
 
 (defgeneric first-responder (w)
