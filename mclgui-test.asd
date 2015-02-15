@@ -36,34 +36,24 @@
   :name "mclgui-test"
   :description "Test system for Macintosh Common Lisp Graphical User Interface for OpenStep"
   :author "Pascal J. Bourguignon"
-  :version "1.1.3"
+  :version "1.1.4"
   :license "GPL3"
   :depends-on ("mclgui"
                "com.informatimago.common-lisp.cesarum")
-  :components ((:file "tests/test-graphics"           :depends-on nil)
-               ;; (:file "tests/test-little"             :depends-on nil)
-               (:file "tests/test-menu"               :depends-on nil)
-               (:file "tests/test-pattern"            :depends-on nil)
-               (:file "tests/test-scroller"           :depends-on nil)
-               (:file "tests/test-view"               :depends-on nil)
-               (:file "tests/test-spring-view"        :depends-on nil)
-               (:file "tests/test-region-path"        :depends-on nil)
-               (:file "examples/coordinated-window"   :depends-on nil)
+  :components ((:file "tests/test-graphics"           :depends-on ())
+               ;; (:file "tests/test-little"             :depends-on ())
+               (:file "tests/test-menu"               :depends-on ())
+               (:file "tests/test-pattern"            :depends-on ())
+               (:file "tests/test-scroller"           :depends-on ())
+               (:file "tests/test-view"               :depends-on ())
+               (:file "tests/test-spring-view"        :depends-on ())
+               (:file "tests/test-region-path"        :depends-on ())
+               (:file "examples/coordinated-window"   :depends-on ())
                (:file "layout"                        :depends-on ())
                (:file "scratch/sdi"                   :depends-on ("layout"))
                (:file "tests/test-region-interactive" :depends-on ("examples/coordinated-window"
                                                                    "scratch/sdi"
                                                                    "tests/test-region-path"))
-               #-(and) (:file "tests"
-                        :depends-on ("tests/test-graphics"           
-                                     "tests/test-menu"               
-                                     "tests/test-pattern"            
-                                     "tests/test-scroller"           
-                                     "tests/test-view"               
-                                     "tests/test-spring-view"        
-                                     "tests/test-region-path"        
-                                     "examples/coordinated-window"   
-                                     "scratch/sdi"                   
-                                     "tests/test-region-interactive"))))
+               (:file "tests/test-text-edit"          :depends-on ())))
 
 ;;;; THE END ;;;;
