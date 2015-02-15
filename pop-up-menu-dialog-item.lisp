@@ -164,24 +164,6 @@ default menu item.  Otherwise the value itself is displayed as if by
     "<No items>"))
 
 
-(defmethod print-object ((thing pop-up-menu) stream)
-  (declare (stepper disable))
-  (print-parseable-object (thing stream :type t :identity t)
-                          (:title (let ((title (menu-title  thing)))
-                                    (if (and title (not (equal title "")))
-                                        title
-                                        (get-menu-body-text thing)))))
-  ;; (print-unreadable-object (thing stream)
-  ;;   (format stream "~S ~S"
-  ;;           (class-name (class-of thing))
-  ;;           (let ((title (menu-title  thing)))
-  ;;             (if (and title (not (equal title "")))
-  ;;                 title
-  ;;                 (get-menu-body-text thing)))))
-  )
-
-                                        ;------
-
 (defgeneric set-pop-up-menu-default-item (menu num &optional force)
   (:method ((menu pop-up-menu) num &optional force)
     (let* ((old (pop-up-menu-default-item menu))
