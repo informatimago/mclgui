@@ -5,8 +5,34 @@ Mclgui Implementation Notes
 ###########################
 
 
-Mechanisms
-==========
+MCL GUI Mechanisms
+==================
+
+set-view-position  -> invalidate-view
+set-view-size      -> invalidate-view
+set-view-container -> invalidate-view
+
+invalidate-view    -> invalidate-corners
+
+invalidate-corners -> invalidate-region
+
+invalidate-region  -> InvalRgn
+                   => region added to window erase region => erased by window-update-event-handler
+
+
+
+validate-view      -> validate-corners
+
+validate-corners   => erases the rectangle defined by the corners
+                   => removes it form the window erase region
+                   -> validate-region
+                   
+validate-region    -> ValidRgn
+
+
+
+Implementation Mechanisms
+=========================
 
 Actions can be initiated from two sides:
 
