@@ -872,9 +872,9 @@ displaying:  (te-display-state-changes current-state new-state) --> display-chan
 Compare the base and new display states, and generates a list of display changes:
 - scrollrects
 - lines needing redisplay
-
-
 "
+  (declare (ignore base new))
+  ;; TODO
   )
 
 
@@ -920,11 +920,11 @@ RETURN: TE
                   (if (atom update)
                       (ecase update
                         (:display
-                         (loop :for lino :below (te-nlines te)
-                               :do (te-draw-line lino te))
                          (validate-corners (te-in-port te)
                                            (rect-topleft (te-%view-rect te))
-                                           (rect-bottomright (te-%view-rect te))))
+                                           (rect-bottomright (te-%view-rect te)))
+                         (loop :for lino :below (te-nlines te)
+                               :do (te-draw-line lino te)))
                         (:selection
                          (assert (<= 0 (te-sel-start te) (te-sel-end te) (te-length te)))
                          (if (te-has-caret te)
@@ -947,28 +947,32 @@ RETURN: TE
   te)
 
 
-(defmacro with-te-update-display (te &body body)
+(defun call-with-te-update-display (te thunk)
   ;; TODO: make it more sophisticated: We want to detect automatically
   ;; what has changed in the TE so that we may redisplay only the
   ;; lines and the selection that have changed.
-  (let ((vte         (gensym "te"))
-        (vselection  (gensym "sel")))
-    `(let* ((,vte ,te)
-            (,vselection (cons (te-sel-start ,vte) (te-sel-end ,vte))))
-       (with-font-focused-view (te-in-port ,vte)
-         (with-clip-rect-intersect (te-%view-rect ,vte)
-           (when (and (te-in-port ,vte) (te-has-caret ,vte))
-             (te-erase-caret ,vte))
-           (multiple-value-prog1 (progn ,@body)
-             (unless (and (= (car ,vselection) (te-sel-start ,vte))
-                          (= (cdr ,vselection) (te-sel-end   ,vte)))
-               (te-show-charpos (te-sel-current ,vte) ,vte))
-             (when (te-in-port ,vte)
-               (invalidate-corners (te-in-port ,vte)
-                                   (rect-topleft (te-%view-rect ,vte))
-                                   (rect-bottomright (te-%view-rect ,vte))
-                                   #|already erased:|#t));;DEBUG-PJB
-             (te-update-view (te-%view-rect ,vte) ,vte)))))))
+  (let ((start (te-sel-start te))
+        (end   (te-sel-end te)))
+    (if (te-in-port te)
+        (with-font-focused-view (te-in-port te)
+          (with-clip-rect-intersect (te-%view-rect te)
+            (when (and (te-in-port te) (te-has-caret te))
+              (te-erase-caret te))
+            (multiple-value-prog1 (funcall thunk)
+              (unless (and (= start (te-sel-start te))
+                           (= end   (te-sel-end   te)))
+                (te-show-charpos (te-sel-current te) te))
+              (when (te-in-port te)
+                (invalidate-corners (te-in-port te)
+                                    (rect-topleft (te-%view-rect te))
+                                    (rect-bottomright (te-%view-rect te))
+                                    #|already erased: nil|#t));;DEBUG-PJB
+              (te-update-view (te-%view-rect te) te))))
+        (funcall thunk))))
+
+
+(defmacro with-te-update-display (te &body body)
+  `(call-with-te-update-display ,te (lambda () ,@body)))
 
 
 
@@ -1445,7 +1449,6 @@ RETURN: The start and end positions of the word that contains CHARPOS.
 
 (defun te-click (pt extend te)
   "
-
 TEClick controls the placement and highlighting of the selection range
 as determined by mouse events. Call TEClick whenever a mouse-down
 event occurs in the view rectangle of the edit record specified by
@@ -1468,7 +1471,6 @@ occurring, TEClick expands or shortens the selection range
 accordingly. In the case of a double-click, the word under the cursor
 becomes the selection range; dragging expands or shortens the
 selection a word at a time.
-
 "
   (with-mutex *te-mutex*
     (te-invariant te)
@@ -1540,7 +1542,6 @@ sel.current <- pt.charpos
 
 (defun te-set-select (start end te)
   "
-
 TESetSelect sets the selection range to the text between selStart and
 selEnd in the text specified by hTE. The old selection range is
 unhighlighted, and the new one is highlighted. If selStart equals
@@ -1550,7 +1551,6 @@ displayed.
 SelEnd and selStart can range from 0 to 32767. If selEnd is anywhere
 beyond the last character of the text, the position just past the last
 character is used.
-
 "
   (with-mutex *te-mutex*
     (te-invariant te)
@@ -1562,7 +1562,6 @@ character is used.
 
 (defun te-activate (te)
   "
-
 TEActivate highlights the selection range in the view rectangle of the
 edit record specified by hTE. If the selection range is an insertion
 point, it displays a caret there. This procedure should be called
@@ -1570,6 +1569,7 @@ every time the Toolbox Event Manager function GetNextEvent reports
 that the window containing the edit record has become active.
 
 "
+  #+debug-views (format-trace "te-activate")
   (with-mutex *te-mutex*
     (with-te-update-display te
       (setf (te-active te) 1
@@ -1580,7 +1580,6 @@ that the window containing the edit record has become active.
 
 (defun te-deactivate (te)
   "
-
 TEDeactivate unhighlights the selection range in the view rectangle of
 the edit record specified by hTE. If the selection range is an
 insertion point, it removes the caret. This procedure should be called
@@ -1588,6 +1587,7 @@ every time the Toolbox Event Manager function GetNextEvent reports
 that the window containing the edit record has become inactive.
 
 "
+  #+debug-views (format-trace "te-deactivate")
   (with-mutex *te-mutex*
     (with-te-update-display te
       (setf (te-active te) 0)
@@ -1752,6 +1752,7 @@ DO:     Takes the specified text and inserts it just before the
 
 
 (defun TE-Auto-View (auto te)
+  (declare (ignore auto te))
   ;; TODO: TE-Auto-View
   )
 
@@ -2706,6 +2707,7 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
            (setf (test-window-te window) te)
            ;; ---
            (te-set-text text te)
+           (window-size-parts window)
            (assert (string= text (te-get-text te)))
            (test/paragraph te)
            :success)
