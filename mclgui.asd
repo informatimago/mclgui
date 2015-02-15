@@ -398,6 +398,12 @@
                              "graphics"
                              "view-classes"))
 
+               (:file "region-path"
+                :depends-on ("packages"
+                             "macros" "variables" "point" "rect"
+                             "graphics"
+                             "region"))
+
                (:file "pen"
                 :depends-on ("packages"
                              "macros" "variables" "point" 
@@ -452,7 +458,7 @@
                              "pop-up-menu-dialog-item" "sequence-dialog-item"
                              "y-or-n-dialog" "message-dialog" "get-string-dialog"
                              "select-dialog"
-                             "scroller"
+                             "scroller" "region-path"
                              "event" "view-event" "window-event"
                              "cursor" "scrap" "eval" "application"
                              #+has-appleevent "apple-event"))))
