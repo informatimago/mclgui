@@ -43,17 +43,15 @@
 (defvar *current-cursor* nil)
 
 (defclass cursor (wrapper)
- ((data     :initarg :data     :initform (make-bits16 0)  :type bits16 :accessor cursor-data)
+  ((data     :initarg :data     :initform (make-bits16 0)  :type bits16 :accessor cursor-data)
    (mask     :initarg :mask     :initform (make-bits16 1)  :type bits16 :accessor cursor-mask)
    (hot-spot :initarg :hot-spot :initform (make-point 0 0) :type point  :accessor cursor-hot-spot)
    (name     :initarg :name     :initform "Cursor"         :type string :accessor cursor-name))
   (:documentation "A Quickdraw cursor"))
 
 
-(defmethod print-object ((cursor cursor) stream)
-  (declare (stepper disable))
-  (print-parseable-object (cursor stream :type t :identity t)
-                          name))
+;; (define-printer cursor name)
+(define-printer (cursor :identity t) name)
 
 
 (defun cursor-premultiplied-data (cursor)

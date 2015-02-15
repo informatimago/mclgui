@@ -87,6 +87,7 @@ own classes of dialog items.
 
 
 
+
 (defclass dialog-item (simple-view)
   ((width-correction            :allocation :class
                                 :initform 0 
@@ -119,6 +120,18 @@ own classes of dialog items.
 The class DIALOG-ITEM provides the basic functionality shared by all
 dialog items. It is built on SIMPLE-VIEW.
 "))
+
+
+(define-printer (view :identity t)
+  (:view-position        (point-to-list (view-position self)))
+  (:position/window      (point-to-list (convert-coordinates (view-position self)
+                                                             (view-container self)
+                                                             (view-window self))))
+  (:view-size            (point-to-list (view-size self)))
+  (:view-scroll-position (point-to-list (view-scroll-position self)))
+  (:view-valid           (view-valid self))
+  (:dialog-item-text     (dialog-item-text self)))
+
 
 
 (defgeneric dialog-item-text-length (item)
@@ -158,41 +171,30 @@ CONTAINER:      The view focused on whose coordinate system body will
 
 (defmethod view-draw-contents ((item dialog-item))
   #+debug-views
-  (progn (format *mclgui-trace* "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
+  (progn (format *mclgui-trace* "~&view-draw-contents dialog-item~%")
+         (format *mclgui-trace* "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
          (format *mclgui-trace* "~&  text    = ~S~%" (dialog-item-text item))
          (format *mclgui-trace* "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
          (format *mclgui-trace* "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
          (finish-output *mclgui-trace*))
   (when (installed-item-p item)
-    (with-focused-dialog-item (item)
-      (let* ((frame (view-frame item))
-             (x     (rect-left   frame))
-             (y     (rect-top    frame))
-             (w     (rect-width  frame))
-             (h     (rect-height frame))
-             (back  (or (part-color item :body) (get-back-color (view-window item))))
-             (fore  (if (dialog-item-enabled-p item)
-                        (or (part-color item :text) (get-fore-color (view-window item)))
-                        *gray-color*)))
-        (with-fore-and-back-color fore back
-          (erase-rect* x y w h)
-          (draw-text (1+ x) (1+ y) (- w 2) (- h 2) (dialog-item-text item)
-                     (or (text-truncation item ) :clipping)
-                     (or (text-justification item) :natural)
-                     (compress-text item))
-          (when (slot-value item 'draw-outline)
-            (draw-rect* x y w h))))))
-
-  #-(and)
-  (with-focused-dialog-item (item)
     (let* ((frame (view-frame item))
-           (x (rect-left   frame))
-           (y (rect-top    frame))
-           (w (rect-width  frame))
-           (h (rect-height frame)))
-      ;; (erase-rect* x y w h)
-      (draw-text (1+ x) (1+ y) (- w 2) (- h 2) (dialog-item-text item))
-      (draw-rect* x y w h))))
+           (x     (rect-left   frame))
+           (y     (rect-top    frame))
+           (w     (rect-width  frame))
+           (h     (rect-height frame))
+           (back  (or (part-color item :body) (get-back-color (view-window item))))
+           (fore  (if (dialog-item-enabled-p item)
+                      (or (part-color item :text) (get-fore-color (view-window item)))
+                      *gray-color*)))
+      (with-fore-and-back-color fore back
+        (erase-rect* x y w h)
+        (draw-text (1+ x) (1+ y) (- w 2) (- h 2) (dialog-item-text item)
+                   (or (text-truncation item ) :clipping)
+                   (or (text-justification item) :natural)
+                   (compress-text item))
+        (when (slot-value item 'draw-outline)
+          (draw-rect* x y w h))))))
 
 
 (defmacro reference-method (generic-function (&rest classes))
@@ -244,7 +246,7 @@ MUST-BE-ENABLED:
 
 (defun make-dialog-item (class position size text &optional action &rest attributes)
   "
-The MAKE-DIALOG-ITEM function creates a dialog item using makeinstance.
+The MAKE-DIALOG-ITEM function creates a dialog item using make-instance.
 
 CLASS:          The class of the dialog item.
 
@@ -343,7 +345,7 @@ CLIPRGN:        Region records from the view’s wptr.  They are ignored.
   (unless *deferred-drawing*
    (with-focused-dialog-item (item) 
      (view-draw-contents item)))
-  #-(and) (with-temp-rgns (visrgn cliprgn)
+  #-(and) (with-temp-rgns (visrgn cliprgn) ;; TODO
             (get-window-visrgn  (wptr item) visrgn)
             (get-window-cliprgn (wptr item) cliprgn)      
             (when (view-is-invalid-p item visrgn cliprgn)

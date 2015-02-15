@@ -304,18 +304,8 @@ other styles.")
 
 
 
-
-(defmethod print-object ((self menu-element) stream)
-  (declare (stepper disable))
-  (print-parseable-object (self stream :type t :identity t)
-                          title enabledp checkedp)
-  ;; (print-unreadable-object (self stream :type t)
-  ;;   (format stream "~S ~:[disabled~;enabled~] ~:[~;checked~]"
-  ;;           (menu-item-title self)
-  ;;           (menu-item-enabled-p self)
-  ;;           (slot-value self 'checkedp)))
-  ;; self
-  )
+(define-printer (menu-element :identity t)
+  title enabledp checkedp)
 
 
 ;;;---------------------------------------------------------------------
@@ -327,17 +317,8 @@ other styles.")
    (menu-font   :initform nil
                 :initarg :menu-font)))
 
-
-(defmethod print-object ((self menu) stream)
-  (declare (stepper disable))
-  (print-parseable-object (self stream :type t :identity t)
-                          title (:items (slot-value self 'item-list)))
-  ;; (print-unreadable-object (self stream :type t)
-  ;;   (format stream "~S (~{~S~^ ~})"
-  ;;           (menu-item-title self)
-  ;;           (slot-value self 'item-list)))
-  ;; self
-  )
+(define-printer (menu :identity t)
+ (:items (slot-value self 'item-list)))
 
 
 (defmethod initialize-instance :after ((menu menu) &key (menu-items '()) &allow-other-keys)

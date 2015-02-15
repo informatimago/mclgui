@@ -345,15 +345,12 @@ not normally called directly but instead by stream output functions.
   pen)
 
 
-(defmethod print-object ((pen pen-state) stream)
-  (declare (stepper disable))
-  (print-parseable-object (pen stream :type t :identity t)
-                          visiblep
-                          (:position (point-to-list (pen-position pen)))
-                          (:size     (point-to-list (pen-size pen)))
-                          (:mode     (pen-mode-to-name (pen-mode pen)))
-                          pattern)
-  pen)
+(define-printer (pen-state :identity t)
+  visiblep
+  (:position (point-to-list (pen-position self)))
+  (:size     (point-to-list (pen-size self)))
+  (:mode     (pen-mode-to-name (pen-mode self)))
+  pattern)
 
 
 

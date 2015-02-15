@@ -148,6 +148,23 @@ RETURN:         A form building a plist of slot values.
                         `(ignore-errors (slot-value ,ovar ',slot))
                         `(ignore-errors ,(second slot)))))))
 
+(defgeneric slots-for-print (object)
+  (:documentation "Returns a plist of slots.")
+  (:method-combination append))
+
+(defmacro define-printer (class-name-and-options &rest slots)
+  (if (symbolp class-name-and-options)
+      `(define-printer (,class-name-and-options) ,@slots)
+      (destructuring-bind (class-name &key (type t) (identity t)) class-name-and-options
+        `(progn
+           (defmethod slots-for-print append ((self ,class-name))
+             ,(extract-slots 'self slots))
+           (defmethod print-object ((self ,class-name) stream)
+             (call-print-parseable-object self stream ,type ,identity
+                                          (lambda (self)
+                                            (declare (ignorable self) (stepper disable))
+                                            (slots-for-print self))))))))
+
 
 (defmacro print-parseable-object ((object stream &key (type t) identity) &rest slots)
   "

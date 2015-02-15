@@ -90,16 +90,14 @@ Stack of instance screen shots. Cf. new-instance and with-instance-drawing.
 ")))
 
 
-(defmethod print-object ((view simple-view) stream)
-  (declare (stepper disable))
-  (print-parseable-object
-      (view stream :type t :identity t)
-      (:view-nick-name         (view-nick-name view))
-      (:view-position        (point-to-list (view-position view)))
-      (:position/window      (point-to-list (convert-coordinates (view-position view)
-                                                                 view (view-window view))))
-      (:view-size            (point-to-list (view-size view)))
-      (:view-scroll-position (point-to-list (view-scroll-position view)))))
+(define-printer simple-view
+  (:view-nick-name       (view-nick-name self))
+  (:view-position        (point-to-list (view-position self)))
+  (:position/window      (point-to-list (convert-coordinates (view-position self)
+                                                             (view-container self)
+                                                             (view-window self))))
+  (:view-size            (point-to-list (view-size self)))
+  (:view-scroll-position (point-to-list (view-scroll-position self))))
 
 
 (defgeneric view-subviews (view)
@@ -172,16 +170,8 @@ DO:             Remove the property KEY from the VIEW.
                          :accessor view-clip-region-slot)))
 
 
-(defmethod print-object ((view view) stream)
-  (declare (stepper disable))
-  (print-parseable-object
-   (view stream :type t :identity t)
-   (:view-position        (point-to-list (view-position view)))
-   (:position/window      (point-to-list (convert-coordinates (view-position view)
-                                                              view (view-window view))))
-   (:view-size            (point-to-list (view-size view)))
-   (:view-scroll-position (point-to-list (view-scroll-position view)))
-   (:view-valid           (view-valid view))))
+(define-printer view
+  (:view-valid           (view-valid self)))
 
 ;;;---------------------------------------------------------------------
 
@@ -216,8 +206,10 @@ DO:             Remove the property KEY from the VIEW.
    
    (window-erase-region              :accessor  window-erase-region
                                      :initform  (new-rgn))
-   (window-invalid-region            :initform  nil                          
-                                     :accessor  window-invalid-region)
+   (window-invalid-region            :accessor  window-invalid-region
+                                     :initform  (new-rgn))
+   (erase-anonymous-invalidations    :initform   t
+                                     :initarg   :erase-anonymous-invalidations)
    (process                          :accessor  window-process
                                      :initarg  :process
                                      :initform  nil)
@@ -272,19 +264,20 @@ DO:             Remove the property KEY from the VIEW.
                                                          :single-edge-box
                                                          :shadow-edge-box
                                                          :tool))
-   (erase-anonymous-invalidations    :initform   t
-                                     :initarg   :erase-anonymous-invalidations)
    (affine-transform                 :initform nil
                                      :accessor window-affine-transform
                                      :documentation "The initial window NSAffineTransform object.")
    (transform-stack                  :initform nil
-                                     :accessor transform-stack
-                                     :documentation "A stack of NSAffineTransform currently applied to
-the graphic context of the window content view.
-Since there's apparently no way to get back the current transform of a graphic context,
-and since we may just from context to context with embedded with-focused-view
-we need to keep track of the transform currently applied to a window, so that we may temporarily
-cancel it.  cf. CALL-WITH-FOCUSED-VIEW")
+                                     :accessor window-transform-stack
+                                     :documentation "
+A stack of NSAffineTransform currently applied to the graphic context
+of the window content view.  Since there's apparently no way to get
+back the current transform of a graphic context, and since we may jump
+from context to context with embedded with-focused-view we need to
+keep track of the transform currently applied to a window, so that we
+may temporarily cancel it.  cf. CALL-WITH-FOCUSED-VIEW.
+FOCUS-VIEW changes the top of the transform-stack of the view window. (NIY)
+")
    ;; WINDOW-PTR is a simulated handle (a mere integer identifying the window).
    ;; It's reset to NIL when the real window handle is released.
    (window-ptr                       :reader window-ptr
@@ -294,13 +287,8 @@ cancel it.  cf. CALL-WITH-FOCUSED-VIEW")
 (defgeneric view-allocate-clip-region (window))
 
 
-(defmethod print-object ((window window) stream)
-  (declare (stepper disable))
-  (print-parseable-object (window stream :type t :identity t)
-                          (:title (ignore-errors (window-title window)))
-                          (:view-position (point-to-list (view-position window)))
-                          (:view-size (point-to-list (view-size window)))))
-
+(define-printer window
+    (:title (ignore-errors (window-title self))))
 
 ;;;---------------------------------------------------------------------
 
