@@ -125,8 +125,7 @@ body is evaluated with VAR bound to that rectangle."
 (defmethod set-clip-region ((view simple-view) new-region)
   (niy set-clip-region view new-region)
   (with-focused-view view
-    ;;(#_SetClip new-region)
-    )
+    [(bezier-path-from-region new-region) setClip])
   new-region)
 
 (defgeneric clip-rect (view left &optional top right bottom))
@@ -311,24 +310,20 @@ body is evaluated with VAR bound to that rectangle."
 
 (defgeneric frame-region (view region))
 (defmethod frame-region ((view simple-view) region)
-  (niy frame-region view region)
   (with-focused-view view
-    ;; (#_FrameRgn region)
-    ))
+    [(bezier-path-from-region region) stroke]))
 
 (defgeneric paint-region (view region))
 (defmethod paint-region ((view simple-view) region)
-  (niy frame-region view region)
   (with-focused-view view
-    ;; (#_PaintRgn region)
-    ))
+    [(bezier-path-from-region region) fill]))
 
 (defgeneric erase-region (view region))
 (defmethod erase-region ((view simple-view) region)
-  (niy erase-region view region)
   (with-focused-view view
-    ;; (#_EraseRgn region)
-    ))
+    (with-background-color
+      [(bezier-path-from-region region) fill])))
+
 
 (defgeneric invert-region (view region))
 (defmethod invert-region ((view simple-view) region)
@@ -339,10 +334,9 @@ body is evaluated with VAR bound to that rectangle."
 
 (defgeneric fill-region (view pattern region))
 (defmethod fill-region ((view simple-view) pattern region)
-  (niy fill-region view pattern region)
-  (with-focused-view view 
-    ;; (#_FillRgn region pattern)
-    ))
+  (with-focused-view view
+    (with-pen-state (:pattern pattern)
+      [(bezier-path-from-region region) fill])))
 
 
 ;;;---------------------------------------------------------------------

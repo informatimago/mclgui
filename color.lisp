@@ -261,6 +261,14 @@ REDISPLAY-P:    If the value of this is true (the default), this
 (defmacro with-fore-and-back-color (fore back &body body)
   `(call-with-fore-and-back-color ,fore ,back (lambda () ,@body)))
 
+(defmacro with-background-color (&body body)
+  `(let ((color (unwrap (or (and *current-view*
+                                 (view-window *current-view*)
+                                 (slot-value (view-window *current-view*) 'back-color))
+                            *background-color*))))
+     (with-saved-graphic-state
+       [color setFill]
+       ,@body)))
 
 ;;;---------------------------------------------------------------------
 ;;;
