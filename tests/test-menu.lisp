@@ -3,7 +3,7 @@
 ;;;;FILE:               test-menu.lisp
 ;;;;LANGUAGE:           Common-Lisp
 ;;;;SYSTEM:             Common-Lisp
-;;;;USER-INTERFACE:     NONE
+;;;;USER-INTERFACE:     MCLGUI
 ;;;;DESCRIPTION
 ;;;;    
 ;;;;    Test the menus.

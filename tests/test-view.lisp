@@ -3,7 +3,7 @@
 ;;;;FILE:               test-view.lisp
 ;;;;LANGUAGE:           Common-Lisp
 ;;;;SYSTEM:             Common-Lisp
-;;;;USER-INTERFACE:     NONE
+;;;;USER-INTERFACE:     MCLGUI
 ;;;;DESCRIPTION
 ;;;;    
 ;;;;    A little view test.

@@ -3,7 +3,7 @@
 ;;;;FILE:               test-region-path.lisp
 ;;;;LANGUAGE:           Common-Lisp
 ;;;;SYSTEM:             Common-Lisp
-;;;;USER-INTERFACE:     NONE
+;;;;USER-INTERFACE:     MCLGUI
 ;;;;DESCRIPTION
 ;;;;    
 ;;;;    Test region paths.

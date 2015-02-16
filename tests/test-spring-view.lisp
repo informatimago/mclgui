@@ -1,9 +1,9 @@
 ;;;; -*- mode:lisp;coding:utf-8 -*-
 ;;;;**************************************************************************
-;;;;FILE:               test.lisp
+;;;;FILE:               test-spring-view.lisp
 ;;;;LANGUAGE:           Common-Lisp
 ;;;;SYSTEM:             Common-Lisp
-;;;;USER-INTERFACE:     NONE
+;;;;USER-INTERFACE:     MCLGUI
 ;;;;DESCRIPTION
 ;;;;    
 ;;;;    XXX

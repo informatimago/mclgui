@@ -3,7 +3,7 @@
 ;;;;FILE:               test-region-interactive.lisp
 ;;;;LANGUAGE:           Common-Lisp
 ;;;;SYSTEM:             Common-Lisp
-;;;;USER-INTERFACE:     NONE
+;;;;USER-INTERFACE:     MCLGUI
 ;;;;DESCRIPTION
 ;;;;    
 ;;;;    Implements an interactive window and view to test regions.
