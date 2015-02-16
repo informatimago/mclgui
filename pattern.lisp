@@ -100,7 +100,8 @@ PIXEL-HEIGHT:   Height of the bitmap (array-dimension bitmap 0).
           :do (loop
                 :for x :from 0 :below width :by 8
                 :do (funcall write-byte (get-byte x y))
-                :finally (loop :repeat (- outRowBytes inRowBytes) :do (funcall write-byte 0))))))
+                :finally (loop :repeat (- outRowBytes inRowBytes)
+                               :do (funcall write-byte 0))))))
     (values totalBytes outRowBytes width height)))
 
 
@@ -159,12 +160,11 @@ PIXEL-HEIGHT:   Height of the bitmap (array-dimension bitmap 0).
       [image addRepresentation:[imagerep autorelease]]
       (setf (handle pattern) [NSColor colorWithPatternImage:[image autorelease]]))))
 
-(define-printer (pattern :identity t)
-    (:data
-     (with-output-to-string (out)
-       (bitmap-to-bytes (pattern-data pattern)
-                        (lambda (byte)
-                          (format out "~%~8,'0B" byte))))))
+(define-printer pattern
+    (:data (with-output-to-string (out)
+             (bitmap-to-bytes (pattern-data self)
+                              (lambda (byte)
+                                (format out "~%~8,'0B" byte))))))
 
 (defun make-pattern (&rest bytes)
   (loop
@@ -239,5 +239,6 @@ PIXEL-HEIGHT:   Height of the bitmap (array-dimension bitmap 0).
                                                                    #*00000000)))))
 
 
+;; (initialize/pattern)
 
 ;;;; THE END ;;;;
