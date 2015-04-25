@@ -210,8 +210,56 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
   ;; WPTR's and that it gets cleared (set to NIL) after its subview's WPTR's.
   ;; Otherwise (:method (setf wptr) (t dialog-item)) won't work.
   (let ((rgn (view-clip-region-slot window)))
-    (or rgn
-        (setf (view-clip-region-slot window) (new-rgn)))))
+    (or rgn (setf (view-clip-region-slot window) (new-region)))))
+
+(defmethod get-window-visrgn ((window window) (region region))
+  (set-rect-region region (view-bounds window)))
+
+(defmethod window-visrgn ((window window))
+  (get-window-visrgn window (new-region)))
+
+
+
+(defun get-clip (region)
+  (let ((win (view-window *current-view*)))
+    (unless (view-clip-region-slot win)
+      (setf (view-clip-region-slot win)
+            (rect-region -32767 -32767 32767 32767)))
+    (copy-region (view-clip-region-slot win) region)))
+
+
+(defun set-clip (region)
+  (let ((win (view-window *current-view*)))
+    (copy-region region (or (view-clip-region-slot win)
+                            (setf (view-clip-region-slot win) (new-region)))))
+  [(bezier-path-from-region region) setClip]
+  region)
+
+
+(defmethod clip-region ((view simple-view) &optional (save-region (new-region)))
+  (let ((save-region (or save-region (new-region)))
+        (window      (view-window view)))
+    (set-rect-region save-region -32767 -32767 32767 32767)
+    (when window
+      (if (view-clip-region-slot window)
+          (with-focused-view view
+            (get-clip save-region))
+          (setf (view-clip-region-slot window) (copy-region save-region))))
+    save-region))
+
+(defmethod set-clip-region ((view simple-view) new-region)
+  (when (view-window view)
+    (with-focused-view view
+      (set-clip new-region)))
+  new-region)
+
+(defmethod clip-rect ((view simple-view) left &optional top right bottom)
+  (with-rectangle-arg (r left top right bottom)
+    (with-focused-view view
+      (set-clip-region view (rect-region left top right bottom)))))
+
+
+
 
 
 
@@ -481,19 +529,19 @@ V:              The vertical coordinate of the new position, or NIL if
 (defmethod set-view-size ((window window) h &optional v)
   (let ((siz      (make-point h v))
         (frame    (window-frame-from-nswindow-frame window))
-        (mswindow (handle window)))
+        (nswindow (handle window)))
     ;; (format-trace '(set-view-size window) (point-to-list siz))
     (setf (%view-size window) siz)
-    (if (and mswindow (/= siz (rect-size frame)))
+    (if (and nswindow (/= siz (rect-size frame)))
         (flet ((resize (redisplay)
                  (let ((*window-growing* t))
-                   [mswindow setFrame:(unwrap (nswindow-frame-from-window-frame window)) display:redisplay]
-                   [mswindow invalidateShadow])
+                   [nswindow setFrame:(unwrap (nswindow-frame-from-window-frame window)) display:redisplay]
+                   [nswindow invalidateShadow])
                  (let ((frame  (window-frame-from-nswindow-frame window)))
                    (setf (%view-position window) (rect-topleft frame)
                          (%view-size     window) (rect-size frame)))
                  (window-size-parts window)))
-          (if [mswindow isVisible]
+          (if [nswindow isVisible]
               (application-eval-enqueue *application* (resize YES))
               (resize NO)))
         (window-size-parts window))
@@ -535,8 +583,11 @@ bars as well as the main text area of the window.
 
 WINDOW:    A window or Fred window.
 ")
-  (:method         ((w window)) (values))
-  (:method :before ((w window)) (invalidate-view w)))
+  (:method         ((w window))
+    (values))
+  (:method :before ((w window))
+    (make-view-invalid w)
+    (invalidate-view w)))
 
 
 
@@ -1225,12 +1276,7 @@ RETURN:         A BOOLEAN value indicating whether view can perform
       #+debug-views (format-trace '(view-draw-contents window))
       ;; #+debug-views #|DEBUG-PJB|#(print-backtrace *standard-output*)
       (with-focused-view window
-        (call-next-method)
-        ;; TODO: originally, it seems MCL didn't erase it, but relied on MacOS visrg/cliprgn/etc.
-        #-(and) (let ((bounds (view-bounds window)))
-                  (erase-rect* (rect-left bounds) (rect-top bounds)
-                               (rect-width bounds) (rect-height bounds))
-                  (call-next-method))))))
+        (call-next-method)))))
 
 
 ;;;---------------------------------------------------------------------

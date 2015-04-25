@@ -64,9 +64,10 @@
                               :view-position #@(150 0)
                               :track-thumb-p t
                               :view-container window)))
+    (declare (ignorable pane))
     (when *scroller-window-1*
       (window-close *scroller-window-1*))
-    (setq *scroller-window-1 window)))
+    (setq *scroller-window-1* window)))
 
 #-(and) (progn
     (setq bar (make-instance 'scroller1

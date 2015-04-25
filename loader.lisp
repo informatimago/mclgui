@@ -64,5 +64,5 @@
 (load "scratch/dump")
 (load "scratch/init-streams")
 (load "scratch/sdi")
-(in-package :ui)
+(in-package "MCLGUI")
 (test-text-box)

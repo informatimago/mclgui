@@ -345,6 +345,8 @@ STRING:         A string against which to compare the text of the
   (:default-initargs :color-p t))
 
 
+(defmethod window-null-event-handler ((window window))
+  (when (next-method-p) (call-next-method)))
 
 (defmethod window-null-event-handler :before ((dialog window))
   (let ((item (current-key-handler dialog)))

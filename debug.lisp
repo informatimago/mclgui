@@ -160,7 +160,7 @@ RETURN:         A string containing the object identity as printed by
 ;; (import '(mclgui.debugging::pl mclgui.debugging::firste))
 
 
-(in-package :ui)
+(in-package "MCLGUI")
 #-(and)
 (defmethod view-draw-contents ((window (eql (front-window))))
   (with-focused-view window

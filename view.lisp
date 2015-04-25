@@ -163,6 +163,7 @@ All views contained in a given window have the same wptr.
                             (view-origin container))
                 (view-scroll-position view))))))
 
+
 (defgeneric view-origin (view)
   (:method ((view simple-view))
     (setf (view-origin-slot view) (compute-view-origin view)))
@@ -174,31 +175,55 @@ All views contained in a given window have the same wptr.
           (compute-view-region view (view-clip-region-slot view)  (view-container view))))))
 
 
-(defmethod view-allocate-clip-region ((view view))
-  (let ((rgn (view-clip-region view)))
-    (or rgn
-        (setf (view-clip-region-slot view) (new-rgn)))))
+(defmethod view-clip-region ((view simple-view))
+  (let* ((container     (view-container view))
+         (container-rgn (view-clip-region container)))
+    (when container-rgn
+      (multiple-value-bind (pos br) (view-corners view)
+        (let* ((rgn           (new-region))
+               (pos-h         (point-h pos))
+               (pos-v         (point-v pos)))
+          (set-rect-region rgn pos-h pos-v (point-h br) (point-v br))
+          (intersect-region rgn container-rgn rgn)
+          (offset-region rgn (- pos-h) (- pos-v))
+          rgn)))))
 
-(defgeneric view-clip-region (view)
-  (:method ((view view))
-    (let ((rgn (view-clip-region-slot view)))
-      (unless (or (null rgn) (view-valid-p view))
-        (compute-view-origin view)
-        (make-view-valid view)
-        (compute-view-region view rgn (view-container view)))
-      rgn)))
+
+(defmethod view-clip-region ((view view))
+  (let ((rgn (view-clip-region-slot view)))
+    (unless (or (null rgn) (view-valid-p view))
+      (compute-view-origin view)
+      (make-view-valid view)
+      (compute-view-region view rgn (view-container view)))
+    rgn))
 
 
 (defgeneric compute-view-region (view rgn container)
   (:method ((view simple-view) rgn container)
-    (declare (ignore container))
     (when rgn
-      (let* ((topleft  (view-origin view))
-             (botright (add-points topleft (view-size view))))
-        (set-rect-region rgn
-                         (point-h topleft) (point-v topleft)
-                         (point-h botright) (point-v botright))))
+      (multiple-value-bind (topleft bottomright) (view-corners view)
+        (if container
+            (let* ((origin           (view-origin-slot view))
+                   (container-origin (view-origin container))
+                   (offset           (subtract-points origin container-origin))
+                   (offset-h         (point-h offset))
+                   (offset-v         (point-v offset)))
+              (set-rect-region  rgn (point-h topleft) (point-v topleft)(point-h bottomright) (point-v bottomright))
+              (intersect-region rgn (view-clip-region container) rgn)
+              (offset-region rgn offset-h offset-v))
+            (let* ((offset           (view-scroll-position view))
+                   (offset-h         (point-h offset))
+                   (offset-v         (point-v offset))
+                   (tl               (subtract-points topleft     offset))
+                   (br               (subtract-points bottomright offset)))
+              (set-rect-region rgn (point-h tl) (point-v tl) (point-h br) (point-v br))))))
     rgn))
+
+
+
+(defmethod view-allocate-clip-region ((view view))
+  (let ((rgn (view-clip-region view)))
+    (or rgn (setf (view-clip-region-slot view) (new-rgn)))))
 
 
 (defun set-font (font-view)
@@ -974,15 +999,16 @@ ERASE-P:        A value indicating whether or not to add the
                 window.  The default is NIL.
 ")
   (:method ((view simple-view) &optional erase-p)
-    (multiple-value-bind (tl br) (view-corners view)
-      (invalidate-corners view tl br erase-p))))
+    (let ((container (or (view-container view) view)))
+      (multiple-value-bind (topleft bottomright) (view-corners view)
+        (invalidate-corners container topleft bottomright erase-p)))))
 
 
 (defgeneric validate-region (view region)
   (:documentation "
 
 DO:             Focus on the view and removes the region from view’s
-                window erase region and explicit invalidation region.
+                window erase region and explicit invalid region.
 
 VIEW:           A simple view.
 
@@ -991,13 +1017,15 @@ REGION:         A region. The region must be a region handle, that is,
 
 ")
   (:method ((view simple-view) region)
-    (let ((invalid-region (window-invalid-region (view-window view))))
-      (difference-region invalid-region region invalid-region))
-    (let ((erase-region (window-erase-region (view-window view))))
-      (difference-region erase-region region erase-region)
-      (when (empty-region-p erase-region)
-        ;; PJB-DEBUG ;; (does-not-need-to-display (view-window view))
-        ))
+    (let* ((window         (view-window view))
+           (invalid-region (window-invalid-region window))
+           (erase-region   (window-erase-region   window))
+           (region/w       (offset-region region (convert-coordinates #@(0 0) view window))))
+      (difference-region invalid-region region/w invalid-region)
+      (difference-region erase-region   region/w erase-region)
+      (when (and (empty-region-p erase-region)
+                 (empty-region-p invalid-region))
+        (does-not-need-to-display (view-window view))))
     (values)))
 
 
@@ -1010,16 +1038,17 @@ DO:             Erase the previous contents of the rectangle formed by
 
 VIEW:           A view or simple view.
 
-TOPLEFT:        The upper-left corner of the view to invalidate.
+TOPLEFT:        The upper-left corner of the view to validate.
 
-BOTTOMRIGHT:    The lower-right corner of the view to invalidate.
+BOTTOMRIGHT:    The lower-right corner of the view to validate.
 ")
   (:method ((view simple-view) topleft bottomright)
     (let ((rgn    *temp-rgn*)
           (left   (box -32768 32767 (point-h topleft)))
           (top    (box -32768 32767 (point-v topleft)))
           (right  (box -32768 32767 (point-h bottomright)))
-          (bottom (box -32768 32767 (point-v bottomright))))
+          (bottom (box -32768 32767 (point-v bottomright)))
+          (window (view-window view)))
       (erase-rect* left top (- right left) (- bottom top))
       (set-rect-region rgn left top right bottom)
       (validate-region view rgn))))
@@ -1033,15 +1062,9 @@ DO:             Validates view by running validate-corners on the
 VIEW:           A view or simple view.
 ")
   (:method ((view simple-view))
-    (let ((container (view-container view)))
-      (unless container
-        (setf container view)
-        (unless (typep view 'window)
-          (let ((pos (view-position view)))
-            (multiple-value-bind (topleft bottomright) (view-corners view)
-              (setq topleft     (subtract-points topleft     pos)
-                    bottomright (subtract-points bottomright pos))
-              (validate-corners container topleft bottomright))))))))
+    (let ((container (or (view-container view) view)))
+      (multiple-value-bind (topleft bottomright) (view-corners view)
+        (validate-corners container topleft bottomright)))))
 
 
 
@@ -1413,21 +1436,44 @@ CONTAINER:      The container of the view.
        ,@body)))
 
 
+#-(and)  ; not used anywhere 
+(defun view-is-invalid-p (view visrgn cliprgn)
+  (or (null visrgn)
+      (null cliprgn)
+      (multiple-value-bind (tl br) (view-corners view)
+        (not (empty-region-p
+              (intersect-region (rect-region (point-h tl) (point-v tl)
+                                             (point-h br) (point-v br))
+                                (intersect-region visrgn cliprgn)))))))
+
 
 (defun %view-draw-contents-with-focused-view (view focused-view visrgn cliprgn)
   (unless *deferred-drawing*
     (let ((window (view-window view)))
       (when window
-        (let ((inter (if (or (null visrgn) (null cliprgn))
-                         (or visrgn cliprgn)
-                         (intersect-region visrgn cliprgn))))
+        (validate-view view)
+        (let ((inter (if (and visrgn cliprgn)
+                         (intersect-region visrgn cliprgn)
+                         (or visrgn cliprgn))))
           (if inter
               (unless (empty-region-p inter)
                 (with-focused-view focused-view
-                  (with-clip-region cliprgn 
+                  (with-clip-region inter
                     (view-draw-contents view))))
               (with-focused-view focused-view
-                (view-draw-contents view))))))))
+                (with-clip-region (view-clip-region view)
+                  (view-draw-contents view)))
+              #-(and)
+              (let* ((pos   (view-corners view))
+                     (pos-h (point-h pos))
+                     (pos-v (point-v pos))
+                     (clip  (offset-region (copy-region (view-clip-region view))
+                                           pos-h  pos-v)))                
+                (with-focused-view focused-view
+                  (with-clip-region clip
+                    (view-draw-contents view))))))))))
+
+
 
 
 (defgeneric view-focus-and-draw-contents (view &optional visrgn cliprgn)
@@ -1461,7 +1507,6 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
 
 (defmethod view-draw-contents ((view view))
   ;; bug for bug compatibility :-(
-  ;; (setf *step-mode* :step)
   (when (wptr view)
     (dovector (subview (view-subviews view))
       (view-focus-and-draw-contents subview))
@@ -1616,19 +1661,7 @@ RETURN:         The cursor shape to display when the mouse is at
 ;;;---------------------------------------------------------------------
 ;;; Internal functions.
 
-(defun view-is-invalid-p (view visrgn cliprgn)
-  (or (null visrgn)
-      (null cliprgn)
-      (multiple-value-bind (tl br) (view-corners view)
-        (niy view-is-invalid-p view visrgn cliprgn tl br)
-        ;; (without-interrupts
-        ;;   ;; (let ((rgn *temp-rgn*)) ; so *temp-rgn* belongs to us
-        ;;   ;;   (#_SetRectRgn rgn (point-h tl)(point-v tl) (point-h br)(point-v br))
-        ;;   ;;   (#_SectRgn rgn visrgn rgn)
-        ;;   ;;   (#_SectRgn rgn cliprgn rgn)                   
-        ;;   ;;   (not (#_EmptyRgn rgn)))
-        ;; t)
-        t)))
+
 
 
 (defgeneric frame-key-handler (view)

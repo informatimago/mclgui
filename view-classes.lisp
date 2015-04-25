@@ -100,6 +100,10 @@ Stack of instance screen shots. Cf. new-instance and with-instance-drawing.
   (:view-scroll-position (point-to-list (view-scroll-position self))))
 
 
+;;;
+;;; 
+;;; 
+
 (defgeneric view-subviews (view)
   (:documentation "
 RETURN:         A vector containing all of the view’s subviews.  This
@@ -154,11 +158,16 @@ DO:             Remove the property KEY from the VIEW.
           (delete key (view-alist view) :key (function car)))
     view))
 
+(defgeneric view-clip-region (view)
+  (:documentation "
+A clip region specific to the VIEW, given in the coordinate system of the VIEW.
+"))
+
 
 ;;;---------------------------------------------------------------------
 
 (defclass view (simple-view)
-  ((view-subviews        :initform nil
+  ((view-subviews        :initform #()
                          :initarg :view-subviews
                          :initarg :subviews
                          :reader   view-subviews
@@ -360,6 +369,59 @@ FOCUS-VIEW changes the top of the transform-stack of the view window. (NIY)
     (declare (ignore view))
     (values)))
 
-(defgeneric get-window-visrgn (view region))
+(defgeneric get-window-visrgn (window region)) 
+(defgeneric window-visrgn (window)) 
+
+
+(defgeneric clip-region (view &optional save-region)
+  (:documentation "
+
+The CLIP-REGION generic function returns the window’s current clip
+region.
+
+VIEW:           A window or a view contained in a window.
+
+SAVE-REGION:    The region in which the window’s clip region is
+                returned; otherwise, the clip region is returned in a
+                newly allocated region.
+
+"))
+
+(defgeneric set-clip-region (view new-region)
+  (:documentation "
+
+The SET-CLIP-REGION generic function sets the window’s clip region to
+NEW-REGION and returns NEW-REGION.
+
+VIEW:           A window or a view contained in a window.
+
+NEW-REGION:     A region.
+
+"))
+
+(defgeneric clip-rect (view left &optional top right bottom)
+  (:documentation "
+
+The CLIP-RECT generic function makes the window’s clip region a
+rectangular region equivalent to the rectangle determined by the
+arguments.  It returns NIL.
+
+VIEW:           A window or a view contained in a window.
+
+LEFT:           
+TOP:
+RIGHT:
+BOTTOM:
+                These four arguments are used together to specify the
+                rectangle.  If only left is given, it should be a
+                pointer to a rectangle record. If only two arguments
+                are given, they should be points specifying the
+                upper-left and lower- right coordinates of the
+                rectangle. If all four arguments are given, they
+                should be coordinates representing the left, top,
+                right, and bottom of the rectangle.
+
+"))
+
 
 ;;;; THE END ;;;;

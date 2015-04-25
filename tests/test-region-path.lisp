@@ -31,7 +31,7 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-(in-package :ui)
+(in-package "MCLGUI")
 
 ;; (eval-when (:compile-toplevel :load-toplevel :execute)
 ;;   (pushnew :region/run-time-checks *features*))
@@ -204,9 +204,9 @@
       (call-next-method)
       (print-unreadable-object (path stream :identity t :type t)
         (format stream "~S " (group-by (tpath-coordinates path) 2))
-        (format stream ":bottom-lines ~S :new-bottom-lines ~S"
-                (mapcar (function tline-to-list) (tpath-bottom-lines path))
-                (mapcar (function tline-to-list) (tpath-new-bottom-lines path)))))
+        (format stream ":above-lines ~S :bottom-lines ~S"
+                (mapcar (function tline-to-list) (tpath-above-lines path))
+                (mapcar (function tline-to-list) (tpath-bottom-lines path)))))
   path)
 
 
@@ -244,7 +244,7 @@
 
 
 #+region/run-time-checks
-(defun check-tpath-bottom-lines (tpath bottom-lines &key name)
+(defun check-tpath-above-lines (tpath bottom-lines &key name)
   (with-checked-objects
     (loop
       :with prev-tline-to-x = most-negative-long-float
@@ -264,8 +264,8 @@
   #+region/run-time-checks
   (with-checked-objects
     (check-tline-double-chain tpath (tpath-lines tpath) :name `(tpath-lines ,name))
-    (check-tpath-bottom-lines tpath (tpath-bottom-lines tpath) :name `(tpath-bottom-lines ,name))
-    (check-tpath-bottom-lines tpath (tpath-new-bottom-lines tpath) :name `(tpath-new-bottom-lines ,name)))
+    (check-tpath-above-lines tpath (tpath-above-lines tpath) :name `(tpath-above-lines ,name))
+    (check-tpath-above-lines tpath (tpath-bottom-lines tpath) :name `(tpath-bottom-lines ,name)))
   tpath)
 
 
@@ -279,506 +279,504 @@
 
 
 
-(defun test/tpath-contains-line-p ()
+(define-test test/tpath-contains-line-p ()
   (let* ((path (make-rect-tpath 0 0 100 100))
          (line))
-    (assert (not (tpath-contains-line-p path (make-tline))))
-    (assert (tpath-contains-line-p path (setf line (tpath-lines path))))
-    (assert (tpath-contains-line-p path (setf line (tline-to-line line))))
-    (assert (tpath-contains-line-p path (setf line (tline-to-line line))))
-    (assert (tpath-contains-line-p path (setf line (tline-to-line line))))
-    (assert (tpath-contains-line-p path (setf line (tline-to-line line))))
-    :success))
+    (assert-true (not (tpath-contains-line-p path (make-tline))))
+    (assert-true (tpath-contains-line-p path (setf line (tpath-lines path))))
+    (assert-true (tpath-contains-line-p path (setf line (tline-to-line line))))
+    (assert-true (tpath-contains-line-p path (setf line (tline-to-line line))))
+    (assert-true (tpath-contains-line-p path (setf line (tline-to-line line))))
+    (assert-true (tpath-contains-line-p path (setf line (tline-to-line line))))))
 
 
 
+(defun test/merge-tpath/prepare (above)
+  (setf (tpath-above-lines above)  (tpath-bottom-lines above)
+        (tpath-bottom-lines above) '()))
 
-(defun test/merge-tpaths ()
-  ;;        +---+
-  ;;        |   |
-  ;;        +---+
-  ;; +---+
-  ;; |   |
-  ;; +---+
-  (let ((above (make-rect-tpath 100  0 150 20))
-        (below (make-rect-tpath   0 20  50 40))
-        top-line)
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (assert (eq :left merged))
-      (assert (null internal))
-      (assert (equalp (list top-line) new-top-lines))))
-  ;; +---+
-  ;; |   |
-  ;; +---+
-  ;;        +---+
-  ;;        |   |
-  ;;        +---+
-  (let ((above (make-rect-tpath   0  0 50 20))
-        (below (make-rect-tpath 100 20 150 40))
-        top-line)
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (assert (eq :right merged))
-      (assert (null internal))
-      (assert (equalp (list top-line) new-top-lines))))
-  
-  ;; +----+
-  ;; |    |
-  ;; +--+-+----+
-  ;;    |      |
-  ;;    +------+
-  (let ((above (make-rect-tpath   0  0 200 20))
-        (below (make-rect-tpath 100 20 300 40))
-        top-line)
-    (declare (ignorable top-line))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 0 0 200 0 200 20 300 20 300 40 100 40 100 20 0 20 0 0))
-      (assert (null internal))
-      (assert (= 1 (length new-top-lines)))
-      (assert (tline-goes (first new-top-lines) 200 20 300 20))))
-  ;; +----------+
-  ;; |          |
-  ;; +-----+----+
-  ;;       |    |
-  ;;       +----+
-  (let ((above (make-rect-tpath   0  0 200 20))
-        (below (make-rect-tpath 100 20 200 40))
-        top-line)
-    (declare (ignorable top-line))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 0 0 200 0 200 40 100 40 100 20 0 20 0 0))
-      (assert (null internal))
-      (assert (null new-top-lines))))
-  ;; +----------+
-  ;; |          |
-  ;; +--+-----+-+
-  ;;    |     |
-  ;;    +-----+
-  (let ((above (make-rect-tpath   0  0 300 20))
-        (below (make-rect-tpath 100 20 200 40))
-        top-line)
-    (declare (ignorable top-line))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 0 0 300 0 300 20 200 20 200 40 100 40 100 20 0 20 0 0))
-      (assert (null internal))
-      (assert (null new-top-lines))))
-  ;; +-----+
-  ;; |     |
-  ;; +-----+----+
-  ;; |          |
-  ;; +----------+
-  (let ((above (make-rect-tpath   0  0 100 20))
-        (below (make-rect-tpath   0 20 200 40))
-        top-line)
-    (declare (ignorable top-line))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 0 0 100 0 100 20 200 20 200 40 0 40 0 0))
-      (assert (null internal))
-      (assert (= 1 (length new-top-lines)))
-      (assert (tline-goes (first new-top-lines) 100 20 200 20))))
-  ;; +----+
-  ;; |    |
-  ;; +----+
-  ;; |    |
-  ;; +----+
-  (let ((above (make-rect-tpath   0  0 200 20))
-        (below (make-rect-tpath   0 20 200 40))
-        top-line)
-    (declare (ignorable top-line))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 0 0 200 0 200 40 0 40 0 0))
-      (assert (null internal))
-      (assert (null new-top-lines))))
-  ;; +----------+
-  ;; |          |
-  ;; +-----+----+
-  ;; |     |
-  ;; +-----+
-  (let ((above (make-rect-tpath   0  0 200 20))
-        (below (make-rect-tpath   0 20 100 40))
-        top-line)
-    (declare (ignorable top-line))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 0 0 200 0 200 20 100 20 100 40 0 40 0 0))
-      (assert (null internal))
-      (assert (null new-top-lines))))
-  ;;    +-----+
-  ;;    |     |
-  ;; +--+-----+-+
-  ;; |          |
-  ;; +----------+
-  (let* ((above (make-rect-tpath   100  0 200 20))
-         (below (make-rect-tpath   0   20 300 40))
-         (below-bottom-line (first (tpath-bottom-lines below)))
-         top-line)
-    (declare (ignorable top-line))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq below-bottom-line (first (tpath-new-bottom-lines merged)))
-              () "bottom-line of below = ~S~%new bottom-line of merged = ~S~%"
-              below-bottom-line (first (tpath-bottom-lines merged)))
-      (assert (eq above merged))
-      (assert (tpath-goes merged 100 0 200 0 200 20 300 20 300 40 0 40 0 20 100 20 100 0))
-      (assert (null internal))
-      (assert (= 2 (length new-top-lines)))
-      (assert (tline-goes (first  new-top-lines) 0 20 100 20))
-      (assert (tline-goes (second new-top-lines) 200 20 300 20))))
-  ;;       +----+
-  ;;       |    |
-  ;; +-----+----+
-  ;; |          |
-  ;; +----------+
-  (let ((above (make-rect-tpath   100  0 200 20))
-        (below (make-rect-tpath     0 20 200 40))
-        top-line)
-    (declare (ignorable top-line))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 100 0   200 0   200 40   0 40   0 20   100 20  100 0))
-      (assert (null internal))
-      (assert (= 1 (length new-top-lines)))
-      (assert (tline-goes (first  new-top-lines) 0 20 100 20))))
-  ;;    +------+
-  ;;    |      |
-  ;; +--+-+----+
-  ;; |    |
-  ;; +----+
-  (let ((above (make-rect-tpath   100  0 300 20))
-        (below (make-rect-tpath     0 20 200 40))
-        top-line)
-    (declare (ignorable top-line))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (setf top-line (tpath-lines below)))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 100 0  300 0 300 20 200 20 200 40 0 40 0 20 100 20 100 0))
-      (assert (null internal))
-      (assert (= 1 (length new-top-lines)))
-      (assert (tline-goes (first  new-top-lines) 0 20 100 20))))
-  ;; 100 200 300 400
-  ;; +------------+  0
-  ;; |            |
-  ;; |   +----+   | 20
-  ;; |   |    |   |
-  ;; +---+    +---+ 40
-  ;; +------------+
-  ;; |            |
-  ;; +------------+ 60
-  (let ((above (tpath-from-coordinates   100 0  400 0  400 40 300 40 300 20 200 20 200 40 100 40 100 0))
-        (below (make-rect-tpath          100 40 400 60)))
-    (setf (tpath-bottom-lines above) (list (nth-tline 6 (tpath-lines above))
-                                           (nth-tline 2 (tpath-lines above))))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (tpath-lines below))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 100 0 400 0 400 40 300 40 300 20 200 20 200 40 400 40 400 60 100 60 100 0))
-      (assert (null internal))
-      (assert (= 1 (length (tpath-bottom-lines merged))))
-      (assert (tline-goes (first (tpath-bottom-lines merged)) 400 40 300 40))
-      (assert (= 1 (length new-top-lines)))
-      (assert (tline-goes (first new-top-lines) 200 40 400 40))
+
+(define-test test/merge-tpaths (&key verbose)
+  (flet ((example (art)
+           (when verbose
+             (format *trace-output* "~A" art)
+             (finish-output *trace-output*))))
+    (example "
+           +---+
+           |   |
+           +---+
+    +---+
+    |   |
+    +---+
+             ")
+    (let ((above (make-rect-tpath 100  0 150 20))
+             (below (make-rect-tpath   0 20  50 40))
+             top-line)
+        (check-tpath above :name 'above)
+        (check-tpath below :name 'below)
+        (test/merge-tpath/prepare above)
+        (multiple-value-bind (merged internal new-above-lines new-top-lines)
+            (merge-tpaths above (first (tpath-above-lines above))
+                          below (setf top-line (tpath-lines below)))
+          (declare (ignorable new-above-lines))
+          (check eq merged :left)
+          (assert-true (null internal))
+          (check equalp new-top-lines (list top-line))))
+    (example "
+    +---+
+    |   |
+    +---+
+           +---+
+           |   |
+           +---+
+                    ")
+    (let ((above (make-rect-tpath   0  0 50 20))
+          (below (make-rect-tpath 100 20 150 40))
+          top-line)
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      (test/merge-tpath/prepare above)
       (multiple-value-bind (merged internal new-above-lines new-top-lines)
-          (merge-tpaths above (first (tpath-bottom-lines above))
-                        below (first new-top-lines))
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (setf top-line (tpath-lines below)))
         (declare (ignorable new-above-lines))
-        (assert (eq above merged))
-        (assert (tpath-goes merged 100 0 400 0 400 60 100 60 100 0))
-        (assert internal)
-        (assert (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
-        (assert (= 1 (length new-top-lines)))
-        (assert (tline-goes (first new-top-lines) 200 40 300 40)))))
-  ;; 100 200 300 400
-  ;; +------------+    0
-  ;; |            |
-  ;; |   +----+   |   20
-  ;; |   |    |   |
-  ;; +---+    +---+   40
-  ;;   +------------+
-  ;;   |            |
-  ;;   +------------+ 60
-  (let ((above (tpath-from-coordinates   100 0  400 0  400 40 300 40 300 20 200 20 200 40 100 40 100 0))
-        (below (make-rect-tpath          150 40 450 60)))
-    (setf (tpath-bottom-lines above) (list (nth-tline 6 (tpath-lines above))
-                                           (nth-tline 2 (tpath-lines above))))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (print `((tpath-bottom-lines above) ,(tpath-bottom-lines above)))
-    (print `((tpath-bottom-lines below) ,(tpath-bottom-lines below)))
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)        
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (tpath-lines below))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 100 0 400 0 400 40 300 40 300 20 200 20 200 40 450 40 450 60 150 60 150 40 100 40 100 0))
-      (assert (null internal))
-      (print `((tpath-bottom-lines merged) ,(tpath-bottom-lines merged)))
-      (assert (= 2 (length (tpath-bottom-lines merged))))
-      (assert (tline-goes (first  (tpath-bottom-lines merged)) 150 40 100 40))
-      (assert (tline-goes (second (tpath-bottom-lines merged)) 400 40 300 40))
-      (assert (= 1 (length new-top-lines)))
-      (assert (tline-goes (first new-top-lines) 200 40 450 40))
+        (assert-true (eq :right merged))
+        (assert-true (null internal))
+        (assert-true (equalp (list top-line) new-top-lines))))
+    (example "    
+    +----+
+    |    |
+    +--+-+----+
+       |      |
+       +------+
+                    ")    
+    (let ((above (make-rect-tpath   0  0 200 20))
+          (below (make-rect-tpath 100 20 300 40))
+          top-line)
+      (declare (ignorable top-line))
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      (test/merge-tpath/prepare above)
       (multiple-value-bind (merged internal new-above-lines new-top-lines)
-          (merge-tpaths above (second (tpath-bottom-lines above))
-                        below (first new-top-lines))
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (setf top-line (tpath-lines below)))
         (declare (ignorable new-above-lines))
         (check-tpath merged :name 'merged)
-        (assert (eq above merged))
-        (assert (tpath-goes merged 100 0 400 0 400 40 450 40 450 60 150 60 150 40 100 40 100 0))
-        (assert internal)
-        (assert (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
-        (assert (= 2 (length new-top-lines)))
-        (assert (tline-goes (first new-top-lines) 200 40 300 40))
-        (assert (tline-goes (second new-top-lines) 400 40 450 40)))))
-  ;;   100 200 300 400
-  ;;   +------------+  0
-  ;;   |            |
-  ;;   |   +----+   | 20
-  ;;   |   |    |   |
-  ;;   +---+    +---+ 40
-  ;; +------------+
-  ;; |            |
-  ;; +------------+   60
-  (let ((above (tpath-from-coordinates   100 0  400 0  400 40 300 40 300 20 200 20 200 40 100 40 100 0))
-        (below (make-rect-tpath           50 40 350 60)))
-    (setf (tpath-bottom-lines above) (list (nth-tline 6 (tpath-lines above))
-                                           (nth-tline 2 (tpath-lines above))))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (tpath-lines below))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 100 0 400 0 400 40 300 40 300 20 200 20 200 40 350 40 350 60 050 60 050 40 100 40 100 0))
-      (assert (null internal))
-      (assert (= 1 (length (tpath-bottom-lines merged))))
-      ;; (assert (tline-goes (first  (tpath-bottom-lines merged)) 100 40 050 40))
-      (assert (tline-goes (first (tpath-bottom-lines merged)) 400 40 300 40))
-      (assert (= 2 (length new-top-lines)))
-      (assert (tline-goes (first new-top-lines) 050 40 100 40))
-      (assert (tline-goes (second new-top-lines) 200 40 350 40))
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 0 0 200 0 200 20 300 20 300 40 100 40 100 20 0 20 0 0))
+        (assert-true (null internal))
+        (assert-true (= 1 (length new-top-lines)))
+        (assert-true (tline-goes (first new-top-lines) 200 20 300 20))))
+    (example "    
+    +----------+
+    |          |
+    +-----+----+
+          |    |
+          +----+
+                    ")    
+    (let ((above (make-rect-tpath   0  0 200 20))
+          (below (make-rect-tpath 100 20 200 40))
+          top-line)
+      (declare (ignorable top-line))
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      (test/merge-tpath/prepare above)
       (multiple-value-bind (merged internal new-above-lines new-top-lines)
-          (merge-tpaths above (first (tpath-bottom-lines above))
-                        below (second new-top-lines))
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (setf top-line (tpath-lines below)))
         (declare (ignorable new-above-lines))
         (check-tpath merged :name 'merged)
-        (assert (eq above merged))
-        (assert (tpath-goes merged 100 0 400 0 400 40 350 40 350 60 50 60 50 40 100 40 100 0))
-        (assert internal)
-        (assert (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
-        (assert (= 1 (length new-top-lines)))
-        (assert (tline-goes (first new-top-lines) 200 40 300 40)))))
-  ;; 100 200 300 400
-  ;; +------------+
-  ;; |            |
-  ;; |   +----+   |
-  ;; |   |    |   |
-  ;; +---+    +---+
-  ;;   +--------+
-  ;;   |        |
-  ;;   +--------+
-  (let ((above (tpath-from-coordinates   100 0  400 0  400 40 300 40 300 20 200 20 200 40 100 40 100 0))
-        (below (make-rect-tpath          150 40 350 60)))
-    (setf (tpath-bottom-lines above) (list (nth-tline 6 (tpath-lines above))
-                                           (nth-tline 2 (tpath-lines above))))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (tpath-lines below))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 100 0 400 0 400 40 300 40 300 20 200 20 200 40 350 40 350 60 150 60 150 40 100 40 100 0))
-      (assert (null internal))
-      (assert (= 2 (length (tpath-bottom-lines merged))))
-      (assert (tline-goes (first  (tpath-bottom-lines merged)) 150 40 100 40))
-      (assert (tline-goes (second (tpath-bottom-lines merged)) 400 40 300 40))
-      (assert (= 1 (length new-top-lines)))
-      (assert (tline-goes (first new-top-lines) 200 40 350 40))
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 0 0 200 0 200 40 100 40 100 20 0 20 0 0))
+        (assert-true (null internal))
+        (assert-true (null new-top-lines))))
+    (example "    
+    +----------+
+    |          |
+    +--+-----+-+
+       |     |
+       +-----+
+                    ")    
+    (let ((above (make-rect-tpath   0  0 300 20))
+          (below (make-rect-tpath 100 20 200 40))
+          top-line)
+      (declare (ignorable top-line))
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      (test/merge-tpath/prepare above)
       (multiple-value-bind (merged internal new-above-lines new-top-lines)
-          (merge-tpaths above (second (tpath-bottom-lines above))
-                        below (first new-top-lines))
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (setf top-line (tpath-lines below)))
         (declare (ignorable new-above-lines))
         (check-tpath merged :name 'merged)
-        (assert (eq above merged))
-        (assert (tpath-goes merged 100 0 400 0 400 40 350 40 350 60 150 60 150 40 100 40 100 0))
-        (assert internal)
-        (assert (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
-        (assert (= 1 (length new-top-lines)))
-        (assert (tline-goes (first new-top-lines) 200 40 300 40)))))
-  ;;   100 200 300 400
-  ;;   +------------+    0 
-  ;;   |            |
-  ;;   |   +----+   |   20
-  ;;   |   |    |   |
-  ;;   +---+    +---+   40
-  ;; +----------------+
-  ;; |                |
-  ;; +----------------+ 60
-  (let ((above (tpath-from-coordinates   100 0  400 0  400 40 300 40 300 20 200 20 200 40 100 40 100 0))
-        (below (make-rect-tpath           50 40 450 60)))
-    (setf (tpath-bottom-lines above) (list (nth-tline 6 (tpath-lines above))
-                                           (nth-tline 2 (tpath-lines above))))
-    (check-tpath above :name 'above)
-    (check-tpath below :name 'below)
-    (multiple-value-bind (merged internal new-above-lines new-top-lines)
-        (merge-tpaths above (first (tpath-bottom-lines above))
-                      below (tpath-lines below))
-      (declare (ignorable new-above-lines))
-      (check-tpath merged :name 'merged)
-      (assert (eq above merged))
-      (assert (tpath-goes merged 100 0 400 0 400 40 300 40 300 20 200 20 200 40 450 40 450 60 050 60 050 40 100 40 100 0))
-      (assert (null internal))
-      (assert (= 1 (length (tpath-bottom-lines merged))))
-      (assert (tline-goes (first (tpath-bottom-lines merged)) 400 40 300 40))
-      (assert (= 2 (length new-top-lines)))
-      (assert (tline-goes (first new-top-lines) 050 40 100 40))
-      (assert (tline-goes (second new-top-lines) 200 40 450 40))
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 0 0 300 0 300 20 200 20 200 40 100 40 100 20 0 20 0 0))
+        (assert-true (null internal))
+        (assert-true (null new-top-lines))))
+    (example "    
+    +-----+
+    |     |
+    +-----+----+
+    |          |
+    +----------+
+                    ")    
+    (let ((above (make-rect-tpath   0  0 100 20))
+          (below (make-rect-tpath   0 20 200 40))
+          top-line)
+      (declare (ignorable top-line))
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      (test/merge-tpath/prepare above)
       (multiple-value-bind (merged internal new-above-lines new-top-lines)
-          (merge-tpaths above (first (tpath-bottom-lines above))
-                        below (second new-top-lines))
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (setf top-line (tpath-lines below)))
         (declare (ignorable new-above-lines))
         (check-tpath merged :name 'merged)
-        (assert (eq above merged))
-        (assert (tpath-goes merged 100 0 400 0 400 40 450 40 450 60 050 60 050 40 100 40 100 0))
-        (assert internal)
-        (assert (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
-        (assert (= 2 (length new-top-lines)))
-        (assert (tline-goes (first new-top-lines) 200 40 300 40))
-        (assert (tline-goes (second new-top-lines) 400 40 450 40)))))
-  :success)
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 0 0 100 0 100 20 200 20 200 40 0 40 0 0))
+        (assert-true (null internal))
+        (assert-true (= 1 (length new-top-lines)))
+        (assert-true (tline-goes (first new-top-lines) 100 20 200 20))))
+    (example "    
+    +----+
+    |    |
+    +----+
+    |    |
+    +----+
+                    ")
+    (let ((above (make-rect-tpath   0  0 200 20))
+          (below (make-rect-tpath   0 20 200 40))
+          top-line)
+      (declare (ignorable top-line))
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      (test/merge-tpath/prepare above)
+      (multiple-value-bind (merged internal new-above-lines new-top-lines)
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (setf top-line (tpath-lines below)))
+        (declare (ignorable new-above-lines))
+        (check-tpath merged :name 'merged)
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 0 0 200 0 200 40 0 40 0 0))
+        (assert-true (null internal))
+        (assert-true (null new-top-lines))))
+    (example "    
+    +----------+
+    |          |
+    +-----+----+
+    |     |
+    +-----+
+                    ")    
+    (let ((above (make-rect-tpath   0  0 200 20))
+          (below (make-rect-tpath   0 20 100 40))
+          top-line)
+      (declare (ignorable top-line))
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      (test/merge-tpath/prepare above)
+      (multiple-value-bind (merged internal new-above-lines new-top-lines)
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (setf top-line (tpath-lines below)))
+        (declare (ignorable new-above-lines))
+        (check-tpath merged :name 'merged)
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 0 0 200 0 200 20 100 20 100 40 0 40 0 0))
+        (assert-true (null internal))
+        (assert-true (null new-top-lines))))
+    (example "    
+       +-----+
+       |     |
+    +--+-----+-+
+    |          |
+    +----------+
+                    ")
+    (let* ((above (make-rect-tpath   100  0 200 20))
+           (below (make-rect-tpath   0   20 300 40))
+           (below-bottom-line (first (tpath-above-lines below)))
+           top-line)
+      (declare (ignorable top-line))
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      (test/merge-tpath/prepare above)
+      (multiple-value-bind (merged internal new-above-lines new-top-lines)
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (setf top-line (tpath-lines below)))
+        (declare (ignorable new-above-lines))
+        (check-tpath merged :name 'merged)
+        (check eq (first (tpath-above-lines merged)) below-bottom-line
+               () "bottom-line of below = ~S~%new above-line of merged = ~S~%"
+               below-bottom-line (first (tpath-above-lines merged)))
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 100 0 200 0 200 20 300 20 300 40 0 40 0 20 100 20 100 0))
+        (assert-true (null internal))
+        (assert-true (= 2 (length new-top-lines)))
+        (assert-true (tline-goes (first  new-top-lines) 0 20 100 20))
+        (assert-true (tline-goes (second new-top-lines) 200 20 300 20))))
+    (example "    
+          +----+
+          |    |
+    +-----+----+
+    |          |
+    +----------+
+                    ")
+    (let ((above (make-rect-tpath   100  0 200 20))
+          (below (make-rect-tpath     0 20 200 40))
+          top-line)
+      (declare (ignorable top-line))
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      (test/merge-tpath/prepare above)
+      (multiple-value-bind (merged internal new-above-lines new-top-lines)
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (setf top-line (tpath-lines below)))
+        (declare (ignorable new-above-lines))
+        (check-tpath merged :name 'merged)
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 100 0   200 0   200 40   0 40   0 20   100 20  100 0))
+        (assert-true (null internal))
+        (assert-true (= 1 (length new-top-lines)))
+        (assert-true (tline-goes (first  new-top-lines) 0 20 100 20))))
+    (example "    
+       +------+
+       |      |
+    +--+-+----+
+    |    |
+    +----+
+                    ")
+    (let ((above (make-rect-tpath   100  0 300 20))
+            (below (make-rect-tpath     0 20 200 40))
+            top-line)
+        (declare (ignorable top-line))
+        (check-tpath above :name 'above)
+        (check-tpath below :name 'below)
+        (test/merge-tpath/prepare above)
+        (multiple-value-bind (merged internal new-above-lines new-top-lines)
+            (merge-tpaths above (first (tpath-above-lines above))
+                          below (setf top-line (tpath-lines below)))
+          (declare (ignorable new-above-lines))
+          (check-tpath merged :name 'merged)
+          (assert-true (eq above merged))
+          (assert-true (tpath-goes merged 100 0  300 0 300 20 200 20 200 40 0 40 0 20 100 20 100 0))
+          (assert-true (null internal))
+          (assert-true (= 1 (length new-top-lines)))
+          (assert-true (tline-goes (first  new-top-lines) 0 20 100 20))))
+    (example "    
+    100 200 300 400
+    +------------+  0
+    |            |
+    |   +----+   | 20
+    |   |    |   |
+    +---+    +---+ 40
+    +------------+
+    |            |
+    +------------+ 60
+                    ")
+    (let ((above (tpath-from-coordinates   100 0  400 0  400 40 300 40 300 20 200 20 200 40 100 40 100 0))
+          (below (make-rect-tpath          100 40 400 60)))
+      (setf (tpath-above-lines above) (list (nth-tline 6 (tpath-lines above))
+                                            (nth-tline 2 (tpath-lines above))))
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      ;; (test/merge-tpath/prepare above)
+      (multiple-value-bind (merged internal new-above-lines new-top-lines)
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (tpath-lines below))
+        (declare (ignorable new-above-lines))
+        (check-tpath merged :name 'merged)
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 100 0 400 0 400 40 300 40 300 20 200 20 200 40 400 40 400 60 100 60 100 0))
+        (assert-true (null internal))
+        (assert-true (= 1 (length (tpath-above-lines merged))))
+        (assert-true (tline-goes (first (tpath-above-lines merged)) 400 40 300 40))
+        (assert-true (= 1 (length new-top-lines)))
+        (assert-true (tline-goes (first new-top-lines) 200 40 400 40))
+        (multiple-value-bind (merged internal new-above-lines new-top-lines)
+            (merge-tpaths merged (first (tpath-above-lines merged))
+                          merged (first new-top-lines))
+          (declare (ignorable new-above-lines))
+          (assert-true (eq above merged))
+          (assert-true (tpath-goes merged 100 0 400 0 400 60 100 60 100 0))
+          (assert-true internal)
+          (assert-true (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
+          (assert-true (= 1 (length new-top-lines)))
+          (assert-true (tline-goes (first new-top-lines) 200 40 300 40)))))
+    (example "    
+    100 200 300 400
+    +------------+    0
+    |            |
+    |   +----+   |   20
+    |   |    |   |
+    +---+    +---+   40
+      +------------+
+      |            |
+      +------------+ 60
+                    ")
+    (let ((above (tpath-from-coordinates   100 0  400 0  400 40 300 40 300 20 200 20 200 40 100 40 100 0))
+          (below (make-rect-tpath          150 40 450 60)))
+      (setf (tpath-above-lines above) (list (nth-tline 6 (tpath-lines above))
+                                            (nth-tline 2 (tpath-lines above)))
+            (tpath-bottom-lines above) '())
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      ;; (print `((tpath-above-lines above) ,(tpath-above-lines above)))
+      ;; (print `((tpath-above-lines below) ,(tpath-above-lines below)))
+      (multiple-value-bind (merged internal new-above-lines new-top-lines)        
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (tpath-lines below))
+        (declare (ignorable new-above-lines))
+        (check-tpath merged :name 'merged)
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 100 0 400 0 400 40 300 40 300 20 200 20 200 40 450 40 450 60 150 60 150 40 100 40 100 0))
+        (assert-true (null internal))
+        ;; (print `((tpath-above-lines merged) ,(tpath-above-lines merged)))
+        (assert-true (= 2 (length (tpath-above-lines merged))))
+        (assert-true (tline-goes (first  (tpath-above-lines merged)) 150 40 100 40))
+        (assert-true (tline-goes (second (tpath-above-lines merged)) 400 40 300 40))
+        (assert-true (= 1 (length new-top-lines)))
+        (assert-true (tline-goes (first new-top-lines) 200 40 450 40))
+        (multiple-value-bind (merged internal new-above-lines new-top-lines)
+            (merge-tpaths merged (second (tpath-above-lines above))
+                          merged (first new-top-lines))
+          (declare (ignorable new-above-lines))
+          (check-tpath merged :name 'merged)
+          (assert-true (eq above merged))
+          (assert-true (tpath-goes merged 100 0 400 0 400 40 450 40 450 60 150 60 150 40 100 40 100 0))
+          (assert-true internal)
+          (assert-true (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
+          (assert-true (= 2 (length new-top-lines)))
+          (assert-true (tline-goes (first new-top-lines) 200 40 300 40))
+          (assert-true (tline-goes (second new-top-lines) 400 40 450 40)))))
+    (example "    
+      100 200 300 400
+      +------------+  0
+      |            |
+      |   +----+   | 20
+      |   |    |   |
+      +---+    +---+ 40
+    +------------+
+    |            |
+    +------------+   60
+                    ")
+    (let ((above (tpath-from-coordinates   100 0  400 0  400 40 300 40 300 20 200 20 200 40 100 40 100 0))
+            (below (make-rect-tpath           50 40 350 60)))
+        (setf (tpath-above-lines above) (list (nth-tline 6 (tpath-lines above))
+                                              (nth-tline 2 (tpath-lines above)))
+              (tpath-bottom-lines above) '())
+        (check-tpath above :name 'above)
+        (check-tpath below :name 'below)
+        (multiple-value-bind (merged internal new-above-lines new-top-lines)
+            (merge-tpaths above (first (tpath-above-lines above))
+                          below (tpath-lines below))
+          (declare (ignorable new-above-lines))
+          (check-tpath merged :name 'merged)
+          (assert-true (eq above merged))
+          (assert-true (tpath-goes merged 100 0 400 0 400 40 300 40 300 20 200 20 200 40 350 40 350 60 050 60 050 40 100 40 100 0))
+          (assert-true (null internal))
+          (assert-true (= 1 (length (tpath-above-lines merged))))
+          ;; (assert-true (tline-goes (first  (tpath-above-lines merged)) 100 40 050 40))
+          (assert-true (tline-goes (first (tpath-above-lines merged)) 400 40 300 40))
+          (assert-true (= 2 (length new-top-lines)))
+          (assert-true (tline-goes (first new-top-lines) 050 40 100 40))
+          (assert-true (tline-goes (second new-top-lines) 200 40 350 40))
+          (multiple-value-bind (merged internal new-above-lines new-top-lines)
+              (merge-tpaths merged (first (tpath-above-lines above))
+                            merged (second new-top-lines))
+            (declare (ignorable new-above-lines))
+            (check-tpath merged :name 'merged)
+            (assert-true (eq above merged))
+            (assert-true (tpath-goes merged 100 0 400 0 400 40 350 40 350 60 50 60 50 40 100 40 100 0))
+            (assert-true internal)
+            (assert-true (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
+            (assert-true (= 1 (length new-top-lines)))
+            (assert-true (tline-goes (first new-top-lines) 200 40 300 40)))))
+    (example "    
+    100 200 300 400
+    +------------+
+    |            |
+    |   +----+   |
+    |   |    |   |
+    +---+    +---+
+      +--------+
+      |        |
+      +--------+
+                    ")
+    (let ((above (tpath-from-coordinates   100 0  400 0  400 40 300 40 300 20 200 20 200 40 100 40 100 0))
+            (below (make-rect-tpath          150 40 350 60)))
+        (setf (tpath-above-lines above) (list (nth-tline 6 (tpath-lines above))
+                                              (nth-tline 2 (tpath-lines above)))
+              (tpath-bottom-lines above) '())
+        (check-tpath above :name 'above)
+        (check-tpath below :name 'below)
+        (multiple-value-bind (merged internal new-above-lines new-top-lines)
+            (merge-tpaths above (first (tpath-above-lines above))
+                          below (tpath-lines below))
+          (declare (ignorable new-above-lines))
+          (check-tpath merged :name 'merged)
+          (assert-true (eq above merged))
+          (assert-true (tpath-goes merged 100 0 400 0 400 40 300 40 300 20 200 20 200 40 350 40 350 60 150 60 150 40 100 40 100 0))
+          (assert-true (null internal))
+          (assert-true (= 2 (length (tpath-above-lines merged))))
+          (assert-true (tline-goes (first  (tpath-above-lines merged)) 150 40 100 40))
+          (assert-true (tline-goes (second (tpath-above-lines merged)) 400 40 300 40))
+          (assert-true (= 1 (length new-top-lines)))
+          (assert-true (tline-goes (first new-top-lines) 200 40 350 40))
+          (multiple-value-bind (merged internal new-above-lines new-top-lines)
+              (merge-tpaths merged (second (tpath-above-lines above))
+                            merged (first new-top-lines))
+            (declare (ignorable new-above-lines))
+            (check-tpath merged :name 'merged)
+            (assert-true (eq above merged))
+            (assert-true (tpath-goes merged 100 0 400 0 400 40 350 40 350 60 150 60 150 40 100 40 100 0))
+            (assert-true internal)
+            (assert-true (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
+            (assert-true (= 1 (length new-top-lines)))
+            (assert-true (tline-goes (first new-top-lines) 200 40 300 40)))))
+    (example "
+      100 200 300 400
+      +------------+    0 
+      |            |
+      |   +----+   |   20
+      |   |    |   |
+      +---+    +---+   40
+    +----------------+
+    |                |
+    +----------------+ 60
+             ")
+    (let ((above (tpath-from-coordinates   100 0  400 0  400 40 300 40 300 20 200 20 200 40 100 40 100 0))
+          (below (make-rect-tpath           50 40 450 60)))
+      (setf (tpath-above-lines above) (list (nth-tline 6 (tpath-lines above))
+                                            (nth-tline 2 (tpath-lines above)))
+            (tpath-bottom-lines above) '())
+      (check-tpath above :name 'above)
+      (check-tpath below :name 'below)
+      (multiple-value-bind (merged internal new-above-lines new-top-lines)
+          (merge-tpaths above (first (tpath-above-lines above))
+                        below (tpath-lines below))
+        (declare (ignorable new-above-lines))
+        (check-tpath merged :name 'merged)
+        (assert-true (eq above merged))
+        (assert-true (tpath-goes merged 100 0 400 0 400 40 300 40 300 20 200 20 200 40 450 40 450 60 050 60 050 40 100 40 100 0))
+        (assert-true (null internal))
+        (assert-true (= 1 (length (tpath-above-lines merged))))
+        (assert-true (tline-goes (first (tpath-above-lines merged)) 400 40 300 40))
+        (assert-true (= 2 (length new-top-lines)))
+        (assert-true (tline-goes (first new-top-lines) 050 40 100 40))
+        (assert-true (tline-goes (second new-top-lines) 200 40 450 40))
+        (multiple-value-bind (merged internal new-above-lines new-top-lines)
+            (merge-tpaths merged (first (tpath-above-lines above))
+                          merged (second new-top-lines))
+          (declare (ignorable new-above-lines))
+          (check-tpath merged :name 'merged)
+          (assert-true (eq above merged))
+          (assert-true (tpath-goes merged 100 0 400 0 400 40 450 40 450 60 050 60 050 40 100 40 100 0))
+          (assert-true internal)
+          (assert-true (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
+          (assert-true (= 2 (length new-top-lines)))
+          (assert-true (tline-goes (first new-top-lines) 200 40 300 40))
+          (assert-true (tline-goes (second new-top-lines) 400 40 450 40)))))))
 
 
 
-
-(defun bezier-path-from-tpath (tpath)
-  (flet ((tpoint-to-point (tpoint)
-           (ns:make-ns-point (tpoint-x tpoint) (tpoint-y tpoint))))
-    (let ((path [NSBezierPath bezierPath]))
-      [path setLineCapStyle:#$NSSquareLineCapStyle]
-      ;; [path setLineJoinStyle:#$NSRoundLineJoinStyle]
-      [path setLineJoinStyle:#$NSBevelLineJoinStyle]
-      [path moveToPoint:(tpoint-to-point (tline-from-point (tpath-lines tpath)))]
-      (tpath-dolines (line tpath)
-        [path lineToPoint:(tpoint-to-point (tline-to-point line))])
-      [path closePath]
-      path)))
-
-
-
-(defvar *w* nil)
-(defvar *speed* 0.0)
-;; (setf *speed* :infinite)
-;; (setf *speed* 0.0)
-;; (setf *speed* 1.0)
-(defun trace-path-pause (how path)
-  (case *speed*
-    (:infinite
-     (format *query-io*  "~&pause ~S ~S" how path)
-     (finish-output *query-io*)
-     (read-line *query-io*))
-    (otherwise
-     (sleep *speed*))))
-
-(defun trace-path (how path)
-  (with-focused-view (or *current-view* *w*)
-    (with-fore-color (case how
-                       (:disjoint       *red-color*)
-                       (:open           *yellow-color*)
-                       (:above          *green-color*)
-                       (:below          *light-blue-color*)
-                       (:merged         *magenta-color*)
-                       (otherwise       *black-color*))
-      (case how
-        ;; ((:above :below :bottom)  [(bezier-path-from-tpath path) fill])
-        (otherwise                [(bezier-path-from-tpath path) stroke]))
-      (with-fore-color *purple-color*
-        (loop
-          :for bottom :in (tpath-bottom-lines path)
-          :for from = (tline-from-point bottom)
-          :for to   = (tline-to-point bottom)
-          :do (draw-line (tpoint-x from) (tpoint-y from) (tpoint-x to) (tpoint-y to))))
-      (with-fore-color *green-color*
-        (loop
-          :for bottom :in (tpath-new-bottom-lines path)
-          :for from = (tline-from-point bottom)
-          :for to   = (tline-to-point bottom)
-          :do (draw-line (tpoint-x from) (tpoint-y from) (tpoint-x to) (tpoint-y to))))))
-      (trace-path-pause how path))
 
 
 (defun segments-from-region (region)
@@ -917,7 +915,7 @@
               ;; (progn
               ;;   (setf open-paths (mapcar (lambda (path)
               ;;                              ;; there's only one bottom to those just generated paths.
-              ;;                              (cons (first (tpath-bottom-lines path)) path))
+              ;;                              (cons (first (tpath-above-lines path)) path))
               ;;                            (generate-paths-for-row)))
               ;;   (let ((*speed* 0.0)) (mapc (lambda (pp) (trace-path :open (cdr pp))) open-paths))
               ;;   (sleep *speed*))
@@ -928,30 +926,30 @@
                 ;;        (sleep *speed*))
                 
                         ;; (format t "~&** top-line    = ~/ui:fmt-line/~%" top-line)
-                              ;; (progn (format t "~&below has not path above, push it to next, and shift new-bottom-lines~%")
+                              ;; (progn (format t "~&below has not path above, push it to next, and shift bottom-lines~%")
                               ;;        (trace-path :below below))
 
-;; (progn (format t "~&** above-line  = ~/ui:fmt-line/~%** above       = ~S~%" above-line above)
+        ;; (progn (format t "~&** above-line  = ~/ui:fmt-line/~%** above       = ~S~%" above-line above)
                               ;;        (trace-path :above above))
                                   ;; (trace-path :disjoint internal)
 
                                 ;; (progn (format t "~&** merged      = ~S~{~%**             = ~S~%~}"
-                                ;;                merged (tpath-new-bottom-lines merged))
+                                ;;                merged (tpath-bottom-lines merged))
                                 ;;        (format t "~&~{** new above-lines = ~S~%~}" new-above-lines)
                                 ;;        (format t "~&~{** new top-lines   = ~S~%~}" new-top-lines)
                                 ;;        (format t "~&** open-paths = ~{~/ui:fmt-line/~^ ~}~%"
                                 ;;                (mapcar (function car) open-paths))
-                                ;;        (print `((tpath-new-bottom-lines merged) ,(mapcar (function tline-coordinates) (tpath-new-bottom-lines merged))))
+                                ;;        (print `((tpath-bottom-lines merged) ,(mapcar (function tline-coordinates) (tpath-bottom-lines merged))))
                                 ;;        (trace-path :open merged))
                 
                 ;; (loop :for (nil . path) :in open-paths :do (trace-path :open path))
                 ;; (loop :for path :in next-paths :do (trace-path :bottom path))
                 ;; (dolist (path next-paths)
                 ;;   (format t "~&** next-path  = ~S~{~%  new bottom  = ~S~}~%"
-                ;;           path (copy-list (tpath-new-bottom-lines path))))
+                ;;           path (copy-list (tpath-bottom-lines path))))
                 ;; (dolist (path (mapcar (function cdr) open-paths))
                 ;;   (format t "~&** open-path  = ~S~{~%  new bottom  = ~S~}~%"
-                ;;           path (copy-list (tpath-new-bottom-lines path))))
+                ;;           path (copy-list (tpath-bottom-lines path))))
 
                            ;; (progn
                            ;;   (format t "~&** current open-paths = ~{~/ui:fmt-line/~^ ~}~%"
@@ -961,11 +959,9 @@
                            ;;   (sleep *speed*))
 
 
-(defun test/region-paths ()
+(define-test test/region-paths ()
   (test/tpath-contains-line-p)
   (test/merge-tpaths))
-
-;; (test/region-paths)
 
 
 ;;;; THE END ;;;;

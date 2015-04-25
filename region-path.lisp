@@ -31,7 +31,7 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-(in-package :ui)
+(in-package "MCLGUI")
 
 
 ;;; Temporary Paths
@@ -54,19 +54,6 @@
   );;tpath
 
 
-
-(defmacro tline-dolines ((line tlines &optional result) &body body)
-  (let ((vstart   (gensym))
-        (vnext (gensym)))
-    `(loop
-       :with ,vstart = ,tlines
-       :for ,line = ,vstart :then ,vnext
-       :for ,vnext = (tline-to-line ,vstart) :then (tline-to-line ,vnext)
-       :do (progn ,@body)
-       :until (eq ,vnext ,vstart)
-       :finally (return ,result))))
-
-
 (defun make-rect-tpath (left top right bottom)
   (let* ((topleft     (make-tpoint :x left  :y top))
          (topright    (make-tpoint :x right :y top))
@@ -85,8 +72,21 @@
           (tline-from-line left-line) bottom-line
           (tline-to-line   left-line) top-line)
     (make-tpath :lines top-line
-                :top-lines (list top-line)
+                :top-lines    (list top-line)
                 :bottom-lines (list bottom-line))))
+
+(defmacro tline-dolines ((line tlines &optional result) &body body)
+  (let ((vstart   (gensym))
+        (vnext (gensym)))
+    `(loop
+       :with ,vstart = ,tlines
+       :for ,line = ,vstart :then ,vnext
+       :for ,vnext = (tline-to-line ,vstart) :then (tline-to-line ,vnext)
+       :do (progn ,@body)
+       :until (eq ,vnext ,vstart)
+       :finally (return ,result))))
+
+
 
 
 (defun tpath-contains-line-p (path line)
@@ -299,7 +299,8 @@ RETURN:         :left or :right or above;
                       (right-line  (tline above-line top-line))
                       (internal    (unless (tpath-contains-line-p above left-line)
                                      (make-tpath :lines left-line))))
-                 (merge-tpath above below internal above-line (list right-line) top-line (list left-line))))))))))))
+                 (merge-tpath above below internal above-line
+                              (list right-line) top-line (list left-line))))))))))))
 
 
 (defun paths-from-region (region)
@@ -418,27 +419,6 @@ RETURN: A list of tpaths surrounding each connected part of the given
                                  next-paths '())))))
     :finally (return (append disjoint-paths (delete-duplicates (mapcar (function cdr) open-paths))))))
 
-
-(defun bezier-path-from-region (region)
-  (flet ((tpoint-to-point (tpoint)
-           (ns:make-ns-point (tpoint-x tpoint) (tpoint-y tpoint))))
-    (declare (inline tpoint-to-point))
-    (let ((tpaths (paths-from-region region))
-          (path [NSBezierPath bezierPath]))
-      [path setLineCapStyle:#$NSSquareLineCapStyle]
-      ;; [path setLineJoinStyle:#$NSRoundLineJoinStyle]
-      [path setLineJoinStyle:#$NSBevelLineJoinStyle]
-      (loop
-        :for tpath :in tpaths
-        :for start = (tpath-lines tpath)
-        :do (let ((first t))
-              (tline-dolines (line start)
-                (when first
-                  [path moveToPoint:(tpoint-to-point (tline-from-point line))]
-                  (setf first nil))
-                [path lineToPoint:(tpoint-to-point (tline-to-point line))])))
-      [path closePath]
-      path)))
 
 
 ;;;; THE END ;;;;

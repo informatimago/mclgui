@@ -329,29 +329,6 @@ WHERE:          The cursor position.
   (dialog-item-action item))
 
 
-(defmethod view-focus-and-draw-contents ((item dialog-item) &optional visrgn cliprgn)
-  "
-The method for dialog items of the generic function
-VIEW-FOCUS-AND-DRAW-CONTENTS focuses on the container of the dialog
-item, then calls VIEW-DRAW-CONTENTS.
-
-ITEM:           A dialog item.
-
-VISRGN:         Region records from the view’s wptr.  They are ignored.
-
-CLIPRGN:        Region records from the view’s wptr.  They are ignored.
-"
-  (declare (ignore visrgn cliprgn))
-  (unless *deferred-drawing*
-   (with-focused-dialog-item (item) 
-     (view-draw-contents item)))
-  #-(and) (with-temp-rgns (visrgn cliprgn) ;; TODO
-            (get-window-visrgn  (wptr item) visrgn)
-            (get-window-cliprgn (wptr item) cliprgn)      
-            (when (view-is-invalid-p item visrgn cliprgn)
-              (call-with-focused-dialog-item item (function view-draw-contents)))))
-
-
 (defmethod set-view-position ((item dialog-item) h &optional v)
   (let ((new-position (make-point h v)))
     (unless (eql new-position (view-position item))

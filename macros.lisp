@@ -32,7 +32,7 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
-(objcl:enable-objcl-reader-macros)
+;;(objcl:enable-objcl-reader-macros)
 (declaim (declaration stepper))
 
 

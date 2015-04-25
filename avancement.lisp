@@ -38,7 +38,7 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 
-(in-package :mclgui)
+(in-package "MCLGUI")
 
 (defparameter *groups*
   (quote (("Points"       "point.lisp")

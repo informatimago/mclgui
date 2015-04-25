@@ -64,12 +64,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defmacro with-rectangle-arg ((var left &optional top right bottom) &body body)
-  "takes a rectangle, two points, or four coordinates and makes a rectangle.
-body is evaluated with VAR bound to that rectangle."
-  `(let ((,var (make-rect ,left ,top ,right ,bottom)))
-     (declare (ignorable ,var)) ; for now
-    ,@body))
 
 #-(and)
 (defun setup-rect (rect left top right bottom)
@@ -111,28 +105,6 @@ body is evaluated with VAR bound to that rectangle."
   (:method ((view simple-view) h &optional v)
     (set-view-scroll-position view h v nil)))
 
-
-(defgeneric clip-region (view &optional save-region))
-(defmethod clip-region ((view simple-view) &optional (save-region))
-  (niy clip-region view save-region)
-  ;; (let ((save-region (or save-region (#_NewRgn))))
-  ;;   (with-focused-view view
-  ;;     (#_GetClip save-region))
-  ;;   save-region)
-  (values))
-
-(defgeneric set-clip-region (view new-region))
-(defmethod set-clip-region ((view simple-view) new-region)
-  (niy set-clip-region view new-region)
-  (with-focused-view view
-    [(bezier-path-from-region new-region) setClip])
-  new-region)
-
-(defgeneric clip-rect (view left &optional top right bottom))
-(defmethod clip-rect ((view simple-view) left &optional top right bottom)
-  (with-rectangle-arg (r left top right bottom)
-   (with-focused-view view
-     (clip-rect* (rect-left r) (rect-top r) (rect-width r) (rect-height r)))))
 
 ;;;---------------------------------------------------------------------
 ;;; Drawing Rectangles

@@ -381,7 +381,7 @@
     (erase-rect* 0 0 1000 1000))
   (bezier-path-from-region r))
 
-(defun stroke-region (r)
+(defun stroke-test-region (r)
   (with-focused-view *w*
     (erase-rect* 0 0 1000 1000))
   (let ((path (bezier-path-from-region r)))
@@ -389,7 +389,7 @@
       (erase-rect* 0 0 1000 1000)
       [path stroke])))
 
-(defun fill-region (r)
+(defun fill-test-region (r)
   (with-focused-view *w*
     (erase-rect* 0 0 1000 1000))
   (let ((path (bezier-path-from-region r)))
@@ -508,5 +508,60 @@
           (setf *speed* 1.0)
 
           );;progn
+
+
+(defun bezier-path-from-tpath (tpath)
+  (flet ((tpoint-to-point (tpoint)
+           (ns:make-ns-point (tpoint-x tpoint) (tpoint-y tpoint))))
+    (let ((path [NSBezierPath bezierPath]))
+      [path setLineCapStyle:#$NSSquareLineCapStyle]
+      ;; [path setLineJoinStyle:#$NSRoundLineJoinStyle]
+      [path setLineJoinStyle:#$NSBevelLineJoinStyle]
+      [path moveToPoint:(tpoint-to-point (tline-from-point (tpath-lines tpath)))]
+      (tpath-dolines (line tpath)
+        [path lineToPoint:(tpoint-to-point (tline-to-point line))])
+      [path closePath]
+      path)))
+
+(defvar *w* nil)
+(defvar *speed* 0.0)
+;; (setf *speed* :infinite)
+;; (setf *speed* 0.0)
+;; (setf *speed* 1.0)
+(defun trace-path-pause (how path)
+  (case *speed*
+    (:infinite
+     (format *query-io*  "~&pause ~S ~S" how path)
+     (finish-output *query-io*)
+     (read-line *query-io*))
+    (otherwise
+     (sleep *speed*))))
+
+(defun trace-path (how path)
+  (with-focused-view (or *current-view* *w*)
+    (with-fore-color (case how
+                       (:disjoint       *red-color*)
+                       (:open           *yellow-color*)
+                       (:above          *green-color*)
+                       (:below          *light-blue-color*)
+                       (:merged         *magenta-color*)
+                       (otherwise       *black-color*))
+      ;; (case how
+      ;;   ;; ((:above :below :bottom)  [(bezier-path-from-tpath path) fill])
+      ;;   (otherwise                [(bezier-path-from-tpath path) stroke]))
+      (with-fore-color *purple-color*
+        (loop
+          :for bottom :in (tpath-above-lines path)
+          :for from = (tline-from-point bottom)
+          :for to   = (tline-to-point bottom)
+          :do (draw-line (tpoint-x from) (tpoint-y from) (tpoint-x to) (tpoint-y to))))
+      (with-fore-color *green-color*
+        (loop
+          :for bottom :in (tpath-bottom-lines path)
+          :for from = (tline-from-point bottom)
+          :for to   = (tline-to-point bottom)
+          :do (draw-line (tpoint-x from) (tpoint-y from) (tpoint-x to) (tpoint-y to))))))
+      (trace-path-pause how path))
+
 
 ;;;; THE END ;;;;

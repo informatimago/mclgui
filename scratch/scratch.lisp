@@ -340,3 +340,5 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
 (%set-fore-color (get-fore-color (view-window view)))
 (unwind-protect
      (%set-fore-color (get-fore-color (view-window view))))
+
+(STEP-unBREAK-ENTRY %view-draw-contents-with-focused-view)

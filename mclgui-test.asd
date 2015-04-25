@@ -40,7 +40,16 @@
   :license "GPL3"
   :depends-on ("mclgui"
                "com.informatimago.common-lisp.cesarum")
-  :components ((:file "tests/test-graphics"           :depends-on ())
+  :components (
+               ;; ---
+               ;; automatic tests:
+               (:file "tests/test-rect"               :depends-on ())
+               (:file "tests/test-region"             :depends-on ())
+               (:file "tests/test-region-path"        :depends-on ())
+               (:file "tests/test-pattern"            :depends-on ())
+               (:file "tests/test-menu"               :depends-on ())
+               ;; ---
+               (:file "tests/test-graphics"           :depends-on ())
                ;; (:file "tests/test-little"             :depends-on ())
                ;; ---
                ;; later we'll make an mclgui-example system:
@@ -49,16 +58,24 @@
                (:file "layout"                        :depends-on ())
                (:file "scratch/sdi"                   :depends-on ("layout"))
                ;; ---
-               (:file "tests/test-menu"               :depends-on ())
-               (:file "tests/test-pattern"            :depends-on ())
                (:file "tests/test-scroller"           :depends-on ())
                (:file "tests/test-view"               :depends-on ())
                (:file "tests/test-spring-view"        :depends-on ())
                (:file "tests/test-text-edit"          :depends-on ())
-               (:file "tests/test-region-path"        :depends-on ())
                (:file "tests/test-region-interactive" :depends-on ("examples/coordinated-window"
                                                                    "scratch/sdi"
                                                                    "tests/test-region-path"))
-               (:file "tests/test-region-pattern"     :depends-on ("examples/computed-view"))))
+               (:file "tests/test-region-pattern"     :depends-on ("examples/computed-view"))
+               ;; ---
+               (:file "tests/test" :depends-on ("tests/test-rect"
+                                                "tests/test-region"
+                                                "tests/test-region-path"
+                                                "tests/test-pattern"
+                                                "tests/test-menu")))
+  :perform (asdf:test-op
+            (operation system)
+            (dolist (p '("MCLGUI"))
+              (let ((*package* (find-package p)))
+                #+asdf3 (uiop:symbol-call p "TEST/ALL")))))
 
 ;;;; THE END ;;;;

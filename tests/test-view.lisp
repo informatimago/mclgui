@@ -46,9 +46,14 @@
     (let ((size (view-size view)))
       (fill-rect* 0 0 (point-h size) (point-v size)))))
 
-(defparameter *w* (make-instance 'window :window-title "Test"))
+(defvar *w* nil)
+(defun initialize/test-view ()
+  (when *w* (window-close *w*))
+  (setf *w* (make-instance 'window :window-title "Test")))
+
 
 #-(and) (progn
+          (initialize/test-view)
           (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
 
           (add-subviews *w*

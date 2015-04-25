@@ -109,9 +109,9 @@
                              "macros" "variables" "point"))
                
                (:file "paragraph-style"
-                      :depends-on ("packages"
-                                   "macros" "objc-classes"
-                                   "wrapper"))
+                :depends-on ("packages"
+                             "macros" "objc-classes"
+                             "wrapper"))
 
                ;; Chapter 2:
 
@@ -150,10 +150,10 @@
 
                (:file "view"
                 :depends-on ("packages" "process" 
-                                       "macros" "variables" "color"
-                                       "point" "region" "font" "pen" 
-                                       "wrapper" "view-classes" "objc-classes"
-                                       #-ccl-1.10 "cg"))
+                                        "macros" "variables" "color"
+                                        "point" "region" "font" "pen" 
+                                        "wrapper" "view-classes" "objc-classes"
+                                        #-ccl-1.10 "cg"))
 
                (:file "view-stream"
                 :depends-on ("packages" 
@@ -162,12 +162,13 @@
 
                (:file "window"
                 :depends-on ("packages" "process"
-                                       "macros" "variables" "color"
-                                       "point" "region" "font"
-                                       "view-classes" "objc-classes"
-                                       "wrapper" "view" "notification"
-                                       "menu"
-                                       #-ccl-1.10 "cg"))
+                                        "macros" "variables" "color"
+                                        "point" "region" "font"
+                                        "objc-classes" "objc-region-path"
+                                        "view-classes"
+                                        "wrapper" "view" "notification"
+                                        "menu"
+                                        #-ccl-1.10 "cg"))
 
                (:file "fred-window"
                 :depends-on ("packages" 
@@ -248,8 +249,8 @@
                              "text-edit"))
 
                (:file "editable-text-dialog-item"
-                      :depends-on ("packages"
-                                   "text-edit-dialog-item"))
+                :depends-on ("packages"
+                             "text-edit-dialog-item"))
                
                (:file "table-dialog-item"
                 :depends-on ("packages" 
@@ -362,8 +363,8 @@
 
                (:file "window-event"
                 :depends-on ("packages" "process"
-                                       "macros" "variables" "point" "system" "view-classes" "window"
-                                       "view-event" "event" "application"))
+                                        "macros" "variables" "point" "system" "view-classes" "window"
+                                        "view-event" "event" "application"))
 
                
                (:file "cursor"
@@ -394,7 +395,12 @@
 
                (:file "region"
                 :depends-on ("packages"
-                             "macros" "variables" "point" "rect"
+                             "macros" "variables" "point" "rect"))
+               
+               (:file "region-view"
+                :depends-on ("packages"
+                             "macros"
+                             "region"
                              "graphics"
                              "view-classes"))
 
@@ -403,6 +409,9 @@
                              "macros" "variables" "point" "rect"
                              "graphics"
                              "region"))
+               
+               (:file "objc-region-path"
+                :depends-on ("region-path"))
 
                (:file "pen"
                 :depends-on ("packages"
@@ -414,7 +423,8 @@
                (:file "quickdraw"
                 :depends-on ("packages"
                              "macros" "variables" "point"
-                             "objc-classes" "view-classes"
+                             "objc-classes" "objc-region-path"
+                             "view-classes"
                              "pattern" "rect" "region" "pen"))
 
                ;; Managers:
@@ -458,10 +468,11 @@
                              "pop-up-menu-dialog-item" "sequence-dialog-item"
                              "y-or-n-dialog" "message-dialog" "get-string-dialog"
                              "select-dialog"
-                             "scroller" "region-path"
+                             "scroller" "region-path" "objc-region-path"
                              "event" "view-event" "window-event"
                              "cursor" "scrap" "eval" "application"
-                             #+has-appleevent "apple-event"))))
+                             #+has-appleevent "apple-event")))
+  :in-order-to ((asdf:test-op (asdf:test-op "mclgui-test"))))
 
 
 ;;;; THE END ;;;;

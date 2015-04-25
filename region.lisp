@@ -13,10 +13,14 @@
 ;;;;MODIFICATIONS
 ;;;;    2012-05-15 <PJB> Created.
 ;;;;BUGS
+;;;;
+;;;;    - we can obtain regions with equal consecutive rows.  Those
+;;;;      could be simplified.
+;;;;
 ;;;;LEGAL
 ;;;;    GPL3
 ;;;;    
-;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
+;;;;    Copyright Pascal J. Bourguignon 2012 - 2015
 ;;;;    
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
@@ -33,83 +37,13 @@
 ;;;;**************************************************************************
 (in-package "MCLGUI")
 
-
-
-
-(defgeneric window-open-region (window)
-  (:documentation "RETURN: NIL or the open region of the window"))
-(defgeneric (setf window-open-region) (new-region window)
-  (:documentation "DO: Sets the open-region of the window.
-NEW-REGION: a region or NIL."))
-
-
-(defun get-clip (region)
-  region)
-
-(defun set-clip (region)
-  region)
-
-
-
 (defvar *temp-rgn* nil)
-
 
 (defmacro with-temp-rgns ((&rest rgn-vars) &body body)
   `(let ,(mapcar (lambda (var) `(,var (new-region))) rgn-vars)
      (unwind-protect
          (progn ,@body)
        ,@(mapcar (lambda (var) `(dispose-region ,var)) rgn-vars))))
-
-
-(defmacro with-hilite-mode (&body body)
-  (niy with-hilite-mode body)
-  `(progn
-     (niy with-hilite-mode ',body)
-     ,@body)
-  #-(and)
-  `(progn
-     (let ((byte (require-trap #_lmgethilitemode)))
-       (require-trap #_lmsethilitemode (%ilogand2 #x7f byte)))
-     ,@body))
-
-
-(defmacro with-clip-rect-intersect (rect &body body)
-  (let ((vrect (gensym)))
-    `(let ((,vrect ,rect))
-       (with-saved-graphic-state
-         (progn
-           (clip-rect* (rect-left ,vrect) (rect-top ,vrect)
-                       (rect-width ,vrect) (rect-height ,vrect))
-           ,@body)))))
-
-
-(defmacro with-clip-region (region &body body)
-  `(with-clip-rect-intersect (region-bounds ,region)
-     ,@body)
-  #-(and)
-  (let ((rgn1 (gensym))
-        (rgn2 (gensym)))    
-    `(with-temp-rgns (,rgn1 ,rgn2)
-       (get-clip ,rgn1)
-       (intersect-region ,rgn1 ,region ,rgn2)
-       (unwind-protect
-            (progn
-              (set-clip ,rgn2)
-              ,@body)
-         (set-clip ,rgn1)))))
-
-#-(and)
-(defmacro with-clip-rect-intersect (rect &rest body)
-  (let ((old (gensym))
-        (new (gensym)))
-    `(with-temp-rgns (,old ,new)
-       (get-clip ,old)
-       (set-rect-region ,new ,rect)
-       (intersect-region ,old ,new ,new)
-       (set-clip ,new)
-       (unwind-protect
-            (progn ,@body)
-         (set-clip ,old)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -149,13 +83,13 @@ NEW-REGION: a region or NIL."))
 ;;;                       (7 . #(17 23))
 ;;;                       (9 . #(17 23))))
 
-#-(and) (expanded-segments #S(region :bounds #S(rect :topleft #@(0 0) :bottomright #@(30 9))
-           :segments #((0 . #(7 24))
-                       (2 . #(0 31))
-                       (4 . #(0 8 17 31))
-                       (6 . #(0 31))
-                       (7 . #(17 23))
-                       (9 . #(17 23)))))
+;; #-(and) (expanded-segments #S(region :bounds #S(rect :topleft #@(0 0) :bottomright #@(30 9))
+;;            :segments #((0 . #(7 24))
+;;                        (2 . #(0 31))
+;;                        (4 . #(0 8 17 31))
+;;                        (6 . #(0 31))
+;;                        (7 . #(17 23))
+;;                        (9 . #(17 23)))))
 
 
 
@@ -290,60 +224,6 @@ RETURN:         A new segments vector, built as the combination by the
     s))
 
 
-(defun test/segments-operate ()
-
-  (assert (equalp (loop
-                     with s = (make-array 10 :adjustable t :fill-pointer 0)
-                     with w = (segment-writer s)
-                     for (a b) in '((1 2) (3 4) (4 5) (6 7))
-                     do (funcall w a b)
-                     finally (return s))
-                  #(1 2 3 5 6 7)))
-
-  (assert (equalp (loop with r = (segment-reader #(1 3 5 7 9 10 11 13 14 15))
-                     with c = 0 with v = 0
-                     do (multiple-value-setq (c v) (funcall r))
-                     collect (list c v)
-                     while c)
-                  '((1 nil) (3 t) (5 nil) (7 t) (9 nil) (10 t) (11 nil)
-                    (13 t) (14 nil) (15 t) (nil nil))))
-
-  (assert (equalp (segments-operate (lambda (a b) (and a b))
-                                    #(1 3 5 7 9 10 11 13 14 15)
-                                    #(0 2 4 6 8 11 12 13))
-                  #(1 2 5 6 9 10 12 13)))
-
-  (assert (equalp (segments-operate (lambda (a b) (or a b))
-                                    #(1 3 5 7 9 10 11 13 14 15)
-                                    #(0 2 4 6 8 11 12 13))
-                  #(0 3 4 7 8 13 14 15)))
-
-  (assert (equalp (segments-operate (lambda (a b) (or (and a (not b)) (and (not a) b)))
-                                    #(1 3 5 7 9 10 11 13 14 15)
-                                    #(0 2 4 6 8 11 12 13))
-                  #(0 1 2 3 4 5 6 7 8 9 10 12 14 15)))
-
-  (assert (equalp (segments-operate (lambda (a b) (and a (not b)))
-                                    #(1 3 5 7 9 10 11 13 14 15)
-                                    #(0 2 4 6 8 11 12 13))
-                  #(2 3 6 7 11 12 14 15)))
-
-  (assert (equalp (segments-operate (lambda (a b) (and a (not b)))
-                                    #(62 138)
-                                    #(85 115))
-                  #(62 85 115 138)))
-
-  (assert (equalp (segments-operate (lambda (a b) (and a (not b)))
-                                    #(62 138) #())
-                  #(62 138)))
-
-  (assert (equalp (segments-operate (lambda (a b) (and a (not b)))
-                                    #() #(62 138))
-                  #()))
-
-  :success)
-
-
 ;;----------------------------------------------------------------------
 ;; update-segments converts inversion-points into segments.
 ;;
@@ -440,24 +320,6 @@ RETURN:             A new segment vector made from SEGMENTS and
         :finally (return new)))))
 
 
-#-(and)
-(defun test/update-segments ()  
-  (assert (equalp (loop
-                    :for invpt :across #(#( 0   7    23)
-                                         #( 2 0 7    23 30)
-                                         #( 4   7 17      )
-                                         #( 6   7 17 27 30)
-                                         #( 8 0   17 23 27)
-                                         #(10     17 23   ))
-                    :for s = (subseq invpt 1) :then (update-segments s invpt)
-                    :collect (cons (aref invpt 0) s))
-                  '((0 . #(7 23))
-                    (2 . #(0 30))
-                    (4 . #(0 7 17 30))
-                    (6 . #(0 27))
-                    (8 . #(17 23))
-                    (10 . #()))))
-  :success)
 
 ;; (loop
 ;;   :for invpt :across #(#( 0   7    23)
@@ -547,17 +409,17 @@ RETURN:
 "
   (let ((start 0)
         (end (length segments)))
-   (loop
-     :while (and (< start (length segments))
-                 (zerop (length (cdr (aref segments start)))))
-     :do (incf start))
-   (loop
-     :do (decf end)
-     :while (and (< 0 end)
-                 (zerop (length (cdr (aref segments (1- end)))))
-                 (zerop (length (cdr (aref segments end)))))
-     :finally (incf end))
-   (nsubseq segments start end)))
+    (loop
+      :while (and (< start end)
+                  (zerop (length (cdr (aref segments start)))))
+      :do (incf start))
+    (loop
+      :do (decf end)
+      :while (and (< start end)
+                  (zerop (length (cdr (aref segments (1- end)))))
+                  (zerop (length (cdr (aref segments end)))))
+      :finally (incf end))
+    (nsubseq segments start end)))
 
 
 (defun segments-bounds (segments)
@@ -582,29 +444,6 @@ RETURN:         The bounds rect.
       (make-rect left top right bottom))))
 
 
-(defun test/segments-trim ()
-  (assert (equalp (segments-trim #((10 . #(10 100))
-                                   (20 . #())))
-                  #((10 . #(10 100))
-                    (20 . #()))))
-  (assert (equalp (segments-trim #((0 . #())
-                                 (1 . #())
-                                 (10 . #(10 100))
-                                 (50 . #(10 100 200 400))
-                                 (60 . #(10 50 350 400))
-                                 (80 . #(10 100 200 400))
-                                 (100 . #(200 400))
-                                 (150 . #())
-                                 (200 . #())
-                                 (201 . #())))
-                #((10 . #(10 100))
-                  (50 . #(10 100 200 400))
-                  (60 . #(10 50 350 400))
-                  (80 . #(10 100 200 400))
-                  (100 . #(200 400))
-                  (150 . #()))))
-  :success)
-
 
 ;;----------------------------------------------------------------------
 ;; region-operate implements the region operations: :intersection,
@@ -625,15 +464,17 @@ DO:             Compute the operation OP between R1 and R2, and set RD
 "
   (check-type op (member :intersection :difference :union :xor :horizontal-inset))
   (flet ((operate (op v s1 s2 res)
-           (vector-push-extend
-            (cons v (ecase op
-                      (:intersection     (segments-operate (lambda (a b) (and a b))        s1 s2))
-                      (:difference       (segments-operate (lambda (a b) (and a (not b)))  s1 s2))
-                      (:union            (segments-operate (lambda (a b) (or a b))         s1 s2))
-                      (:xor              (segments-operate (function xor)                  s1 s2))
-                      ;; (:horizontal-inset (segments-horizontal-inset s1 s2))
-                      ))
-            res)))
+           (let ((row (ecase op
+                        (:intersection     (segments-operate (lambda (a b) (and a b))        s1 s2))
+                        (:difference       (segments-operate (lambda (a b) (and a (not b)))  s1 s2))
+                        (:union            (segments-operate (lambda (a b) (or a b))         s1 s2))
+                        (:xor              (segments-operate (function xor)                  s1 s2))
+                        ;; (:horizontal-inset (segments-horizontal-inset s1 s2))
+                        ))
+                 (last (1- (fill-pointer res))))
+             (when (or (minusp last)
+                       (not (equalp (aref res last) row)))
+               (vector-push-extend (cons v row) res)))))
     (declare (inline operate))
     (loop
       :with segs1 = (expanded-segments r1)
@@ -685,76 +526,6 @@ DO:             Compute the operation OP between R1 and R2, and set RD
 
 
 
-#-(and)
-(defun region-operate-not-easy (op r1 r2 rd)
-  "
-NOTE:           This function computes the operation on the inversion
-                points of r1 and r2.
-OP:             A keyword denoting an operation, one of :intersection
-                :difference :union :xor.
-R1:             A region.
-R2:             A region.
-RD:             A region.
-DO:             Compute the operation OP between R1 and R2, and set RD
-                to the result of that operation.
-"
-  (check-type op (member :intersection :difference :union :xor :horizontal-inset))
-  (flet ((operate (op v s1 s2 res)
-           (vector-push-extend
-            (cons v (case op
-                      (:intersection     (segments-operate (lambda (a b) (and a b))        s1 s2))
-                      (:difference       (segments-operate (lambda (a b) (and a (not b)))  s1 s2))
-                      (:union            (segments-operate (lambda (a b) (or a b))         s1 s2))
-                      (:xor              (segments-operate (function xor)                  s1 s2))
-                      ;; (:horizontal-inset (segments-horizontal-inset s1 s2))
-                      ))
-            res)))
-    (loop
-      :with invpt1 = (expanded-inversion-points r1)
-      :with invpt2 = (expanded-inversion-points r2)
-      :with r = (make-array (+ (length invpt1) (length invpt2)) :adjustable t :fill-pointer 0)
-      :with s1 = #()
-      :with s2 = #()
-      :with i1 = 0
-      :with i2 = 0
-      :with ip1 = (aref invpt1 i1) :with v1 = (aref ip1 0)
-      :with ip2 = (aref invpt2 i2) :with v2 = (aref ip2 0)
-      :do (cond
-            ((and (null v1) (null v2))
-             (loop-finish))
-            ((or (null v2) (and v1 (< v1 v2)))
-             (setf s1 (update-segments s1 ip1))
-             (operate op v1 s1 s2 r)
-             (incf i1)
-             (if (< i1 (length invpt1))
-               (setf ip1 (aref invpt1 i1)
-                     v1  (aref ip1 0))
-               (setf v1 nil)))
-            ((or (null v1) (< v2 v1))
-             (setf s2 (update-segments s2 ip2))
-             (operate op v2 s1 s2 r)
-             (incf i2)
-             (if (< i2 (length invpt2))
-               (setf ip2 (aref invpt2 i2)
-                     v2  (aref ip2 0))
-               (setf v2 nil)))
-            (t
-             (setf s1 (update-segments s1 ip1)
-                   s2 (update-segments s2 ip2))
-             (operate op v2 s1 s2 r)
-             (incf i1)
-             (if (< i1 (length invpt1))
-               (setf ip1 (aref invpt1 i1)
-                     v1  (aref ip1 0))
-               (setf v1 nil))
-             (incf i2)
-             (if (< i2 (length invpt2))
-               (setf ip2 (aref invpt2 i2)
-                     v2  (aref ip2 0))
-               (setf v2 nil))))
-      :finally (return (values r rd)))))
-
-
 (defun region-operate (op r1 r2 rd)
   "
 NOTE:           This function computes the operations in simple cases,
@@ -796,32 +567,6 @@ DO:             Compute the operation OP between R1 and R2, and set RD
             (t  (region-operate-not-easy op r1 r2 rd)))))
   rd)
 
-
-(defun test/region-operate ()
-  (assert (equalp (region-operate :intersection
-                                  (set-rect-region (new-region) 0 0 200 100)
-                                  (set-rect-region (new-region) 50 20 250 120)
-                                  (new-region))
-                  #S(region :bounds #S(rect :topleft 1310770 :bottomright 6553800)
-                            :segments #())))
-  (assert (equalp
-           (region-operate
-            :difference
-            (region-operate
-             :union
-             (set-rect-region (new-region) 10 10 100 100)
-             (set-rect-region (new-region) 200 50 400 150)
-             (new-region)) 
-            (set-rect-region (new-region) 50 60 350 80)
-            (new-region))
-           #S(region :bounds #S(rect :topleft 655370 :bottomright 9830800)
-                     :segments #((10 . #(10 100))
-                                 (50 . #(10 100 200 400))
-                                 (60 . #(10 50 350 400))
-                                 (80 . #(10 100 200 400))
-                                 (100 . #(200 400))
-                                 (150 . #())))))
-  :success)
 
 
 ;;----------------------------------------------------------------------
@@ -906,136 +651,10 @@ LEFT, TOP, RIGHT, BOTTOM:
   region)
 
 
-(defun rect-region (rect-or-left &optional top right bottom)
-  (assert (or (and (integerp rect-or-left)
-                   (integerp top)
-                   (integerp right)
-                   (integerp bottom))
-              (and (typep rect-or-left 'rect)
-                   (null top)
-                   (null right)
-                   (null bottom))))
-  (if bottom
-      (set-rect-region (new-region)
-                       rect-or-left top
-                       right bottom)
-      (set-rect-region (new-region)
-                       (rect-left rect-or-left) (rect-top rect-or-left)
-                       (rect-right rect-or-left) (rect-bottom rect-or-left))))
+(defun rect-region (left &optional top right bottom)
+  (with-rectangle-arg (rect left top right bottom)
+    (set-rect-region (new-region) rect)))
 
-;;----------------------------------------------------------------------
-
-(defgeneric open-region (view)
-  (:documentation "
-The OPEN-REGION generic function hides the pen and begins recording a
-region.  Subsequent drawing commands to the window add to the region.
-Recording ends when CLOSE-REGION is called. The function returns NIL.
-It is an error to call OPEN-REGION a second time without first calling
-CLOSE-REGION.
-
-VIEW:           A window or a view contained in a window.
-")
-  #-(and) "
-
-OpenRgn tells QuickDraw to allocate temporary space and start saving
-lines and framed shapes for later processing as a region
-definition. While a region is open, all calls to Line, LineTo, and the
-procedures that draw framed shapes (except arcs) affect the outline of
-the region. Only the line endpoints and shape boundaries affect the
-region definition; the pen mode, pattern, and size do not affect
-it. In fact, OpenRgn calls HidePen, so no drawing occurs on the screen
-while the region is open (unless you called ShowPen just after
-OpenRgn, or you called ShowPen previously without balancing it by a
-call to HidePen). Since the pen hangs below and to the right of the
-pen location, drawing lines with even the smallest pen will change
-bits that lie outside the region you define.
-
-The outline of a region is mathematically defined and infinitely thin,
-and separates the bit image into two groups of bits: Those within the
-region and those outside it. A region should consist of one or more
-closed loops. Each framed shape itself constitutes a loop. Any lines
-drawn with Line or LineTo should connect with each other or with a
-framed shape. Even though the on screen presentation of a region is
-clipped, the definition of a region is not; you can define a region
-anywhere on the coordinate plane with complete disregard for the
-location of various grafPort entities on that plane.
-
-When a region is open, the current grafPort's rgnSave field contains a
-handle to information related to the region definition. If you want to
-temporarily disable the collection of lines and shapes, you can save
-the current value of this field, set the field to NIL, and later
-restore the saved value to resume the region definition.  Also,
-calling SetPort while a regionis being formed will discontinue
-formation of the region until another call to SetPort resets the
-region's original grafPort.
-
-Warning: Do not call OpenRgn while another region or polygon is
-already open. All open regions but the most recent will behave
-strangely.
-
-Note: Regions are limited to 32K bytes. You can determine the current
-size of a region by calling the Memory Manager function GetHandleSize.
-
-"
-  (:method ((view simple-view))
-    (when (window-open-region (view-window view))
-      (error "Cannot call ~S twice in a row before calling ~S."
-             'open-region 'close-region))
-    (niy open-region view)
-    (pen-hide view)
-    (setf (window-open-region (view-window view)) (new-region))))
-
-
-(defgeneric close-region (view &optional dest-region)
-  (:documentation "
-
-The CLOSE-REGION generic function shows the pen and returns a region
-that is the accumulation of drawing commands in the window since the
-last open-region for the window.  It returns the result in
-DEST-REGION, if supplied, or else in a newly created region.  It is an
-error to call CLOSE-REGION before OPEN-REGION has been called.  Note
-that if a new region is created, you must dispose of it explicitly to
-reclaim its storage space.
-
-VIEW:           A window or a view contained in a window.
-
-DEST-REGION:    A region.
-")
-  #-(and) "
-
-CloseRgn stops the collection of lines and framed shapes, organizes
-them into a region definition, and saves the resulting region in the
-region indicated by dstRgn. CloseRgn does not create the destination
-region; space must already have been allocated for it. You should
-perform one and only one CloseRgn for every OpenRgn. CloseRgn calls
-ShowPen, balancing the HidePen call made by OpenRgn.
-
-Here's an example of how to create and open a region, define a barbell
-shape, close the region, draw it, and dispose of it:
-
-    barbell := NewRgn;                   {create a new region}
-    OpenRgn;                             {begin collecting stuff}
-        SetRect(tempRect,20,20,30,50);   {form the left weight}
-        FrameOval(tempRect);
-        SetRect(tempRect,25,30,85,40);   {form the bar}
-        FrameRect(tempRect);
-        SetRect(tempRect,80,20,90,50);   {form the right weight}
-        FrameOval(tempRect);
-    CloseRgn(barbell);                   {we're done; save in barbell}
-    FillRgn(barbell,black);              {draw it on the screen}
-    DisposeRgn(barbell);                 {dispose of the region}
-
-"
-  (:method ((view simple-view) &optional dest-region)
-    (unless (window-open-region (view-window view))
-      (error "Cannot call ~S without calling ~S before."
-             'close-region 'open-region)) 
-    (niy close-region view dest-region)
-    (prog1 (if dest-region
-             (copy-region (window-open-region (view-window view)) dest-region)
-             (window-open-region (view-window view)))
-      (setf (window-open-region (view-window view)) nil)
-      (pen-show view))))
 
 
 ;;----------------------------------------------------------------------
@@ -1211,34 +830,34 @@ the original region.
 
 
 
-#-(and) (progn
-          
-          (values
-           (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20)
-           (rect-to-list (region-bounds (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20)))
-           (inset-region (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20) -5 -7)
-           (rect-to-list (region-bounds (inset-region (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20) -5 -7))))
-
-
-          (inset-region
-           (copy-region #S(region :bounds #S(rect :topleft #@(0 0) :bottomright #@(30 9))
-                                  :segments #((0 . #(7 24))
-                                              (2 . #(0 31))
-                                              (4 . #(0 8 17 31))
-                                              (6 . #(0 31))
-                                              (7 . #(17 23))
-                                              (9 . #(17 23)))))
-           
-           -10 -10)
-          #S(region :bounds #S(rect :topleft 4294377462 :bottomright 1245224)
-                    :segments #((-10 . #(-3 34))
-                                (-8 . #(-10 41))
-                                (-6 . #(-10 -2 27 41))
-                                (16 . #(-10 41))
-                                (17 . #(27 33))
-                                (19 . #(27 33))))
-
-          )
+;; #-(and) (progn
+;;           
+;;           (values
+;;            (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20)
+;;            (rect-to-list (region-bounds (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20)))
+;;            (inset-region (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20) -5 -7)
+;;            (rect-to-list (region-bounds (inset-region (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20) -5 -7))))
+;; 
+;; 
+;;           (inset-region
+;;            (copy-region #S(region :bounds #S(rect :topleft #@(0 0) :bottomright #@(30 9))
+;;                                   :segments #((0 . #(7 24))
+;;                                               (2 . #(0 31))
+;;                                               (4 . #(0 8 17 31))
+;;                                               (6 . #(0 31))
+;;                                               (7 . #(17 23))
+;;                                               (9 . #(17 23)))))
+;;            
+;;            -10 -10)
+;;           #S(region :bounds #S(rect :topleft 4294377462 :bottomright 1245224)
+;;                     :segments #((-10 . #(-3 34))
+;;                                 (-8 . #(-10 41))
+;;                                 (-6 . #(-10 -2 27 41))
+;;                                 (16 . #(-10 41))
+;;                                 (17 . #(27 33))
+;;                                 (19 . #(27 33))))
+;; 
+;;           )
 
 
 
@@ -1356,10 +975,6 @@ REGION:         A region.
 
 
 (defun initialize/region ()
-  (test/segments-operate)
-  (test/segments-trim)
-  ;; (test/update-segments)
-  (test/region-operate)
   (setf *temp-rgn* (new-region)))
 
 ;;--------------------
@@ -1433,12 +1048,6 @@ DO:     Sets REGION to a disc of center CX CY and given RADIUS.
                                 (10 . #())))
           )
 
-(defun test/xor-region ()
-  (let ((circle (set-disc-region (new-region) 0 0 10)))
-    (assert (equal-region-p
-             (xor-region circle (inset-region (copy-region circle) 1 1) (new-region))
-             (xor-region (inset-region (copy-region circle) 1 1) circle (new-region)))))
-  :success)
 
 
 #-(and) (progn
@@ -1470,5 +1079,3 @@ DO:     Sets REGION to a disc of center CX CY and given RADIUS.
          )
 
 
-#+not-yet
-(test/xor-region)

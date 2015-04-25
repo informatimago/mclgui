@@ -48,6 +48,13 @@
 
   );;eval-when
 
+(defmethod print-object ((rect rect) stream)
+  (if *print-readably*
+      (call-next-method)
+      (format stream "(rect :left ~D :top ~D :right ~D :bottom ~D)"
+              (rect-left rect) (rect-top rect)
+              (rect-right rect) (rect-bottom rect)))
+  rect)
 
 (defun make-rect (left &optional top right bottom)
   "
@@ -331,28 +338,6 @@ RECT2:          A rectangle.
            result)))))
 
 
-(defun test/rect-difference ()
-  (let ((r1 (make-rect 0 0 200 100))
-        (r2 (make-rect 1000 0 200 100))
-        (r3 (make-rect 0 50 200 150))
-        (r4 (make-rect 100 50 300 150))
-        (r5 (make-rect 20 50 160 200))
-        (r6 (make-rect 20 20 160 60))
-        (colors (list *red-color* *green-color* *blue-color* *yellow-color*)))
-    (loop :with view = (front-window)
-          :for or :in (list r1 r2 r3 r4 r5 r6)
-          :for diffs  = (rect-difference r1 or)
-          :do (with-focused-view view
-                (view-draw-contents view)
-                (loop
-                  :for r :in diffs
-                  :for c :in colors
-                  :do (with-fore-color c
-                        (fill-rect* (rect-left r) (rect-top r) (rect-width r) (rect-height r))))
-                (draw-rect* (rect-left r1) (rect-top r1) (rect-width r1) (rect-height r1))
-                (draw-rect* (rect-left or) (rect-top or) (rect-width or) (rect-height or)))
-              (sleep 3))))
-
 
 (defun point-in-rect-p (rect h &optional v)
   "
@@ -407,35 +392,13 @@ V:              Vertical position.  If V is NIL (the default), H is
         (values (round angle (/ pi 180)))))))
 
 
-(defun test/point-to-angle ()
-  (flet ((test (r x y angle)
-           (assert (= angle (point-to-angle r x y))
-                   ()
-                   "rect = ~S ; point = ~S ; expected angle = ~S ; obtained angle = ~S~%"
-                   (rect-to-list r)
-                   (point-to-list (make-point x y))
-                   angle
-                   (point-to-angle r  x y))))
-    
-    (let ((r (make-rect 0 0 10 10)))
-      (test r  5   0   0)
-      (test r 10 -10  18)
-      (test r 10   0  45)
-      (test r 10   5  90)
-      (test r 10  10 135)
-      (test r  5  10 180)
-      (test r  0  10 225)
-      (test r  0   5 270)
-      (test r  0   5 270)
-      (test r  0   0 315)
-      (test r  0  -5 333)
-      (test r  5   5   0)                 ; degenerate: center
-      (test (make-rect 0 0 0 0)  10 10 0) ; degenerate: empty rect
-      (test (make-rect 0 0 0 10) 10 10 0) ; degenerate: empty flat rect
-      (test (make-rect 0 0 10 0) 10 10 0) ; degenerate: empty flat rect
-      ))
-  :success)
 
-#+test (test/point-to-angle)
+(defmacro with-rectangle-arg ((var left &optional top right bottom) &body body)
+  "takes a rectangle, two points, or four coordinates and makes a rectangle.
+body is evaluated with VAR bound to that rectangle."
+  `(let ((,var (make-rect ,left ,top ,right ,bottom)))
+     (declare (ignorable ,var)) ; for now
+    ,@body))
+
 
 ;;;; THE END ;;;;

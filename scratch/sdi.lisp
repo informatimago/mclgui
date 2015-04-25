@@ -57,8 +57,11 @@
                     (view-draw-contents subview))))))
 
 
-(defvar *w* (make-instance 'sdi-window :window-title "Test"))
+(defvar *w*  nil)
 
+(defun initialize/sdi ()
+  (when *w* (window-close *w*))
+  (setf *w* (make-instance 'sdi-window :window-title "Test")))
 
 
 (defgeneric first-responder (w)
@@ -211,6 +214,7 @@
                                 :horizontal-alignment :right
                                 :spacing 20
                                 :subviews (list red green blue))))
+    (declare (ignorable vlayout layout))
     (add-subviews *w* layout)
     (adjust-layout-to-parent layout)))
 
@@ -255,6 +259,7 @@
 
 
 (defun test-text-box ()
+  (initialize/sdi)
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
   (add-subviews *w*
 
@@ -327,6 +332,8 @@
 #-(and)
 (progn
 
+  (initialize/sdi)
+  
   (let ((image (load-image #P"~/Pictures/blue-eyes-baby.jpg")))
     (with-focused-view (front-window)
       (draw-image image (view-bounds (front-window)))))

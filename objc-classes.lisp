@@ -819,16 +819,17 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(drawRect:(:<NSR>ect)rect)
   resultType:(:void)
   body:
-  (declare (ignorable rect))
   (with-event-environment
     #+debug-objc (format-trace "progn (-[MclguiView drawRect:]" (*nsrect-to-nsrect rect) self)
-    (let ((view (nsview-view self)))
-      (when view
-        (let ((cliprgn (rect-region (nsrect-to-rect (*nsrect-to-nsrect rect)))))
-          #+debug-objc (format-trace ":rect"    (rect-to-list (region-bounds cliprgn)))
-          #+debug-objc (format-trace ":invalid" (rect-to-list (region-bounds (window-invalid-region (view-window view)))))
-          #+debug-objc (format-trace ":erase"   (rect-to-list (region-bounds (window-erase-region   (view-window view)))))
-          (view-focus-and-draw-contents view cliprgn cliprgn))))
+    (let ((window (nsview-view self))
+          (visrgn (rect-region (nsrect-to-rect (*nsrect-to-nsrect rect)))))
+      (when window
+        #+debug-objc (format-trace ":vis-region"     (rect-to-list (region-bounds visrgn)))
+        #+debug-objc (format-trace ":invalid-region" (rect-to-list (region-bounds (window-invalid-region window))))
+        #+debug-objc (format-trace ":erase-region"   (rect-to-list (region-bounds (window-erase-region   window))))
+        (erase-region window (window-erase-region window))
+        (set-rect-region (window-erase-region window) 0 0 0 0)
+        (view-focus-and-draw-contents window visrgn (view-clip-region window))))
     #+debug-objc (if [self needsDisplay]
                      (format-trace "-[MclguiView drawRect:])" "still needsDisplay")
                      (format-trace "-[MclguiView drawRect:])" "done")))]
