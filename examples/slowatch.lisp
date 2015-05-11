@@ -101,16 +101,20 @@
                                  tz))))))))))
 
 (defclass slowin (window)
-  ())
+  ((bit :initform nil :accessor %slowin-bit)))
 
 (defmethod set-view-size :after ((view slowin) h &optional v)
   (dovector (subview (view-subviews view))
     (set-view-size subview h v))
   (view-draw-contents view))
 
+;; TODO: the redrawing updates occur to often with window-null-event-handler.
 (defmethod window-null-event-handler ((view slowin))
-  (format *trace-output* "~& slowin window-null-event-handler ~%")
-  (view-draw-contents (aref (view-subviews view) 0)))
+  (view-draw-contents (aref (view-subviews view) 0))
+  (with-focused-view view
+    (if (setf (%slowin-bit view) (not (%slowin-bit view)))
+        (fill-rect*  0 0 2 2)
+        (erase-rect* 0 0 2 2))))
 
 (defvar *slowin* nil)
 
