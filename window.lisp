@@ -1276,7 +1276,8 @@ RETURN:         A BOOLEAN value indicating whether view can perform
       #+debug-views (format-trace '(view-draw-contents window))
       ;; #+debug-views #|DEBUG-PJB|#(print-backtrace *standard-output*)
       (with-focused-view window
-        (call-next-method)))))
+        (with-fore-and-back-color (get-fore-color window) (get-back-color window)
+          (call-next-method))))))
 
 
 ;;;---------------------------------------------------------------------
