@@ -118,6 +118,7 @@
   (:export
 
    ;; Extensions:
+   "DOVECTOR"
    
    "INITIALIZE"
    "COPY-OBJECT-FROM"
