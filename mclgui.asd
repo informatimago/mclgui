@@ -153,6 +153,7 @@
                                         "macros" "variables" "color"
                                         "point" "region" "font" "pen" 
                                         "wrapper" "view-classes" "objc-classes"
+                                        "region-view"
                                         #-ccl-1.10 "cg"))
 
                (:file "view-stream"
@@ -256,6 +257,7 @@
                 :depends-on ("packages" 
                              "macros" "variables" "point" "system" "region"
                              "view-classes" "view" "window" ; "event"
+                             "region-view"
                              "dialog-item" "view-event" "key-handler-mixin"
                              "scroll-bar-dialog-item"))
 
