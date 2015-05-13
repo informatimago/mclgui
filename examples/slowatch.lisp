@@ -124,7 +124,6 @@
     (set-view-size subview h v))
   (view-draw-contents view))
 
-;; TODO: the redrawing updates occur to often with window-null-event-handler.
 (defmethod window-null-event-handler ((view slowin))
   (let* ((now         (get-universal-time))
          (watch       (aref (view-subviews view) 0))
