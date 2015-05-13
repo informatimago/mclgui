@@ -119,10 +119,11 @@
   ((bit         :initform nil :accessor %slowin-bit)
    (update-time :initform nil :accessor %update-time)))
 
-(defmethod set-view-size :after ((view slowin) h &optional v)
-  (dovector (subview (view-subviews view))
-    (set-view-size subview h v))
-  (view-draw-contents view))
+(defmethod window-size-parts ((view slowin))
+  (let ((size (view-size view)))
+    (dovector (subview (view-subviews view))
+      (set-view-size subview size))))
+
 
 (defmethod window-null-event-handler ((view slowin))
   (let* ((now         (get-universal-time))
