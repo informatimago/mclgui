@@ -41,15 +41,30 @@
 (in-package "COM.INFORMATIMAGO.SLOWATCH")
 
 (defclass slowatch (simple-view)
-  ((show-timezone :initarg :show-timezone :initform t :accessor show-timezone)))
+  ((show-timezone :initarg :show-timezone :initform t :accessor show-timezone)
+   (update-period :initform nil :reader update-period)))
+
+(defmethod timezone ((view slowatch))
+  (uiop:getenv "TZ"))
 
 (defmethod current-hour ((view slowatch))
   (multiple-value-bind (s m h) (decode-universal-time (get-universal-time))
     (+ h (/ (+ m (/ s 60)) 60))))
 
-(defmethod timezone ((view slowatch))
-  (uiop:getenv "TZ"))
+(defmethod hand-radius ((view slowatch))
+  (let* ((bounds (view-bounds view))
+         (size   (min (rect-height bounds) (rect-width bounds)))
+         (r      (truncate size 2)))
+    (- r 40)))
 
+(defmethod update-period ((view slowatch))
+  (or (slot-value view 'update-period)
+      (setf (slot-value view 'update-period)
+            (truncate (* 24 60 60) (* 2 pi (hand-radius view))))))
+
+(defmethod set-view-size :after ((view slowatch) h &optional v)
+  (declare (ignore h v))
+  (setf (slot-value view 'update-period) nil))
 
 (defmethod view-draw-contents ((view slowatch))
   (with-focused-view view
@@ -84,7 +99,7 @@
           (let ((h  (current-hour view)))
             (let* ((a  (a h))
                    (ir 4)
-                   (er (- r 40)))
+                   (er (hand-radius view)))
               (draw-ellipse cx cy ir ir)
               (draw-line (x ir a) (y ir a) (x er a) (y er a)))
             (when (show-timezone view)
@@ -101,7 +116,8 @@
                                  tz))))))))))
 
 (defclass slowin (window)
-  ((bit :initform nil :accessor %slowin-bit)))
+  ((bit         :initform nil :accessor %slowin-bit)
+   (update-time :initform nil :accessor %update-time)))
 
 (defmethod set-view-size :after ((view slowin) h &optional v)
   (dovector (subview (view-subviews view))
@@ -110,11 +126,17 @@
 
 ;; TODO: the redrawing updates occur to often with window-null-event-handler.
 (defmethod window-null-event-handler ((view slowin))
-  (view-draw-contents (aref (view-subviews view) 0))
-  (with-focused-view view
-    (if (setf (%slowin-bit view) (not (%slowin-bit view)))
-        (fill-rect*  0 0 2 2)
-        (erase-rect* 0 0 2 2))))
+  (let* ((now         (get-universal-time))
+         (watch       (aref (view-subviews view) 0))
+         (update-time (or (%update-time view)
+                          (setf (%update-time view) now))))
+    (when (<= update-time now)
+      (setf (%update-time view) (+ now (update-period watch)))
+      (view-draw-contents watch)
+      (with-focused-view view
+        (if (setf (%slowin-bit view) (not (%slowin-bit view)))
+            (fill-rect*  0 0 2 2)
+            (erase-rect* 0 0 2 2))))))
 
 (defvar *slowin* nil)
 
