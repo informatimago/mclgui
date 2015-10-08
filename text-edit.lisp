@@ -966,7 +966,7 @@ RETURN: TE
                 (invalidate-corners (te-in-port te)
                                     (rect-topleft (te-%view-rect te))
                                     (rect-bottomright (te-%view-rect te))
-                                    #|already erased: nil|#t));;DEBUG-PJB
+                                    #|already erased: nil|#t))
               (te-update-view (te-%view-rect te) te))))
         (funcall thunk))))
 

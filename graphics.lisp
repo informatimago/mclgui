@@ -197,6 +197,7 @@
 
 (defun fill-rect* (x y w h)
   #+debug-graphics (format-trace "fill-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  (when (< w h) (break))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -204,13 +205,15 @@
           (#_NSRectFillUsingOperation (ns:make-ns-rect x y w h)
                                       (mode-to-compositing-operation (pen-mode pen))))))))
 
+
 (defun erase-rect* (x y w h)
   #+debug-graphics (format-trace "erase-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  ;; (when (< w h) (break))
   (let ((color (unwrap (or (and *current-view*
                                 (view-window *current-view*)
                                 (slot-value (view-window *current-view*) 'back-color))
                            *background-color*))))
-    (with-saved-graphic-state
+    (with-saved-graphic-state ()
       [color setFill]
       (#_NSRectFill (ns:make-ns-rect x y w h)))))
 
@@ -282,7 +285,7 @@
                                   *background-color*))))
           ;; TODO: deal with rectangular pen sizes.
           [NSBezierPath setDefaultLineWidth:(cgfloat (average (point-h size) (point-v size)))]
-          (with-saved-graphic-state
+          (with-saved-graphic-state ()
             [color setFill]
             [[NSBezierPath bezierPathWithRoundedRect:(ns:make-ns-rect x y w h)
                            xRadius:(cgfloat (/ oval-width  2.0))
@@ -328,6 +331,29 @@
         [[NSBezierPath bezierPathWithOvalInRect: (ns:make-ns-rect x y w h)] fill]))))
 
 
-;; (push :debug-graphics *features*)
+#-(and)
+(progn
+
+  (trace draw-char
+         draw-string
+         font-attributes
+         draw-text
+         draw-point
+         draw-line
+         draw-rect*
+         fill-rect*
+         erase-rect*
+         draw-rect
+         average
+         draw-round-rect*
+         fill-round-rect*
+         erase-round-rect*
+         draw-round-rect
+         draw-ellipse
+         fill-ellipse)
+
+  (push :debug-graphics *features*)
+  )
+
 
 ;;;; THE END ;;;;

@@ -55,36 +55,61 @@ NEW-REGION: a region or NIL."))
      ,@body))
 
 
+(defmacro %with-clip-region (region &body body)
+  "
+REGION: A region in the current window coordinates system.
+
+DO:     Intersects the clip region of the window of the *CURRENT-VIEW*
+        with the REGION while evaluating the BODY forms, and then
+        revert to the old window clip region.
+"
+  (let ((saved-clip (gensym "saved-clip"))
+        (clip       (gensym "clip"))
+        (win        (gensym "win"))
+        (vregion    (gensym "region")))
+    `(let ((,win (and *current-view* (view-window *current-view*))))
+       (when ,win
+         (let* ((,saved-clip (view-clip-region-slot ,win))
+                (dummy (format-trace "%with-clip-region" :saving___ :saved-clip ,saved-clip))
+                (,vregion    ,region)
+                (,clip       (if ,saved-clip
+                                 (intersect-region ,saved-clip ,vregion)
+                                 ,vregion)))
+           (unwind-protect
+                (progn (%set-clip ,win ,clip)
+                       ,@body)
+             (format-trace "%with-clip-region" :restoring :saved-clip ,saved-clip)
+             (setf (view-clip-region-slot ,win) ,saved-clip)))))))
 
 
 (defmacro with-clip-region (region &body body)
-  (let ((saved-clip (gensym))
-        (clip       (gensym)))
-    `(let ((,saved-clip (get-clip (new-region))))
-       (unwind-protect
-            (let ((,clip (intersect-region ,saved-clip ,region)))
-              (set-clip ,clip)
-              (print ,clip)
-              ,@body)
-         (set-clip ,saved-clip)))))
+  "
+REGION: A region in the current window coordinates system.
+
+DO:     Intersects the clip region of the window of the *CURRENT-VIEW*
+        with the REGION while evaluating the BODY forms, and then
+        revert to the old window clip region.
+"
+  (let ((saved-clip (gensym "saved-clip"))
+        (clip       (gensym "clip"))
+        (win        (gensym "win"))
+        (vregion    (gensym "region")))
+    `(let ((,win     (and *current-view* (view-window *current-view*))))
+       (when ,win
+         (let* ((,saved-clip (view-clip-region-slot ,win))
+                (dummy (format-trace "with-clip-region" :saving___ :saved-clip ,saved-clip))
+                (,vregion    ,region)
+                (,clip       (if ,saved-clip
+                                 (intersect-region ,saved-clip ,vregion)
+                                 ,vregion)))
+           (with-saved-graphic-state (:restore-form
+                                      (progn (format-trace "with-clip-region" :restoring :saved-clip ,saved-clip)
+                                             (setf (view-clip-region-slot ,win) ,saved-clip)))
+             (%set-clip ,win ,clip)
+             ,@body))))))
 
 (defmacro with-clip-rect-intersect (rect &body body)
   `(with-clip-region (rect-region ,rect) ,@body))
-
-
-
-#-(and)
-(defmacro with-clip-rect-intersect (rect &rest body)
-  (let ((old (gensym))
-        (new (gensym)))
-    `(with-temp-rgns (,old ,new)
-       (get-clip ,old)
-       (set-rect-region ,new ,rect)
-       (intersect-region ,old ,new ,new)
-       (set-clip ,new)
-       (unwind-protect
-            (progn ,@body)
-         (set-clip ,old)))))
 
 
 

@@ -416,7 +416,7 @@ BOTTOM:
                 rectangle.  If only left is given, it should be a
                 pointer to a rectangle record. If only two arguments
                 are given, they should be points specifying the
-                upper-left and lower- right coordinates of the
+                upper-left and lower-right coordinates of the
                 rectangle. If all four arguments are given, they
                 should be coordinates representing the left, top,
                 right, and bottom of the rectangle.

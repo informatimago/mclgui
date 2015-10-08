@@ -305,6 +305,7 @@
    ;; Extension (not exported/documented in MCL 4.1):
    "VIEW-GET" "VIEW-PUT" "VIEW-GET" "VIEW-REMPROP"
    "VIEW-CONTAINS-P"
+   "OFFSET-TO-WINDOW-COORDINATES"
    
    ;; Extension: condition:
    "VIEW-ERROR"

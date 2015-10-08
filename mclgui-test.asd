@@ -57,7 +57,9 @@
                (:file "examples/computed-view"        :depends-on ())
                (:file "layout"                        :depends-on ())
                (:file "scratch/sdi"                   :depends-on ("layout"))
+               (:file "scratch/dump"                  :depends-on ())
                ;; ---
+               (:file "tests/test-clip"               :depends-on ("examples/coordinated-window" "scratch/dump"))
                (:file "tests/test-scroller"           :depends-on ())
                (:file "tests/test-view"               :depends-on ())
                (:file "tests/test-spring-view"        :depends-on ())
@@ -72,6 +74,7 @@
                                                 "tests/test-region-path"
                                                 "tests/test-pattern"
                                                 "tests/test-menu")))
+
   :perform (asdf:test-op
             (operation system)
             (dolist (p '("MCLGUI"))

@@ -212,8 +212,6 @@ All views contained in a given window have the same wptr.
               (intersect-region rgn (view-clip-region container) rgn)
               (offset-region rgn offset-h offset-v))
             (let* ((offset           (view-scroll-position view))
-                   (offset-h         (point-h offset))
-                   (offset-v         (point-v offset))
                    (tl               (subtract-points topleft     offset))
                    (br               (subtract-points bottomright offset)))
               (set-rect-region rgn (point-h tl) (point-v tl) (point-h br) (point-v br))))))
@@ -376,23 +374,56 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
     (setq *current-view* nil)
     (focus-view view *current-font-view*)))
 
+(defun draw-yellow-border (view)
+  (let ((bounds (view-bounds view)))
+    (with-fore-color *green-color*
+      (draw-rect* (1- (rect-left bounds))
+                  (1- (rect-top bounds))
+                  (+ 2 (rect-width bounds))
+                  (+ 2 (rect-height bounds))))
+    (with-fore-color *yellow-color*
+      (draw-rect*  (rect-left bounds)
+                   (rect-top bounds)
+                   (rect-width bounds)
+                   (rect-height bounds)))))
 
 (defgeneric call-with-focused-view (view function &optional font-view)
   ;; Note: be careful to return the FUNCTION results in all cases.
   (:method ((view simple-view) function &optional (font-view *current-font-view*))
+    ;; #|PJB-DEBUG|# #-(and) (format-trace 'call-with-focused-view
+    ;;                                     :view view
+    ;;                                     :backtrace (mapcar (lambda (x)
+    ;;                                                          (if (member (first x) '(ccl::%call-next-method-with-args
+    ;;                                                                                  ccl::%%cnm-with-args-combined-method-dcode
+    ;;                                                                                  ccl::%call-next-method
+    ;;                                                                                  ccl::%%before-and-after-combined-method-dcode
+    ;;                                                                                  ccl::%%standard-combined-method-dcode
+    ;;                                                                                  ccl::%pascal-functions%
+    ;;                                                                                  funcall))
+    ;;                                                              (second x)
+    ;;                                                              (first x)))
+    ;;                                                        (ccl::backtrace-as-list)))
+    
     (labels ((call-it ()
                ;; reset the transform, a previous focus-view may have changed it.
                (refocus-view *current-view*)
-               #-(and) (format-trace "progn (call-with-focused-view enter"
-                                     :ctm (get-at* (get-ctm (view-window view)))
-                                     :view view)
-               (call-with-pen-state (lambda () (funcall function view))
-                                    (view-pen view))
-               #-(and) (unwind-protect
-                            (call-with-pen-state (lambda () (funcall function view))
-                                                 (view-pen view))
-                         (format-trace "(call-with-focused-view exit))"
-                                       :view view)))
+               #-(and)(format-trace "progn (call-with-focused-view enter"
+                             :ctm (get-at* (get-ctm (view-window view)))
+                             :view view)
+               ;; #|PJB-DEBUG|# #-(and) (draw-yellow-border view)
+               ;; (format-trace "call-with-focused-view"
+               ;;               :ctm (get-at* (get-ctm (view-window view)))
+               ;;               :function function
+               ;;               :view view)
+               (unwind-protect
+                    (progn
+                      (funcall function view)
+                      ;; (call-with-pen-state (lambda () (funcall function view)) (view-pen view))
+                      )
+                 (graphics-flush)
+                 #-(and)(format-trace "call-with-focused-view exit)"
+                               :ctm (get-at* (get-ctm (view-window view)))
+                               :view view)))
              (call-it/trans ()
                (let ((window (view-window view)))
                  (push (current-affine-transform window) (window-transform-stack window))
@@ -411,22 +442,30 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
                        (*current-font-codes* (if same-font
                                                  (copy-list *current-font-codes*)
                                                  (set-font font-view)))) ; change font
+                   ;; (format-trace 'call-with-focused-view '(eql *current-view* view))
                    (call-it))
               ;; reset the transform;  the function may have called focus-view.
               (refocus-view *current-view*))
-            (with-view-handle (winh view)
-              (let ((unlock nil))
-                (unwind-protect
-                     (when (setf unlock [winh lockFocusIfCanDraw])
-                       (let ((*current-view*      view)
-                             (*current-font-view* font-view)
-                             (*current-font-codes* (copy-list *current-font-codes*)))
-                         (unless same-font (apply (function set-current-font-codes) (set-font *current-font-view*)))
-                         (call-it/trans)))
-                  (when unlock
-                    (refocus-view *current-view*)
-                    (graphics-flush)
-                    [winh unlockFocus])))))))))
+            (with-handle (winh (view-window view))
+              (with-view-handle (viewh view)
+                ;; PJB-DEBUG (format-trace 'call-with-focused-view '/before :needs-display [viewh needsDisplay] :views-need-display [winh viewsNeedDisplay])
+                (let ((unlock nil))
+                  (unwind-protect
+                       (if (setf unlock [viewh lockFocusIfCanDraw])
+                           (let ((*current-view*      view)
+                                 (*current-font-view* font-view)
+                                 (*current-font-codes* (copy-list *current-font-codes*)))
+                             (unless same-font (apply (function set-current-font-codes) (set-font *current-font-view*)))
+                             ;; (format-trace 'call-with-focused-view :unlock unlock '(and (not (eql *current-view* view)) lockFocusIfCanDraw))
+                             (call-it/trans))
+                           ;; (format-trace 'call-with-focused-view :unlock  '(and (not (eql *current-view* view)) (NOT lockFocusIfCanDraw)))
+                           )
+                    (when unlock
+                      (refocus-view *current-view*)
+                      (graphics-flush)
+                      [viewh unlockFocus]
+                      ;; PJB-DEBUG (format-trace 'call-with-focused-view '/after- :needs-display [viewh needsDisplay] :views-need-display [winh viewsNeedDisplay])
+                      ))))))))))
 
 
 
@@ -856,8 +895,6 @@ RETURN:  The VIEW rectangle in the view coordinates.
 
 
 
-
-
 (defun erase (window bounds)
   (with-focused-view window
     (with-back-color (or (slot-value window 'back-color) *white-color*)
@@ -907,11 +944,13 @@ ERASE-P:        A value indicating whether or not to add the
                                                   (region-bounds region)
                                                   (view-bounds view)))
                         :converted (rect-to-list bounds))
+          #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
           (when erase-p
             (union-region (window-erase-region window) region
                           (window-erase-region window)))
           (union-region (window-invalid-region window) region
                         (window-invalid-region window))
+          #+debug-views #|DEBUG-PJB|# (format-trace 'invalidate-region (window-invalid-region window))
           (needs-to-draw-rect window bounds))))
 
     #-(and)
@@ -953,6 +992,7 @@ ERASE-P:        A value indicating whether or not to add the
     (values))
   
   (:method ((window window) region &optional erase-p)
+    #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
     (let ((bounds (if region
                       (region-bounds region)
                       (view-bounds window))))
@@ -1012,46 +1052,50 @@ DO:             Focus on the view and removes the region from view’s
 
 VIEW:           A simple view.
 
-REGION:         A region. The region must be a region handle, that is,
+REGION:         A region, in the coordinate system of the VIEW.
+                The region must be a region handle, that is,
                 the result of (new-region).
 
 ")
   (:method ((view simple-view) region)
-    (let* ((window         (view-window view))
-           (invalid-region (window-invalid-region window))
+    (let* ((rgn            (intersect-region region (view-clip-region view)))
+           (window         (view-window view))
            (erase-region   (window-erase-region   window))
-           (region/w       (offset-region region (convert-coordinates #@(0 0) view window))))
-      (difference-region invalid-region region/w invalid-region)
+           (invalid-region (window-invalid-region window))
+           (offset         (convert-coordinates #@(0 0) view window))
+           (region/w       (if (= 0 offset)
+                               region
+                               (offset-region region offset))))
       (difference-region erase-region   region/w erase-region)
+      (difference-region invalid-region region/w invalid-region)
       (when (and (empty-region-p erase-region)
                  (empty-region-p invalid-region))
-        (does-not-need-to-display (view-window view))))
+        (does-not-need-to-display (view-window view)))
+      #+debug-views #|PJB-DEBUG|# (format-trace 'validate-region :invalid-region (window-invalid-region window)))
     (values)))
 
 
 (defgeneric validate-corners (view topleft bottomright)
   (:documentation "
-DO:             Erase the previous contents of the rectangle formed by
-                topleft and bottomright and calls #_ValidRgn on the
-                rectangle.  It also removes the rectangle from the
-                erase region of the window of the view.
+DO:             Calls VALIDATE-REGION on the rectangle.  This
+                removes the rectangle from the erase region of the
+                window of the view.
 
 VIEW:           A view or simple view.
 
-TOPLEFT:        The upper-left corner of the view to validate.
+TOPLEFT:        The upper-left corner of the view to validate,
+                in the coordinate system of the view.
 
-BOTTOMRIGHT:    The lower-right corner of the view to validate.
+BOTTOMRIGHT:    The lower-right corner of the view to validate,
+                in the coordinate system of the view.
 ")
   (:method ((view simple-view) topleft bottomright)
-    (let ((rgn    *temp-rgn*)
-          (left   (box -32768 32767 (point-h topleft)))
+    (let ((left   (box -32768 32767 (point-h topleft)))
           (top    (box -32768 32767 (point-v topleft)))
           (right  (box -32768 32767 (point-h bottomright)))
-          (bottom (box -32768 32767 (point-v bottomright)))
-          (window (view-window view)))
-      (erase-rect* left top (- right left) (- bottom top))
-      (set-rect-region rgn left top right bottom)
-      (validate-region view rgn))))
+          (bottom (box -32768 32767 (point-v bottomright))))
+      (validate-region view (set-rect-region (new-region)
+                                             left top right bottom)))))
 
 
 (defgeneric validate-view (view)
@@ -1062,9 +1106,16 @@ DO:             Validates view by running validate-corners on the
 VIEW:           A view or simple view.
 ")
   (:method ((view simple-view))
-    (let ((container (or (view-container view) view)))
+    (let ((container (view-container view)))
       (multiple-value-bind (topleft bottomright) (view-corners view)
-        (validate-corners container topleft bottomright)))))
+        (if container
+            (validate-corners container topleft bottomright)
+            (let ((pos (view-position view)))
+              (validate-corners view
+                                (subtract-points topleft     pos)
+                                (subtract-points bottomright pos)))))))
+  (:method ((view window))
+    (multiple-value-call (function validate-corners) view (view-corners view))))
 
 
 
@@ -1293,6 +1344,17 @@ SOURCE-VIEW:    A view in whose coordinate system point is given.
                (add-points delta (rect-bottomright rect)))))
 
 
+(defgeneric offset-to-window-coordinates (view)
+  (:documentation "
+RETURN:   A point, offset from the VIEW coordinates system to the
+          VIEW-WINDOW coordinates system.
+")
+  (:method ((view simple-view))
+    (if (view-window view)
+        (convert-coordinates 0 view (view-window view))
+        0)))
+
+
 (defgeneric local-to-global (view h &optional v))
 (defmethod local-to-global ((view simple-view) h &optional v)
   (let ((window (view-window view))
@@ -1448,32 +1510,50 @@ CONTAINER:      The container of the view.
 
 
 (defun %view-draw-contents-with-focused-view (view focused-view visrgn cliprgn)
+  "
+
+VIEW:           The VIEW to draw.
+
+FOCUSED-VIEW:   The VIEW that must be focused to, which is either VIEW
+                or (VIEW-CONTAINER VIEW), depending on the class of
+                VIEW.
+
+VISRGN:         NIL, or the visible REGION of the (VIEW-WINDOW VIEW),
+                in that window coordinates system.
+
+CLIPRGN:        NIL, or the wanted clip REGION in the (VIEW-WINDOW
+                VIEW) coordinates system.  If NIL, then
+                (VIEW-CLIP-REGION VIEW) is used.
+
+NOTE:           If VISRGN, then the intersection between the VISRGN
+                and the clip region is actually used.
+"
   (unless *deferred-drawing*
     (let ((window (view-window view)))
       (when window
+        #+debug-views (format-trace '%view-draw-contents-with-focused-view
+                                    :step 1
+                                    :view view :focused-view  focused-view
+                                    :visrgn visrgn :cliprgn cliprgn)
         (validate-view view)
-        (let ((inter (if (and visrgn cliprgn)
-                         (intersect-region visrgn cliprgn)
-                         (or visrgn cliprgn))))
-          (if inter
-              (unless (empty-region-p inter)
-                (with-focused-view focused-view
-                  (with-clip-region inter
-                    (view-draw-contents view))))
+        (let* ((clip-region (or cliprgn
+                                (offset-region (copy-region (view-clip-region view))
+                                               (convert-coordinates 0 view window))))
+               (inter       (if visrgn
+                                (intersect-region visrgn clip-region)
+                                clip-region)))
+          (if (empty-region-p inter)
+              (progn
+                #+debug-views (format-trace '%view-draw-contents-with-focused-view '!!!
+                                            :step 2
+                                            :reason "we don't draw because the intersection of visrgn and cliprgn is empty"
+                                            :visrgn visrgn :cliprgn clip-region))
               (with-focused-view focused-view
-                (with-clip-region (view-clip-region view)
-                  (view-draw-contents view)))
-              #-(and)
-              (let* ((pos   (view-corners view))
-                     (pos-h (point-h pos))
-                     (pos-v (point-v pos))
-                     (clip  (offset-region (copy-region (view-clip-region view))
-                                           pos-h  pos-v)))                
-                (with-focused-view focused-view
-                  (with-clip-region clip
-                    (view-draw-contents view))))))))))
-
-
+                #+debug-views (format-trace '%view-draw-contents-with-focused-view
+                                            :step 3
+                                            :clip (rect-to-list (region-bounds inter)))
+                (%with-clip-region inter
+                  (view-draw-contents view)))))))))
 
 
 (defgeneric view-focus-and-draw-contents (view &optional visrgn cliprgn)
@@ -1496,8 +1576,8 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
 
 
 (defmethod view-draw-contents :before ((view simple-view))
-  #+debug-views
-  (format-trace 'view-draw-contents
+  ;; #+debug-views
+  #-(and) (format-trace 'view-draw-contents
                 :already-current (eql view *current-view*)
                 :view view
                 :current *current-view*))

@@ -1,6 +1,31 @@
 (in-package :ui)
-
 (objcl:set-objective-cl-syntax)
+
+
+(use-package "MCLGUI.TEST.CLIP")
+(view-focus-and-draw-contents (front-window))
+(with-focused-view  (front-window)
+  (erase-rect* 0 0 1000 1000)
+  (let* ((view   (elt (view-subviews (front-window)) 1))
+         (clip   (clip-view-region view))
+         (bounds (view-bounds view)))
+    (with-fore-color *orange-color*
+      (with-clip-region (offset-region (copy-region clip)
+                                       (offset-to-window-coordinates view))
+        (frame-region view clip)
+        (fill-rect* (rect-left bounds) (rect-top bounds) (rect-width bounds) (rect-height bounds))
+        (fill-rect view *gray-pattern* (rect-left bounds) (rect-top bounds) (rect-width bounds) (rect-height bounds))))))
+
+
+(trace MCLGUI:DRAW-RECT* PATCHWORK::DRAW-PATCH-VIEW-OUTLINE PATCHWORK:DRAW-FUNCTION-NAME PATCHWORK::DRAW-SMALL-RECTS)
+
+(let ((visrgn  #S(region :bounds #.(rect :left 99 :top 39 :right 195 :bottom 65) :segments #()))
+      (cliprgn #S(region :bounds #.(rect :left 0 :top 0 :right 428 :bottom 275) :segments #())))
+  (let ((inter (if (and visrgn cliprgn)
+                   (intersect-region visrgn cliprgn)
+                   (or visrgn cliprgn))))
+    (values (empty-region-p inter) inter)))
+
 
 ;;------------------------------------------------------------
 

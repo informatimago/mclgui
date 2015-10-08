@@ -144,6 +144,7 @@ dialog items. It is built on SIMPLE-VIEW.
     (call-with-focused-view (or container (view-container item))
                             (lambda (container)
                               (declare (ignore container))
+                              ;; (format-trace "call-with-focused-dialog-item" :function fn :item item)
                               (funcall fn item))
                             item)))
 
@@ -170,13 +171,6 @@ CONTAINER:      The view focused on whose coordinate system body will
 
 
 (defmethod view-draw-contents ((item dialog-item))
-  #+debug-views
-  (progn (format *mclgui-trace* "~&view-draw-contents dialog-item~%")
-         (format *mclgui-trace* "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
-         (format *mclgui-trace* "~&  text    = ~S~%" (dialog-item-text item))
-         (format *mclgui-trace* "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
-         (format *mclgui-trace* "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
-         (finish-output *mclgui-trace*))
   (when (installed-item-p item)
     (let* ((frame (view-frame item))
            (x     (rect-left   frame))
@@ -187,6 +181,15 @@ CONTAINER:      The view focused on whose coordinate system body will
            (fore  (if (dialog-item-enabled-p item)
                       (or (part-color item :text) (get-fore-color (view-window item)))
                       *gray-color*)))
+      #+debug-views
+      (progn (format *mclgui-trace* "~&view-draw-contents dialog-item~%")
+             (format *mclgui-trace* "~&view ~A~%" (or (view-nick-name item)  (class-name (class-of item))))
+             (format *mclgui-trace* "~&  text    = ~S~%" (dialog-item-text item))
+             (format *mclgui-trace* "~&  frame   = ~S~%" (rect-to-list (view-frame item)))
+             (format *mclgui-trace* "~&  bounds  = ~S~%" (rect-to-list (view-bounds item)))
+             (format *mclgui-trace* "~&  fore    = ~S~%" fore)
+             (format *mclgui-trace* "~&  back    = ~S~%" back)
+             (finish-output *mclgui-trace*))
       (with-fore-and-back-color fore back
         (erase-rect* x y w h)
         (draw-text (1+ x) (1+ y) (- w 2) (- h 2) (dialog-item-text item)
@@ -614,7 +617,6 @@ appears is not active.
 "
   (with-focused-dialog-item (item)
     (call-next-method)))
-
 
 
 (defgeneric cell-contents (item h &optional v)

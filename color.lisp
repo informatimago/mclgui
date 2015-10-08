@@ -202,12 +202,10 @@ REDISPLAY-P:    If the value of this is true (the default), this
         (let ((*foreground-color* color)
               (old-fore-color (slot-value window 'fore-color)))
           (with-saved-graphic-state
+              (:restore-form (setf (slot-value window 'fore-color) old-fore-color))
+            (setf (slot-value window 'fore-color) color)
             (%set-fore-color color)
-            (unwind-protect
-                 (progn
-                   (setf (slot-value window 'fore-color) *foreground-color*)
-                   (funcall thunk))
-              (setf (slot-value window 'fore-color) old-fore-color)))))))
+            (funcall thunk))))))
 
 
 (defun call-with-back-color (color thunk)
@@ -240,16 +238,15 @@ REDISPLAY-P:    If the value of this is true (the default), this
                (old-fore-color (slot-value window 'fore-color))
                (old-back-color (slot-value window 'back-color)))
            (with-saved-graphic-state
+               (:restore-form (progn
+                                (%set-back-color window (or old-back-color *background-color*))
+                                (setf (slot-value window 'fore-color) old-fore-color
+                                      (slot-value window 'back-color) old-back-color)))
              (%set-fore-color fore)
-             (unwind-protect
-                  (progn
-                    (%set-back-color window back)
-                    (setf (slot-value (view-window *current-view*) 'fore-color) *foreground-color*
-                          (slot-value (view-window *current-view*) 'back-color) *background-color*)
-                    (funcall thunk))
-               (%set-back-color window (or old-back-color *background-color*))
-               (setf (slot-value window 'fore-color) old-fore-color
-                     (slot-value window 'back-color) old-back-color))))))))
+             (%set-back-color window back)
+             (setf (slot-value (view-window *current-view*) 'fore-color) *foreground-color*
+                   (slot-value (view-window *current-view*) 'back-color) *background-color*)
+             (funcall thunk)))))))
 
 
 (defmacro with-fore-color (color &body body)
@@ -266,7 +263,7 @@ REDISPLAY-P:    If the value of this is true (the default), this
                                  (view-window *current-view*)
                                  (slot-value (view-window *current-view*) 'back-color))
                             *background-color*))))
-     (with-saved-graphic-state
+     (with-saved-graphic-state ()
        [color setFill]
        ,@body)))
 

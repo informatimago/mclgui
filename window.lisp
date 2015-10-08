@@ -219,44 +219,64 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
   (get-window-visrgn window (new-region)))
 
 
+;;; get-clip, set-clip (and clip-rect) are quickdraw functions.
 
 (defun get-clip (region)
-  (let ((win (view-window *current-view*)))
-    (unless (view-clip-region-slot win)
-      (setf (view-clip-region-slot win)
-            (rect-region -32767 -32767 32767 32767)))
-    (copy-region (view-clip-region-slot win) region)))
+  (let ((win (and *current-view* (view-window *current-view*))))
+    (when win
+      (unless (view-clip-region-slot win)
+        (setf (view-clip-region-slot win)
+              (rect-region -32767 -32767 32767 32767)))
+      (copy-region (view-clip-region-slot win) region))))
 
+
+(defun %set-clip (win region)
+  "
+WIN:        A WINDOW.
+REGION:     A REGION in the WIN coordinate systems.
+POST:       (eql (view-clip-region-slot win) region)
+            and the window clip region is set to REGION.
+RETURN:     REGION.
+"
+  #+debug-views (format-trace "%set-clip" region)
+  ;; #+debug-views (let ((*allow-print-backtrace* t)) (print-backtrace))
+  (setf (view-clip-region-slot win) region)
+  (let ((path (bezier-path-from-region region)))
+    [path setClip]
+    #+debug-view
+    (with-saved-graphic-state ()
+      [(unwrap *gray-color*) setFill]
+      [path fill]))
+  region)
 
 (defun set-clip (region)
-  (let ((win (view-window *current-view*)))
-    (copy-region region (or (view-clip-region-slot win)
-                            (setf (view-clip-region-slot win) (new-region)))))
-  [(bezier-path-from-region region) setClip]
-  region)
+  (let ((win (and *current-view* (view-window *current-view*))))
+    (when win
+     (%set-clip win
+                (if region
+                    (copy-region region (or (view-clip-region-slot win) (new-region)))
+                    (set-rect-region    (or (view-clip-region-slot win) (new-region))
+                                        -32767 -32767 32767 32767))))))
+
 
 
 (defmethod clip-region ((view simple-view) &optional (save-region (new-region)))
-  (let ((save-region (or save-region (new-region)))
-        (window      (view-window view)))
-    (set-rect-region save-region -32767 -32767 32767 32767)
-    (when window
-      (if (view-clip-region-slot window)
-          (with-focused-view view
-            (get-clip save-region))
-          (setf (view-clip-region-slot window) (copy-region save-region))))
-    save-region))
+  ;; returns the WINDOW’s current clip region.
+  (let ((*current-view* view))
+    (get-clip save-region)))
 
 (defmethod set-clip-region ((view simple-view) new-region)
-  (when (view-window view)
-    (with-focused-view view
-      (set-clip new-region)))
-  new-region)
+  ;; sets the WINDOW’s clip region to NEW-REGION and returns
+  ;; NEW-REGION.
+  (let ((*current-view* view))
+    (set-clip new-region)))
 
 (defmethod clip-rect ((view simple-view) left &optional top right bottom)
+  ;; makes the window’s clip region a rectangular region equivalent to
+  ;; the rectangle determined by the arguments.  It returns NIL.
   (with-rectangle-arg (r left top right bottom)
-    (with-focused-view view
-      (set-clip-region view (rect-region left top right bottom)))))
+    (set-clip-region view (rect-region left top right bottom)))
+  nil)
 
 
 
@@ -1274,7 +1294,7 @@ RETURN:         A BOOLEAN value indicating whether view can perform
     (when (window-visiblep window)
       ;; time/stdout
       #+debug-views (format-trace '(view-draw-contents window))
-      ;; #+debug-views #|DEBUG-PJB|#(print-backtrace *standard-output*)
+      #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
       (with-focused-view window
         (with-fore-and-back-color (get-fore-color window) (get-back-color window)
           (call-next-method))))))

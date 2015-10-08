@@ -35,11 +35,12 @@
 (objcl:enable-objcl-reader-macros)
 (enable-sharp-at-reader-macro)
 
-(defmacro with-saved-graphic-state (&body body)
+(defmacro with-saved-graphic-state ((&key restore-form) &body body)
   `(progn
      [NSGraphicsContext saveGraphicsState]
      (unwind-protect (progn ,@body)
-       [NSGraphicsContext restoreGraphicsState])))
+       [NSGraphicsContext restoreGraphicsState]
+       ,restore-form)))
 
 
 ;;;; THE END ;;;;
