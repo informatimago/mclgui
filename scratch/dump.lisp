@@ -170,6 +170,19 @@
     (cons view (mapcar (function subview-tree)
                        (coerce (view-subviews view) 'list)))))
 
+
+(defgeneric subview-tree/clip (view)
+  (:method ((view simple-view))
+    (list (offset-region (compute-view-region view (new-region) (view-container view))
+                         (offset-to-window-coordinates view))))
+  (:method ((view view))
+    (cons (offset-region (compute-view-region view (new-region) (view-container view))
+                         (offset-to-window-coordinates view))
+          (mapcar (function subview-tree/clip)
+                  (coerce (view-subviews view) 'list)))))
+
+
+
 #-(and)(progn
          (mapcar (lambda (v) [(ui::handle v) lockFocusIfCanDraw])
                  (rest (ui::collect-views (first (windows)))))
