@@ -290,4 +290,13 @@ recent outstanding catch-cancel.
      ,@body))
 
 
+(defmacro cycle (&rest items)
+  (let ((vitems   (gensym))
+        (vcurrent (gensym)))
+    `(let* ((,vitems   (list ,@items))
+            (,vcurrent ,vitems))
+       (when (null ,vitems)
+         (setf ,vitems ,vcurrent))
+       (pop ,vcurrent))))
+
 ;;;; THE END ;;;;
