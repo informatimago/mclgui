@@ -342,15 +342,6 @@
         handle
         (slot-value item 'dialog-item-text))))
 
-(defmacro cycle (&rest items)
-  (let ((vitems   (gensym))
-        (vcurrent (gensym)))
-    `(let* ((,vitems   (list ,@items))
-            (,vcurrent ,vitems))
-       (when (null ,vitems)
-         (setf ,vitems ,vcurrent))
-       (pop ,vcurrent))))
-
 
 (defmethod view-draw-contents ((item text-edit-dialog-item))
   (when (installed-item-p item)
@@ -362,10 +353,16 @@
       (with-slot-values (dialog-item-handle text-justification) item
         (without-interrupts
           (with-focused-view (view-container item)
-            (with-fore-and-back-color (if (and colorp (not enabled-p))
-                                          *gray-color*
-                                          (part-color item :text))
-                #|PJB-DEBUG|# (prog1 (cycle *green-color* *yellow-color* *blue-color*) (part-color item :body))
+            #|PJB-DEBUG|# #+(and) (with-fore-color (cycle *green-color* *yellow-color* *blue-color*)
+                                    (draw-rect* (1- (rect-left rect))
+                                                (1- (rect-top rect))
+                                                (+ 2 (rect-width rect))
+                                                (+ 2 (rect-height rect))))
+            (with-fore-and-back-color
+                (if (and colorp (not enabled-p))
+                    *gray-color*
+                    (part-color item :text))
+                (part-color item :body)
               ;; (validate-corners item (rect-topleft rect) (rect-bottomright rect))
               (if (eql item (current-key-handler my-dialog))
                   (progn
