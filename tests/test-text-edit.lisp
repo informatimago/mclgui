@@ -38,7 +38,8 @@
 ;;;---------------------------------------------------------------------
 
 (defclass te-test-window (window)
-  ((te :initform nil :accessor test-window-te)))
+  ((te :initarg :te :initform nil :accessor test-window-te))
+  (:documentation "A window with a TE text edit filling the whole window bounds."))
 
 (defmethod window-size-parts ((window te-test-window))
   (let ((te (test-window-te window)))
@@ -91,9 +92,12 @@
                     (event-modifierp *current-event* shift-key))
                   te)))))
 
+;;;---------------------------------------------------------------------
 
 (defclass te-test-item-window (te-test-window)
-  ())
+  ()
+  (:documentation "A window with a TE text edit that can be in a editable-text-dialog-item
+or standalone, but that is not resized when the window is resized."))
 
 (defmethod window-size-parts ((window te-test-item-window))
   (values))
@@ -107,13 +111,17 @@
         (te-update (te-%view-rect te) te)))))
 
 
+;;;------------------------------------------------------------
+
 ;; TODO: call test/paragraph on terec in different states.
 (defun test/paragraph (te)
+  "Tests the consistency of te-paragraph vs. doparagraphs."
   (doparagraphs (i para te)
     (assert (equal para (te-paragraph i te))))
   :success)
 
 (defun test/te-set-text ()
+  "Interactive test TE text edit."
   (let ((window (make-instance 'te-test-window
                                :window-title "test/te-set-text"
                                :view-size #@(200 400)
@@ -161,12 +169,13 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
 
 
 (defun test/te-field ()
+  "Interactively tests TE text edit with no wrapping and left justification."
   (let* ((window (make-instance 'te-test-item-window
                                 :window-title "test/field"
                                 :view-size #@(200 100)
                                 :view-font '("Times" 18 :plain :srcor)))
          (text   "hello world")
-         (te     (te-new (make-rect 20 10 180 30) (make-rect 20 10 180 30) window)))
+         (te     (te-new (make-rect 20 15 180 30) (make-rect 20 15 180 30) window)))
     (setf (test-window-te window) te)
     ;; ---
     (te-set-wrapping +te-no-wrap+ te)
@@ -179,7 +188,53 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
     te))
 
 
+;;;---------------------------------------------------------------------
+
+(defclass frame (view)
+  ()
+  (:documentation "A view that draws its own bounds around its subviews."))
+
+(defmethod view-draw-contents ((view frame))
+  ;; (break "view-draw-contents frame")
+  (with-focused-view view
+    (call-next-method)
+    (let ((size (view-size view)))
+      (draw-rect* 0 0 (point-h size) (point-v size)))))
+
+
+;;;---------------------------------------------------------------------
+
+(defun test/text-dialog-item ()
+  "Tests editable-text-dialog-item.
+"
+  (let* ((text   "hello world")
+         (tdi    (make-dialog-item 'editable-text-dialog-item
+                                   #@(20 15)
+                                   #@(180 30)
+                                   text
+                                   nil
+                                   :view-font '("Monaco" 9 :plain :srcor)
+                                   :allow-returns nil
+                                   :draw-outline t))
+         ;; (frame  (make-instance 'frame
+         ;;                        :view-size #@(80 30)
+         ;;                        :view-position #@(10 10)
+         ;;                        :view-subviews (list tdi)
+         ;;                        ))
+         (window (make-instance 'window
+                                :window-title "test/text-dialog-item"
+                                :view-size #@(200 100)
+                                :view-font '("Times" 18 :plain :srcor)
+                                :view-subviews (list tdi))))
+    (view-draw-contents window)
+    window))
+
+
+
+;;;---------------------------------------------------------------------
+
 (defun test/te-wrap-paragraph ()
+  "Interactively tests TE text edit with paragraph wrapping and left justification."
   (let* ((window (make-instance 'te-test-window
                                 :window-title "test/te-wrap-paragraph"
                                 :view-size #@(200 400)
@@ -228,6 +283,7 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
 
 
 (defun test/te-selection ()
+  "Automatically tests the handling of selection."
   (let* ((text "first1 first2 first3 first4 first5
 secon1 secon2 secon3 secon4 secon5
 third1 third2 third3 third4 third5
@@ -310,7 +366,9 @@ fifth1 fifth2 fifth3 fifth4 fifth5
     :success))
 
 
+
 (defun test/te-split ()
+  "Tests paragraph splitting on the TE text edit of the front window."
   (let* ((te (test-window-te (front-window)))
          (charpos 10)
          ;; (charpos (te-sel-current te))
@@ -370,36 +428,37 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
 
 "))
 
-
+;;;------------------------------------------------------------
 
 #-(and) (progn
 
+          (test/te-all)
+
+          (te-init)
           ;; Use one of those to create a text window:
           (test/te-set-text) 
           (test/te-wrap-paragraph)
-
-          (defparameter *te* (test-window-te (front-window)))
-          (te-set-text *text* *te*)
-          (setf (te-click-stuff (test-window-te (front-window))) nil)
-          
-          (te-init)
-          (test/te-wrap-paragraph)
-          (te-set-wrapping +te-no-wrap+ *te*)
-          (te-set-wrapping +te-word-wrap+ *te*)
-          (te-update (view-bounds (te-in-port *te*)) *te*)
-          
-          (test/te-all)
-          (test/te-set-text)
+          (test/te-field)
+          (test/text-dialog-item)
 
           (test/te-split)
           (test/te-selection)
+
+
+          (te-set-wrapping +te-no-wrap+ *te*)
+          (te-set-wrapping +te-word-wrap+ *te*)
+          (te-update (view-bounds (te-in-port *te*)) *te*)
           
           (te-set-select start end te)
           (te-change-selection extend new-point te)
 
           (inspect (test-window-te (front-window)))
-
           (te-cal-text (test-window-te (front-window)))
+
+          (defparameter *te* (test-window-te (front-window)))
+          (te-set-text *text* *te*)
+          (setf (te-click-stuff (test-window-te (front-window))) nil)
+          
           
           (dotimes (i (te-nlines (test-window-te (front-window))))
             (write-line (te-line i (test-window-te (front-window)))))
@@ -422,8 +481,6 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
           (let ((te (test-window-te (front-window))))
             (values (te-length te)
                     (TE-line-starts te)))
-
-
 
           
           (let ((te (test-window-te (front-window))))
@@ -516,5 +573,50 @@ monde!
           (defparameter *te* (test/te-wrap-paragraph))
           )
 
+
+#-(and)
+(progn
+
+  (make-instance 'window
+                 :window-title "test/text-dialog-item"
+                 :view-size #@(200 100)
+                 :view-font '("Times" 18 :plain :srcor)
+                 :view-subviews '())
+  
+  (make-instance 'frame
+                 :view-size #@(200 30)
+                 :view-position #@(10 10)
+                 ;; :view-subviews (list tdi)
+                 :view-container (front-window))
+  (add-subviews (elt (view-subviews (front-window)) 0)
+                (make-dialog-item 'editable-text-dialog-item
+                                  #@(2 1)
+                                  #@(180 16)
+                                  "Brown Fox"
+                                  nil
+                                  :view-font '("Monaco" 9 :plain :srcor)
+                                  :allow-returns nil))
+  
+  (make-instance 'image-box
+                 :view-position #@(10 80)
+                 :view-size #@(200 200)
+                 :image #P"~/Pictures/funny/we-attack-at-dawn.png"
+                 :view-container (front-window))
+  
+  (set-view-size     (elt (view-subviews (front-window)) 0) 200 30)
+  (set-view-position (elt (view-subviews (front-window)) 1) 10 80)
+  
+  (view-draw-contents (front-window))
+  (view-focus-and-draw-contents (front-window))
+  (test/text-dialog-item)
+  (pprint (subview-tree (front-window)))
+  (subview-tree (front-window))
+
+  
+  (view-draw-contents (elt (view-subviews (front-window)) 1))
+
+  (remove-subviews (front-window) (elt (view-subviews (front-window)) 1))
+
+  )
 
 ;;;; THE END ;;;;
