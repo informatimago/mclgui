@@ -621,7 +621,7 @@ is empty and returns the empty region.
 
 REGION:         A region.
 "
-  (setf (region-bounds    region) #.(make-rect 0 0 0 0)
+  (setf (region-bounds    region) (load-time-value (make-rect 0 0 0 0))
         (region-segments  region) #())
   region)
 
@@ -672,14 +672,17 @@ H:              Horizontal position.
 V:              Vertical position.  If V is NIL (the default), H is
                 assumed to represent a point.
 "
-  (offset-rect (region-bounds region) h v)
-  (loop
-    :for segs :across (region-segments region)
-    :do (incf (car segs) v)
-    :do (loop
-          :with s = (cdr segs)
-          :for i :below (length s)
-          :do (incf (aref s i) h)))
+  (let* ((p (make-point h v))
+         (h (point-h p))
+         (v (point-v p)))
+    (offset-rect (region-bounds region) h v)
+    (loop
+      :for segs :across (region-segments region)
+      :do (incf (car segs) v)
+      :do (loop
+            :with s = (cdr segs)
+            :for i :below (length s)
+            :do (incf (aref s i) h))))
   region)
 
 
@@ -860,7 +863,6 @@ the original region.
 ;;           )
 
 
-
 (defun intersect-region (region1 region2 &optional (dest-region (new-region)))
   "
 The INTERSECT-REGION function returns a region that is the
@@ -927,7 +929,10 @@ H:              Horizontal position.
 V:              Vertical position.  If V is NIL (the default), H is
                 assumed to represent a point.
 "
-  (niy point-in-region-p region h v))
+  (let* ((p (make-point h v))
+         (h (point-h p))
+         (v (point-v p)))
+    (rect-in-region-p region h v (1+ h) (+ v))))
 
 
 (defun rect-in-region-p (region left &optional top right bot)
@@ -949,7 +954,7 @@ LEFT, TOP, RIGHT, BOTTOM:
                 should be coordinates representing the LEFT, TOP,
                 RIGHT, and BOTTOM of the rectangle.
 "
-  (empty-region-p (intersect-region region (set-rect-region (new-region) left top right bot))))
+  (not (empty-region-p (intersect-region region (rect-region left top right bot)))))
 
 
 (defun equal-region-p (region1 region2)
