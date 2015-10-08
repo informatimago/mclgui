@@ -55,10 +55,11 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
         (aget *event-environment-bindings* '*debug-io*)        *debug-io*)
   (values))
 
-
+(defparameter *allow-print-backtrace* nil)
 (defun print-backtrace (&optional (output *error-output*))
-  #+ccl (format output "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~&"
-                (ccl::backtrace-as-list)))
+  (when *allow-print-backtrace*
+   #+ccl (format output "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~&"
+                 (ccl::backtrace-as-list))))
 
 (defun error-file-pathname ()
   (merge-pathnames (format nil "Desktop/~A-errors.txt" (if *application*
@@ -107,6 +108,7 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
                                (return-from ,vhandler nil))))
          ,@body))))
 
+;; (push :debug-on-error *features*)
 
 (defmacro with-event-environment (&body body)
   `(let ((*idle* nil))
