@@ -97,6 +97,9 @@
 (defmethod view-draw-contents ((view coordinates-view))
   (draw-coordinates view))
 
+(defmethod view-corners ((view coordinates-view))
+  ;; return (values topleft bottomright)
+  (multiple-value-call (function inset-corners) #@(-2 -2) (call-next-method)))
 
 
 (defclass coordinated-window (window)
@@ -112,24 +115,28 @@
 
 (defmethod set-view-font-codes :after ((window coordinated-window) ff ms &optional ff-mask ms-mask)
   (declare (ignorable ff ms ff-mask ms-mask))
-  (update-coordinates-size (coordinates-view window)))
+  (when (slot-boundp window 'coordinates-view)
+    (update-coordinates-size (coordinates-view window))))
 
 (defmethod window-null-event-handler ((window coordinated-window))
   (call-next-method)
-  (let ((where (get-mouse))
-        (cview (coordinates-view window)))
-    (unless (= where (coordinates-view-coordinates cview))
-      (update-coordinates cview where)
-      (view-draw-contents cview))))
+  (when (slot-boundp window 'coordinates-view)
+    (let ((where (get-mouse))
+          (cview (coordinates-view window)))
+      (unless (= where (coordinates-view-coordinates cview))
+        (update-coordinates cview where)
+        (view-draw-contents cview)))))
 
-;; (defmethod view-double-click-event-handler ((window coordinated-window) where)
-;;   (set-view-position  (coordinates-view window) where)
-;;   (update-coordinates (coordinates-view window) where)
-;;   (call-next-method)
-;;   window)
+(defmethod view-double-click-event-handler ((window coordinated-window) where)
+  (when (slot-boundp window 'coordinates-view)
+    (set-view-position  (coordinates-view window) where)
+    (update-coordinates (coordinates-view window) where))
+  (call-next-method)
+  window)
 
 (defmethod view-click-event-handler ((window coordinated-window) where)
-  (update-coordinates (coordinates-view window) where)
+  (when (slot-boundp window 'coordinates-view)
+    (update-coordinates (coordinates-view window) where))
   (call-next-method)
   window)
 
