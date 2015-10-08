@@ -48,13 +48,25 @@
 
   );;eval-when
 
+(defun rect-to-list (rect)
+  "
+RETURN:         A list of two lists containing the coordinates of the
+                topLeft and bottomRight points of the RECT rectangle.
+"
+  (list :topleft (point-to-list (rect-topleft rect))
+        :size (point-to-list (rect-size rect))))
+
 (defmethod print-object ((rect rect) stream)
+  (declare (stepper disable))
   (if *print-readably*
       (call-next-method)
+      #-(and)
       (format stream "(rect :left ~D :top ~D :right ~D :bottom ~D)"
               (rect-left rect) (rect-top rect)
-              (rect-right rect) (rect-bottom rect)))
+              (rect-right rect) (rect-bottom rect))
+      (format stream "#.(rect ~{~S #@~S~^ ~})" (rect-to-list rect)))
   rect)
+
 
 (defun make-rect (left &optional top right bottom)
   "
@@ -63,6 +75,7 @@ The function MAKE-RECT can be called with either:
 - two points, topLeft and bottomRight;
 - four coordinates: left, top, right, bottom.
 "
+  (declare (stepper disable))
    (cond
     ((and (null top) (null right) (null bottom))
      (copy-rect left))
@@ -71,19 +84,40 @@ The function MAKE-RECT can be called with either:
     (t
      (%make-rect :topleft (make-point left top) :bottomright (make-point right bottom)))))
 
+(defun rect (&key left top right bottom width height topleft bottomright size)
+  (declare (stepper disable))
+  (assert (xor width  size) (width  size) ":WIDTH and :SIZE are exclusive.")
+  (assert (xor height size) (height size) ":HEIGHT and :SIZE are exclusive.")
+  (flet ((solve (direction
+                 label-min1   min1   label-min2   min2
+                 label-max1   max1   label-max2   max2
+                 label-delta1 delta1 label-delta2 delta2)
+           (assert (not (and min1 min2)) (min1 min2) "~S and ~S are exclusive" label-min1 label-min2)
+           (assert (not (and max1 max2)) (max1 max2) "~S and ~S are exclusive" label-max1 label-max2)
+           (assert (not (and delta1 delta2)) (delta1 delta2) "~S and ~S are exclusive" label-delta1 label-delta2)
+           (let ((min   (or min1 min2))
+                 (max   (or max1 max2))
+                 (delta (or delta1 delta2)))
+             (assert (= 2 (+ (if min 1 0) (if max 1 0) (if delta 1 0)))
+                     (min max delta)
+                     "Exactly 2 ~A specifiers must be given." direction)
+             (values (or min (- max delta))
+                     (or max (+ min delta))))))
+    (multiple-value-bind (left right) (solve :horizontal
+                                             :left  left  :topleft     (when topleft     (point-h topleft))
+                                             :right right :bottomright (when bottomright (point-h bottomright))
+                                             :width width :size        (when size        (point-h size)))
+      (multiple-value-bind (top bottom) (solve :vertical
+                                               :top    top    :topleft     (when topleft     (point-v topleft))
+                                               :bottom bottom :bottomright (when bottomright (point-v bottomright))
+                                               :height height :size        (when size        (point-v size)))
+        (make-rect left top right bottom)))))
+
 (defun pt2rect (p1 p2)
   (make-rect (min (point-h p1) (point-h p2))
              (min (point-v p1) (point-v p2))
              (max (point-h p1) (point-h p2))
              (max (point-v p1) (point-v p2))))
-
-(defun rect-to-list (rect)
-  "
-RETURN:         A list of two lists containing the coordinates of the
-                topLeft and bottomRight points of the RECT rectangle.
-"
-  (list :topleft (point-to-list (rect-topleft rect))
-        :size (point-to-list (rect-size rect))))
 
 ;; (make-rect 1 2 3 4)
 ;; #S(rect :topleft 131073 :bottomright 262147)
