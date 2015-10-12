@@ -147,6 +147,7 @@
 
 (defun draw-rect* (x y w h)
   #+debug-graphics (format-trace "draw-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  ;; (incf x) (incf y) (decf w 2) (decf h 2)
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -175,19 +176,21 @@
                 [path fill])))))))
 
 
-#-(and)(loop
-         :for mode :in '(:srcCopy :srcOr :srcXor :srcBic
-                         :notSrcCopy :notSrcOr :notSrcXor :notSrcBic
-                         :patCopy :patOr :patXor :patBic
-                         :notPatCopy :notPatOr :notPatXor :notPatBic)
-         :do (with-focused-view (front-window)
-               (with-pen-state (:pattern *gray-pattern* :size (make-point 10 10)
-                                :mode :srcCopy)
-                 (draw-rect* 10 20 100 200))
-               (with-pen-state (:pattern *gray-pattern* :size (make-point 10 10)
-                                :mode mode)
-                 (draw-rect* 10 20 100 200)))
-             (sleep 3))
+
+
+#-(and) (loop
+          :for mode :in '(:srcCopy :srcOr :srcXor :srcBic
+                          :notSrcCopy :notSrcOr :notSrcXor :notSrcBic
+                          :patCopy :patOr :patXor :patBic
+                          :notPatCopy :notPatOr :notPatXor :notPatBic)
+          :do (with-focused-view (front-window)
+                (with-pen-state (:pattern *gray-pattern* :size (make-point 10 10)
+                                 :mode :srcCopy)
+                  (draw-rect* 10 20 100 200))
+                (with-pen-state (:pattern *gray-pattern* :size (make-point 10 10)
+                                 :mode mode)
+                  (draw-rect* 10 20 100 200)))
+              (sleep 3))
 
 #-(and) (with-focused-view (front-window)
           (with-pen-state (:pattern *light-gray-pattern* :size (make-point 20 10)
@@ -197,7 +200,7 @@
 
 (defun fill-rect* (x y w h)
   #+debug-graphics (format-trace "fill-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
-  (when (< w h) (break))
+  ;; (when (< w h) (break))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window

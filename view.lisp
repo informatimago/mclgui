@@ -252,6 +252,12 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
               (list (ccl::pref ctm #>CGAffineTransform.tx)
                     (ccl::pref ctm #>CGAffineTransform.ty))))
 
+(defun get-at-at (at)
+  #-ccl  (error "~S is not implemented on ~A" 'get-at-at (lisp-implementation-type))
+  #+ccl (ccl::rlet ((r :<NSA>ffine<T>ransform<S>truct))
+          (ccl::send/stret r at "transformStruct")
+          (get-at r)))
+
 (defun get-at* (ctm)
   (mapcar (lambda (xs) (mapcar (lambda (x) (/ (round x 0.1) 10.0)) xs)) (get-at ctm)))
 
@@ -335,12 +341,14 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
             (warn "(window-affine-transform window) is nil :window ~S" window)
             (setf *current-view* view)
             (return-from focus-view (values)))
+          #+debug-focused-view (format-trace 'focus-view :wtrans (get-at-at wtrans) :ctm (get-at* (get-ctm window)))
           [wtrans set]
           [vtrans translateXBy:(cgfloat 0.0) yBy:(cgfloat (point-v (view-size (view-window view))))]
           [vtrans scaleXBy:(cgfloat 1.0) yBy:(cgfloat -1.0)]
           [vtrans translateXBy:(cgfloat (point-h origin)) yBy:(cgfloat (point-v origin))]
           #+debug-focused-view (format-trace 'focused-view (list (class-name (class-of view)) :w-ctm (get-at* (get-ctm window))))
           [vtrans concat]
+          #+debug-focused-view (format-trace 'focus-view :vtrans (get-at-at vtrans) :ctm (get-at* (get-ctm window)))
           #+debug-focused-view (format-trace 'focused-view (list (class-name (class-of view)) :v-ctm (get-at* (get-ctm window))))
           [vtrans release]
           (focus-font-view font-view)
@@ -876,6 +884,14 @@ WINDOW:         A window.
     (values #@(0 0) (view-size win))))
 
 
+(defgeneric %view-frame-in-window (view)
+  (:documentation "
+RETURN:  The VIEW rectangle in the window coordinates.
+")
+  (:method ((view simple-view))
+    (offset-rect (view-bounds view)
+                 (convert-coordinates 0 view (view-window view)))))
+
 (defgeneric view-frame (view)
   (:documentation "
 RETURN:  The VIEW rectangle in the view container coordinates.
@@ -883,7 +899,6 @@ RETURN:  The VIEW rectangle in the view container coordinates.
   (:method ((view simple-view))
     (let ((topleft (view-position view)))
       (make-rect topleft (add-points topleft (view-size view))))))
-
 
 (defgeneric view-bounds (view)
   (:documentation "
@@ -1549,10 +1564,12 @@ NOTE:           If VISRGN, then the intersection between the VISRGN
                                             :reason "we don't draw because the intersection of visrgn and cliprgn is empty"
                                             :visrgn visrgn :cliprgn clip-region))
               (with-focused-view focused-view
-                #+debug-views (format-trace '%view-draw-contents-with-focused-view
-                                            :step 3
-                                            :clip (rect-to-list (region-bounds inter)))
                 (%with-clip-region inter
+                  ;; #+debug-views
+                  (format-trace '%view-draw-contents-with-focused-view
+                                :step 3
+                                :clip (rect-to-list (region-bounds inter))
+                                :view (rect-to-list (%view-frame-in-window view)))
                   (view-draw-contents view)))))))))
 
 

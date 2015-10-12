@@ -241,12 +241,17 @@ RETURN:     REGION.
   #+debug-views (format-trace "%set-clip" region)
   ;; #+debug-views (let ((*allow-print-backtrace* t)) (print-backtrace))
   (setf (view-clip-region-slot win) region)
-  (let ((path (bezier-path-from-region region)))
-    [path setClip]
-    #+debug-view
-    (with-saved-graphic-state ()
-      [(unwrap *gray-color*) setFill]
-      [path fill]))
+  (let ((path (bezier-path-from-region region))
+        (saved-view *current-view*))
+    (unwind-protect
+         (progn
+           (focus-view win)
+           [path setClip]
+           #-(and) (progn
+                     [path setLineWidth:(cgfloat 4.0)]
+                     [(unwrap *gray-color*) set]
+                     [path stroke]))
+      (refocus-view saved-view)))
   region)
 
 (defun set-clip (region)

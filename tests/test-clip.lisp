@@ -63,14 +63,11 @@
                  (fill-rect* (rect-left bounds) (rect-top bounds) (rect-width bounds) (rect-height bounds)))
                (with-fore-color *black-color*
                  (draw-rect* (rect-left bounds) (rect-top bounds) (rect-width bounds) (rect-height bounds)))))))
-    (if (clip-view-region view)
-        (let ((offset (convert-coordinates 0 view (view-window view))))
-          (with-clip-region (if (= 0 offset)
-                                region
-                                (offset-region (copy-region (clip-view-region view))
-                                               offset))
-            (draw)))
-        (draw)))
+    (let ((region  (clip-view-region view)))
+      (if region
+          (with-clip-region region
+            (draw))
+          (draw))))
   (call-next-method))
 
 (defclass clip-window (ui::coordinated-window)
@@ -91,7 +88,7 @@
          (v1 (make-instance 'clip-view
                             :view-position #@(20 10)
                             :view-size #@(51 41)
-                            :clip-region (set-disc-region (new-region) 0 0 50)
+                            :clip-region (set-disc-region (new-region) 30 0 50)
                             :clip-color *blue-color*
                             :view-container win))
          (v2  (make-instance 'clip-view
@@ -121,9 +118,11 @@
     (declare (ignorable v1 v2 v21 v22 v221))
     win))
 
-(test/clip-in-window)
-#-(and) (progn
 
+#-(and) (progn
+          (in-package "MCLGUI.TEST.CLIP")
+          (on-main-thread (test/clip-in-window))
+          
           (clip-view-color (elt (view-subviews (front-window)) 0))
 
 

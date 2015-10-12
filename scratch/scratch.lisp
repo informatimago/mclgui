@@ -1,6 +1,58 @@
 (in-package :ui)
 (objcl:set-objective-cl-syntax)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (error "Do not load ~S." (or *compile-file-pathname* *load-pathname*)))
+
+
+(mapcar 'point-to-list (mapcar 'view-position
+                               (remove-if (lambda (win) (prefixp "Listener" (window-title win)))
+                                          (windows))))
+
+(defmacro get-nsthing (call)
+  (let ((vframe (gensym)))
+    `(oclo:slet ((,vframe ,call)) (wrap ,vframe))))
+
+(mapcar (lambda (win) (let ((at   (current-affine-transform win))
+                            (ctm  (get-ctm win)))
+                        (list (when at (ccl::rlet ((r :<NSA>ffine<T>ransform<S>truct))
+                                         (ccl::send/stret r at "transformStruct")
+                                         (get-at r)))
+                              (when ctm (get-at ctm)))))
+        (remove-if (lambda (win) (prefixp "Listener" (window-title win)))
+                   (windows)))
+((((1.0D0 0.0D0) (0.0D0 1.0D0) (0.0D0 0.0D0)) ((1.0D0 0.0D0) (0.0D0 1.0D0) (0.0D0 0.0D0)))
+ (((1.0D0 0.0D0) (0.0D0 1.0D0) (0.0D0 0.0D0)) ((1.0D0 0.0D0) (0.0D0 1.0D0) (0.0D0 0.0D0))))
+
+(defparameter *w* (first (remove-if (lambda (win) (prefixp "Listener" (window-title win)))
+                                    (windows))))
+
+
+(point-to-list(view-position(front-window)))
+(point-to-list(view-position (first (remove-if-not (lambda (win) (prefixp "Listener" (window-title win)))
+                                                   (windows)))))
+
+(mapc (lambda (win) (set-view-position win 12 662)) (windows))
+
+(mapcar (lambda (win) (get-nsrect [(handle win) frame])) (windows))
+(mapc   (lambda (win) (set-view-position win 20 300))    (windows))
+
+
+'(#S(nsrect :x 20.0D0 :y 680.0D0 :width 100.0D0 :height 122.0D0)
+  #S(nsrect :x 20.0D0 :y 580.0D0 :width 300.0D0 :height 222.0D0)
+  #S(nsrect :x 20.0D0 :y 441.0D0 :width 711.0D0 :height 361.0D0))
+
+'(#S(nsrect :x 12.0D0 :y 318.0D0 :width 100.0D0 :height 122.0D0)
+  #S(nsrect :x 12.0D0 :y 218.0D0 :width 300.0D0 :height 222.0D0)
+  #S(nsrect :x 23.0D0 :y 110.0D0 :width 711.0D0 :height 361.0D0))
+
+(mapcar 'window-title(windows))
+("Untitled" "Test Clip Window" "Listener")
+(handle(first (windows)))
+#<mclgui-window <MclguiWindow: 0x2b75c6c0> (#x2B75C6C0)>
+
+(mapc 'window-bring-to-front (windows))
+
 
 (use-package "MCLGUI.TEST.CLIP")
 (view-focus-and-draw-contents (front-window))
@@ -24,7 +76,7 @@
   (let ((inter (if (and visrgn cliprgn)
                    (intersect-region visrgn cliprgn)
                    (or visrgn cliprgn))))
-    (values (empty-region-p inter) inter)))
+    (values (empty-region-p inter) inter))))
 
 
 ;;------------------------------------------------------------

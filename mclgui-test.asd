@@ -74,9 +74,13 @@
                                                 "tests/test-region-path"
                                                 "tests/test-pattern"
                                                 "tests/test-menu")))
+  :perform (asdf:prepare-op
+            :after (operation system) (declare (ignore operation system))
+            (ui:initialize))
 
   :perform (asdf:test-op
-            (operation system)
+            (operation system) (declare (ignore operation system))
+            (ui:initialize)
             (dolist (p '("MCLGUI"))
               (let ((*package* (find-package p)))
                 #+asdf3 (uiop:symbol-call p "TEST/ALL")))))
