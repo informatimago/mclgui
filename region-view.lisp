@@ -70,16 +70,16 @@ DO:     Intersects the clip region of the window of the *CURRENT-VIEW*
     `(let ((,win (and *current-view* (view-window *current-view*))))
        (when ,win
          (let* ((,saved-clip (view-clip-region-slot ,win))
-                (dummy (format-trace "%with-clip-region" :saving___ :saved-clip ,saved-clip))
+                ;; (dummy (format-trace "%with-clip-region" :saving___ :saved-clip ,saved-clip))
                 (,vregion    ,region)
                 (,clip       (if ,saved-clip
                                  (intersect-region ,saved-clip ,vregion)
                                  ,vregion)))
-           (declare (ignore dummy))
+           ;; (declare (ignore dummy))
            (unwind-protect
                 (progn (%set-clip ,win ,clip)
                        ,@body)
-             (format-trace "%with-clip-region" :restoring :saved-clip ,saved-clip)
+             ;; (format-trace "%with-clip-region" :restoring :saved-clip ,saved-clip)
              (setf (view-clip-region-slot ,win) ,saved-clip)))))))
 
 
@@ -98,14 +98,14 @@ DO:     Intersects the clip region of the window of the *CURRENT-VIEW*
     `(let ((,win     (and *current-view* (view-window *current-view*))))
        (when ,win
          (let* ((,saved-clip (view-clip-region-slot ,win))
-                (dummy (format-trace "with-clip-region" :saving___ :saved-clip ,saved-clip))
+                ;; (dummy (format-trace "with-clip-region" :saving___ :saved-clip ,saved-clip))
                 (,vregion    ,region)
                 (,clip       (if ,saved-clip
                                  (intersect-region ,saved-clip ,vregion)
                                  ,vregion)))
            (declare (ignore dummy))
            (with-saved-graphic-state (:restore-form
-                                      (progn (format-trace "with-clip-region" :restoring :saved-clip ,saved-clip)
+                                      (progn ;; (format-trace "with-clip-region" :restoring :saved-clip ,saved-clip)
                                              (setf (view-clip-region-slot ,win) ,saved-clip)))
              (%set-clip ,win ,clip)
              ,@body))))))
