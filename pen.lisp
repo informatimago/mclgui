@@ -407,16 +407,14 @@ not normally called directly but instead by stream output functions.
     (let ((window (view-window *current-view*)))
       (when window
         (let ((original-pen (view-pen window)))
-          (unwind-protect
-               (progn
-                 ;; [context saveGraphicsState]
-                 (setf (slot-value window 'view-pen) pen)
-                 (apply-pen window pen)
-                 (funcall thunk))
-            ;; [context restoreGraphicsState]
-            (unless (eql original-pen (view-pen window))
-              (setf (slot-value window 'view-pen) original-pen)
-              (apply-pen window pen))))))))
+          (with-saved-graphic-state (:restore-form
+                                     (unless (eql original-pen (view-pen window))
+                                       (setf (slot-value window 'view-pen) original-pen))
+                                     ;; (apply-pen window original-pen)
+                                     )
+            (setf (slot-value window 'view-pen) pen)
+            (apply-pen window pen)
+            (funcall thunk)))))))
 
 
 (defmacro with-pen-state ((&key location size mode pattern) &body body)
