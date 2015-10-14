@@ -80,7 +80,8 @@ DO:     Intersects the clip region of the window of the *CURRENT-VIEW*
                 (progn (%set-clip ,win ,clip)
                        ,@body)
              ;; (format-trace "%with-clip-region" :restoring :saved-clip ,saved-clip)
-             (setf (view-clip-region-slot ,win) ,saved-clip)))))))
+             ;; (setf (view-clip-region-slot ,win) ,saved-clip) ; included in:
+             (%set-clip ,win ,saved-clip)))))))
 
 
 (defmacro with-clip-region (region &body body)
@@ -103,10 +104,10 @@ DO:     Intersects the clip region of the window of the *CURRENT-VIEW*
                 (,clip       (if ,saved-clip
                                  (intersect-region ,saved-clip ,vregion)
                                  ,vregion)))
-           (declare (ignore dummy))
+           ;; (declare (ignore dummy))
            (with-saved-graphic-state (:restore-form
                                       (progn ;; (format-trace "with-clip-region" :restoring :saved-clip ,saved-clip)
-                                             (setf (view-clip-region-slot ,win) ,saved-clip)))
+                                        (setf (view-clip-region-slot ,win) ,saved-clip)))
              (%set-clip ,win ,clip)
              ,@body))))))
 
