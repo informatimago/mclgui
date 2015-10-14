@@ -288,12 +288,11 @@
 (defgeneric hilite-control (control-item state))
 
 (defmethod hilite-control ((item control-dialog-item) state)
-  (format-trace 'hilite-control :state state :item item)
+  (format-trace 'hilite-control :state state :item item :deferred *deferred-drawing*)
   (setf (control-hilite-state item) state)
   (unless *deferred-drawing*
     (with-focused-dialog-item (item)
-      (view-draw-contents item))
-    (graphics-flush)))
+      (view-draw-contents item))))
 
 
 (defmethod view-click-event-handler ((item control-dialog-item) where)
