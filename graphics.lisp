@@ -355,7 +355,7 @@
          draw-ellipse
          fill-ellipse)
 
-  (push :debug-graphics *features*)
+  (pushnew :debug-graphics *features*)
   )
 
 
