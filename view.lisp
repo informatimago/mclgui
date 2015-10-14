@@ -1549,7 +1549,8 @@ NOTE:           If VISRGN, then the intersection between the VISRGN
         #+debug-views (format-trace '%view-draw-contents-with-focused-view
                                     :step 1
                                     :view view :focused-view  focused-view
-                                    :visrgn visrgn :cliprgn cliprgn)
+                                    :visrgn visrgn :cliprgn cliprgn
+                                    :current-clip (get-clip (new-region)))
         (validate-view view)
         (let* ((clip-region (or cliprgn
                                 (offset-region (copy-region (view-clip-region view))
@@ -1565,11 +1566,10 @@ NOTE:           If VISRGN, then the intersection between the VISRGN
                                             :visrgn visrgn :cliprgn clip-region))
               (with-focused-view focused-view
                 (%with-clip-region inter
-                  ;; #+debug-views
-                  (format-trace '%view-draw-contents-with-focused-view
-                                :step 3
-                                :clip (rect-to-list (region-bounds inter))
-                                :view (rect-to-list (%view-frame-in-window view)))
+                  #+debug-views (format-trace '%view-draw-contents-with-focused-view
+                                              :step 3
+                                              :clip (rect-to-list (region-bounds inter))
+                                              :view (rect-to-list (%view-frame-in-window view)))
                   (view-draw-contents view)))))))))
 
 

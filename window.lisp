@@ -247,7 +247,7 @@ RETURN:     REGION.
          (progn
            (focus-view win)
            [path setClip]
-           #-(and) (progn
+           #-(and) (progn #| DEBUG-PJB |#
                      [path setLineWidth:(cgfloat 4.0)]
                      [(unwrap *gray-color*) set]
                      [path stroke]))

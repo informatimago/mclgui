@@ -419,3 +419,20 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
      (%set-fore-color (get-fore-color (view-window view))))
 
 (STEP-unBREAK-ENTRY %view-draw-contents-with-focused-view)
+
+
+(with-focused-view (front-window)
+  (erase-rect* 20 10 200 20)
+  
+  #-(and) (progn
+            (with-pen-state (:mode :patcopy :pattern *black-pattern*)
+              (fill-rect* 20 10 60 20))
+
+            (with-pen-state (:mode :patcopy :pattern *white-pattern*)
+              (fill-rect* 21 11 58 18)))
+
+  (ui::with-clip-rect-intersect (ui::rect :left 81 :top 10 :width 60 :height 20)
+    (fill-ellipse 100 15 20 20)
+    ;; (draw-rect* 81 10 60 20)
+    (draw-line 80 0 140 30)
+    (draw-line 80 30 140 0)))
