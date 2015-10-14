@@ -161,13 +161,14 @@ RETURN:         A string containing the object identity as printed by
 
 
 (in-package "MCLGUI")
+
 #-(and)
 (defmethod view-draw-contents ((window (eql (front-window))))
   (with-focused-view window
     (let ((bounds (view-bounds window)))
       (with-fore-color *green-color*
         (fill-rect* (rect-left bounds) (rect-top bounds)
-                       (rect-width bounds) (rect-height bounds)))
+                    (rect-width bounds) (rect-height bounds)))
       (call-next-method))))
 
 
