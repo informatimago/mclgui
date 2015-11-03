@@ -98,8 +98,8 @@
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
-        (let ((siz     (pen-size (view-pen window))))
-          (#_NSRectFill (ns:make-ns-rect x y (point-h siz) (point-v siz))))))))
+        (let ((size (pen-size (view-pen window))))
+          (#_NSRectFill (ns:make-ns-rect x y (point-h size) (point-v size))))))))
 
 
 (defun draw-line (x1 y1 x2 y2)
@@ -147,13 +147,12 @@
 
 (defun draw-rect* (x y w h)
   #+debug-graphics (format-trace "draw-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
-  ;; (incf x) (incf y) (decf w 2) (decf h 2)
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
         (let* ((pen  (view-pen window))
                (size (pen-size pen)))
-          (if (and nil (= #@(1 1) size)
+          (if (and (= #@(1 1) size)
                    (eql *black-pattern* (pen-state-pattern pen)))
               (#_NSFrameRect (ns:make-ns-rect x y w h))
               (let ((path [NSBezierPath bezierPath])
@@ -200,7 +199,6 @@
 
 (defun fill-rect* (x y w h)
   #+debug-graphics (format-trace "fill-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
-  ;; (when (< w h) (break))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
@@ -210,12 +208,12 @@
 
 
 (defun erase-rect* (x y w h)
-  #+debug-graphics (format-trace "erase-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
-  ;; (when (< w h) (break))
   (let ((color (unwrap (or (and *current-view*
                                 (view-window *current-view*)
                                 (slot-value (view-window *current-view*) 'back-color))
                            *background-color*))))
+    #+debug-graphics (format-trace "erase-rect*" x y w h :brightness [color brightnessComponent]
+                                   :view *current-view* :window (when *current-view* (view-window *current-view*)))
     (with-saved-graphic-state ()
       [color setFill]
       (#_NSRectFill (ns:make-ns-rect x y w h)))))
