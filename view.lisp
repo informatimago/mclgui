@@ -270,6 +270,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 
 (declaim (inline graphics-flush))
 (defun graphics-flush ()
+  (format-trace 'graphics-flush)
   [[NSGraphicsContext currentContext] flushGraphics])
 
 
@@ -464,9 +465,10 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
                                  (*current-font-view* font-view)
                                  (*current-font-codes* (copy-list *current-font-codes*)))
                              (unless same-font (apply (function set-current-font-codes) (set-font *current-font-view*)))
+                             [[NSGraphicsContext currentContext] setShouldAntialias:NO]
                              ;; (format-trace 'call-with-focused-view :unlock unlock '(and (not (eql *current-view* view)) lockFocusIfCanDraw))
                              (call-it/trans))
-                           ;; (format-trace 'call-with-focused-view :unlock  '(and (not (eql *current-view* view)) (NOT lockFocusIfCanDraw)))
+                           ;; (format-trace 'call-with-focused-view :unlock '(and (not (eql *current-view* view)) (NOT lockFocusIfCanDraw)))
                            )
                     (when unlock
                       (refocus-view *current-view*)
