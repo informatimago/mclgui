@@ -229,7 +229,6 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
               (rect-region -32767 -32767 32767 32767)))
       (copy-region (view-clip-region-slot win) region))))
 
-
 (defun %set-clip (win region)
   "
 WIN:        A WINDOW.
@@ -246,7 +245,7 @@ RETURN:     REGION.
     (unwind-protect
          (progn
            (focus-view win)
-           [path setClip]
+           ;; [path setClip]
            #-(and) (progn #| DEBUG-PJB |#
                      [path setLineWidth:(cgfloat 4.0)]
                      [(unwrap *gray-color*) set]
@@ -1235,30 +1234,38 @@ RETURN:         A BOOLEAN value indicating whether view can perform
                      (where     event-where)
                      (modifiers event-modifiers)
                      (message   event-message)) *current-event*
-      (case what
-        ((#.null-event)
-         ;; (view-mouse-moved-event-handler window)
-         (window-null-event-handler window))
-        ((#.mouse-down)
-         #+debug
-         (format *terminal-io* "~&screen point ~S~%" (point-to-list where))
-         (let ((where (screen-to-window-point window where)))
-           #+debug
-           (progn (format *terminal-io* "~&window point ~S~%" (point-to-list where))
-                  (finish-output *terminal-io*))
-           (view-click-event-handler window where)
-           (when (double-click-p)
-             (view-double-click-event-handler window where))))
-        ((#.mouse-up)
-         (window-mouse-up-event-handler window))
-        ((#.key-down #.auto-key)
-         (view-key-event-handler window (nth-value 1 (decode-key-message message))))
-        ((#.activate-evt)
-         (if (logtest active-flag modifiers)
-             (view-activate-event-handler window)
-             (view-deactivate-event-handler window)))
-        ((#.update-evt)
-         (window-update-event-handler window))))))
+      (with-handle (winh window)
+        (let ((gc [NSGraphicsContext graphicsContextWithWindow:winh])
+              (saved-context [NSGraphicsContext currentContext]))
+          (unwind-protect
+               (progn
+                 [gc setShouldAntialias:NO]
+                 [NSGraphicsContext setCurrentContext:gc]
+                 (case what
+                   ((#.null-event)
+                    ;; (view-mouse-moved-event-handler window)
+                    (window-null-event-handler window))
+                   ((#.mouse-down)
+                    #+debug
+                    (format *terminal-io* "~&screen point ~S~%" (point-to-list where))
+                    (let ((where (screen-to-window-point window where)))
+                      #+debug
+                      (progn (format *terminal-io* "~&window point ~S~%" (point-to-list where))
+                             (finish-output *terminal-io*))
+                      (view-click-event-handler window where)
+                      (when (double-click-p)
+                        (view-double-click-event-handler window where))))
+                   ((#.mouse-up)
+                    (window-mouse-up-event-handler window))
+                   ((#.key-down #.auto-key)
+                    (view-key-event-handler window (nth-value 1 (decode-key-message message))))
+                   ((#.activate-evt)
+                    (if (logtest active-flag modifiers)
+                        (view-activate-event-handler window)
+                        (view-deactivate-event-handler window)))
+                   ((#.update-evt)
+                    (window-update-event-handler window))))
+            [NSGraphicsContext setCurrentContext:saved-context]))))))
 
 ;;;---------------------------------------------------------------------
 ;;; Fonts
