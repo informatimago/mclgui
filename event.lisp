@@ -794,6 +794,7 @@ IDLE:           An argument representing whether the main Lisp process
                 otherwise.  The function EVENT-DISPATCH calls
                 GET-NEXT-EVENT with an event and the value of IDLE.
 "
+  ;; This is called periodically on the main thread by run-loop-task.
   (let ((*current-event* (get-next-event idle event-mask)))
     (when *current-event*
       (unwind-protect
