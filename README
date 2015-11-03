@@ -1,0 +1,6 @@
+This is an implementation of the MCL GUI (CLOS layer on MacOS
+Toolbox), targetting CCL on MacOSX.
+
+Some parts of the code may come from the rmcl 5.1b2 sources (LGPL).
+
+This library is under the GPL3 license.
