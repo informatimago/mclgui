@@ -118,7 +118,7 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
              (not (slot-value window 'theme-background)))
     ;; only needed for non-theme color background
     (setf (window-invalid-region window) (new-rgn)))
-  (add-to-list *window-list* window)
+  (add-new-to-list *window-list* window)
   ;;#+debug-views
   (format-trace '(update-handle window)
                 :pos (point-to-list (view-position window))
@@ -170,7 +170,7 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     ;; [winh setDelegate:(make-instance 'mclgui-window-delegate :window window)]
     [winh setDelegate:winh]
     [winh setTitle:(objcl:objc-string (window-title window))]
-    (setf (window-affine-transform window) (current-affine-transform window))
+    ;; (setf (window-affine-transform window) (current-affine-transform window))
     #+debug-views
     (format-trace '(update-handle window)
                   :wintitle (window-title window)
@@ -191,9 +191,9 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
 
 (defmethod initialize-instance :after ((window window) &key &allow-other-keys)
   (with-handle (winh window)
-    (let* ((bound (get-nsrect [[winh contentView] bounds]))
-           (posiz (window-frame-from-nswindow-frame window))
-           (ori   (subtract-points #@(0 0) (rect-topleft (nsrect-to-rect bound)))))
+    (let* ((bounds (get-nsrect [[winh contentView] bounds]))
+           (ori    (subtract-points #@(0 0) (rect-topleft (nsrect-to-rect bounds))))
+           (posiz  (window-frame-from-nswindow-frame window)))
       (setf (slot-value window 'window-title)         (objcl:lisp-string [winh title])
             (slot-value window 'view-position)        (rect-topleft posiz)
             (slot-value window 'view-size)            (rect-size posiz) 
@@ -244,7 +244,7 @@ RETURN:     REGION.
         (saved-view *current-view*))
     (unwind-protect
          (progn
-           (focus-view win)
+           ;; (focus-view win)
            ;; [path setClip]
            #-(and) (progn #| DEBUG-PJB |#
                      [path setLineWidth:(cgfloat 4.0)]
@@ -323,6 +323,7 @@ INCLUDE-WINDOIDS
                 included.  Floating windows are also included if the
                 value of the CLASS argument is WINDOID.
 "
+  (wrap [[NSApplication sharedApplication] orderedWindows])
   (delete-if (lambda (window)
                (not (and (if include-windoids
                              (or (typep window class)
@@ -1306,7 +1307,7 @@ RETURN:         A BOOLEAN value indicating whether view can perform
     (when (window-visiblep window)
       ;; time/stdout
       #+debug-views (format-trace '(view-draw-contents window))
-      #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
+      ;; #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
       (with-focused-view window
         (with-fore-and-back-color (get-fore-color window) (get-back-color window)
           (call-next-method))))))
@@ -1328,15 +1329,18 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 
 (defmethod wrap ((nswindow ns:ns-window))
   ;; (format-trace 'wrap nswindow)
-  (make-instance 'unknown-window :handle nswindow))
+  (or (find nswindow *window-list* :key (function handle))
+      (make-instance 'unknown-window :handle nswindow)))
 
 (defmethod wrap ((nswindow gui::hemlock-listener-frame))
   ;; (format-trace 'wrap nswindow)
-  (make-instance 'hemlock-listener-frame :handle nswindow))
+  (or (find nswindow *window-list* :key (function handle))
+      (make-instance 'hemlock-listener-frame :handle nswindow)))
 
 (defmethod wrap ((nswindow gui::hemlock-frame))
   ;; (format-trace 'wrap nswindow)
-  (make-instance 'hemlock-frame :handle nswindow))
+  (or (find nswindow *window-list* :key (function handle))
+      (make-instance 'hemlock-frame :handle nswindow)))
 
 
 (defun initialize/window ()
