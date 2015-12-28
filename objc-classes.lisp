@@ -534,19 +534,29 @@ DO:             Evaluates the BODY in a lexical environment where
 ;;;------------------------------------------------------------
 ;;; Application Delegate
 
-
-
-@[LispApplicationDelegate
-  method:(applicationShouldTerminate:(id)sender)
-  resultType:(:int)
-  body:
-  (declare (ignore sender))
+(defun application-shoud-terminate ()
   (with-event-environment
     (block nil
       (catch :cancel
         (mapc (function funcall) *application-should-terminate-functions*)
         (return #$NSTerminateNow))
-      #$NSTerminateCancel))]
+      #$NSTerminateCancel)))
+
+#+(and ccl ccl-1.11)
+@[IDEApplicationDelegate
+  method:(applicationShouldTerminate:(id)sender)
+  resultType:(:int)
+  body:
+  (declare (ignore sender))
+  (application-shoud-terminate)]
+
+#+(and ccl (not ccl-1.11))
+@[LispApplicationDelegate
+  method:(applicationShouldTerminate:(id)sender)
+  resultType:(:int)
+  body:
+  (declare (ignore sender))
+  (application-shoud-terminate)]
 
 
 ;;;------------------------------------------------------------
@@ -817,6 +827,11 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:<bool>)
   body:YES]
 
+@[MclguiView
+  method:(isOpaque)
+  resultType:(:<bool>)
+  body:YES]
+
 (defun *nsrect-to-nsrect (prect)
   #+ccl (make-nsrect 
          :x (ccl:pref prect :<nsr>ect.origin.x)
@@ -966,7 +981,10 @@ DO:             Evaluates the BODY in a lexical environment where
 @[NSObject subClass:MclguiEvaluator
            slots:((thunk :initform nil
                          :initarg :think
-                         :accessor evaluator-thunk))]
+                         :accessor evaluator-thunk)
+                  (source :initform nil
+                          :initarg :source ; for debugging
+                          :accessor evaluator-source))]
 
 @[MclguiEvaluator
   method:(evaluate)
