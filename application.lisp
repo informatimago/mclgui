@@ -239,10 +239,10 @@ FORM:           A symbol, function or lisp form.
 ")
   (:method ((application t) form)
     (let ((evaluator [[MclguiEvaluator alloc] init]))
-      (setf (evaluator-thunk evaluator)
-            (typecase form
-              ((or symbol cl:function) form)
-              (otherwise               (lambda () (eval form)))))
+      (setf (evaluator-thunk evaluator) (typecase form
+                                          ((or symbol cl:function) form)
+                                          (otherwise   (lambda () (eval form))))
+            (evaluator-source evaluator) form)
       (on-main-thread [evaluator evaluate])
       [evaluator autorelease]))
   (:method ((application lisp-development-system) form)
@@ -269,7 +269,6 @@ FORM:           A symbol, function or lisp form.
 
 ;; (application-eval-enqueue *application* '(invoke-debugger (make-condition 'error)))
 ;; (setf (evaluator-thunk *run-loop-evaluator*) (function run-loop-task))
-
 
 (defun initialize-run-loop-evaluator ()
   (when *run-loop-timer*
