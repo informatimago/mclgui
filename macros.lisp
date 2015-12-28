@@ -58,6 +58,32 @@ DO:             Destructively add the ELEMENT to the LIST-PLACE in the
 "
   `(appendf ,list-place (list ,element)))
 
+(defmacro add-new-to-list (list-place element &environment environment)
+  "
+DO:             Destructively add the ELEMENT to the LIST-PLACE in the
+                last position if it is not already in the list.
+"
+  (multiple-value-bind (vars vals store-vars writer-form reader-form)
+      (get-setf-expansion list-place environment)
+    (when (cdr store-vars)
+      (error "Can't expand this."))
+    (let ((vstore   (car store-vars))
+          (velement (gensym))
+          (vcell    (gensym)))
+      `(let* (,@(mapcar (function list) vars vals)
+              (,vstore ,reader-form)
+              (,velement ,element))
+         (if ,vstore
+             (loop
+               :for ,vcell :on ,vstore
+               :do (cond
+                     ((eql ,velement (car ,vcell))
+                      (loop-finish))
+                     ((null (cdr ,vcell))
+                      (setf (cdr ,vcell) (list ,velement))
+                      (loop-finish))))
+             (setf ,vstore (list ,velement)))
+         ,writer-form))))
 
 (defmacro delete-from-list (list-place element)
   "
