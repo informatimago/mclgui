@@ -56,11 +56,13 @@
       value
       (error 'type-error :datum value :expected-type type)))
 
+(declaim (inline signed-byte-16-p))
 (defun signed-byte-16-p (value)
   (declare (stepper disable))
   (and (integerp value) (<= #x-8000 value #x7fff)))
 
 
+(declaim (inline make-point))
 (defun make-point (h &optional v)
   "
 Points are couples of coordinates in the range [-32768,+32767].
