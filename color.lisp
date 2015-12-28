@@ -129,11 +129,11 @@ RGB colors into Macintosh color-table entries, see Inside Macintosh.
               [nscolor alphaComponent]))
 
 (defmethod unwrap ((self color))
-  (unwrapping self
-    [NSColor colorWithCalibratedRed: (cgfloat (%color-red self))
-             green: (cgfloat (%color-green self))
-             blue:  (cgfloat (%color-blue self))
-             alpha: (cgfloat (%color-alpha self))]))
+  ;; unwrapping self
+  [NSColor colorWithCalibratedRed: (cgfloat (%color-red self))
+           green: (cgfloat (%color-green self))
+           blue:  (cgfloat (%color-blue self))
+           alpha: (cgfloat (%color-alpha self))])
 
 
 
