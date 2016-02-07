@@ -45,7 +45,7 @@
                "alexandria"
                "split-sequence"
                "com.informatimago.objcl"
-               "com.informatimago.clext"   ; closer-weak: wrapper.lisp uses weak lists
+               "com.informatimago.clext" ; closer-weak: wrapper.lisp uses weak lists
                ;; While developping:
                "com.informatimago.common-lisp.cesarum")
   :components ((:file "cocoa"
@@ -71,8 +71,9 @@
                 :depends-on ("packages"))
 
                (:file "process"
-                :depends-on ("packages" "mailbox"
-                                        "debug"))
+                :depends-on ("packages"
+                             "mailbox"
+                             "debug"))
 
                (:file "variables"
                 :depends-on ("packages" "point"))
@@ -135,7 +136,8 @@
                (:file "menu"
                 :depends-on ("packages" 
                              "macros" "variables" "color"
-                             "point" "font" "wrapper" "notification" "view-classes"))
+                             "point" "font" "wrapper" "notification" "view-classes"
+                             "application"))
 
                (:file "window-menu-item"
                 :depends-on ("packages" 
@@ -149,12 +151,13 @@
                              "wrapper"))
 
                (:file "view"
-                :depends-on ("packages" "process" 
-                                        "macros" "variables" "color"
-                                        "point" "region" "font" "pen" 
-                                        "wrapper" "view-classes" "objc-classes"
-                                        "region-view"
-                                        #-ccl-1.10 "cg"))
+                :depends-on ("packages"
+                             "process" 
+                             "macros" "variables" "color"
+                             "point" "region" "font" "pen" 
+                             "wrapper" "view-classes" "objc-classes"
+                             "region-view"
+                             #-ccl-1.10 "cg"))
 
                (:file "view-stream"
                 :depends-on ("packages" 
@@ -162,14 +165,15 @@
                              "view-classes" "view" "graphics"))
 
                (:file "window"
-                :depends-on ("packages" "process"
-                                        "macros" "variables" "color"
-                                        "point" "region" "font"
-                                        "objc-classes" "objc-region-path"
-                                        "view-classes"
-                                        "wrapper" "view" "notification"
-                                        "menu"
-                                        #-ccl-1.10 "cg"))
+                :depends-on ("packages"
+                             "process"
+                             "macros" "variables" "color"
+                             "point" "region" "font"
+                             "objc-classes" "objc-region-path"
+                             "view-classes"
+                             "wrapper" "view" "notification"
+                             "menu"
+                             #-ccl-1.10 "cg"))
 
                (:file "fred-window"
                 :depends-on ("packages" 
@@ -364,9 +368,10 @@
                              "event" "key-handler-mixin"))
 
                (:file "window-event"
-                :depends-on ("packages" "process"
-                                        "macros" "variables" "point" "system" "view-classes" "window"
-                                        "view-event" "event" "application"))
+                :depends-on ("packages"
+                             "process"
+                             "macros" "variables" "point" "system" "view-classes" "window"
+                             "view-event" "event" "application"))
 
                
                (:file "cursor"

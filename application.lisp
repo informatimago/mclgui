@@ -45,7 +45,7 @@
 
 #+ccl
 (progn
-  (defvar *application-name* nil)
+  (defvar *application-name* "App")
   (defmethod application-name ((application ccl::application))
     *application-name*)
   (defmethod (setf application-name) (new-name (application ccl::application))
@@ -55,7 +55,7 @@
   ((name :initform nil :initarg :name :accessor application-name
          :documentation "
 RETURN:         The name of the application (a string). The default
-                value is NIL.
+                value is \"App\".
 
 APPLICATION:    The application.  MCL standard event handling always
                 uses the value of *APPLICATION*.

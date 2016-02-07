@@ -41,54 +41,54 @@
 (in-package "MCLGUI")
 
 (defparameter *groups*
-  (quote (("Points"       "point.lisp")
-          ("Fonts"        "font.lisp")
-          ("Menus"        "menu.lisp")
-          ("Views"        "view-classes.lisp"
-                          "view.lisp")
-          ("Windows"      "window.lisp"
-                          "window-menu-item.lisp")
-          ("Dialogs"      "dialog.lisp"
-                          "get-string-dialog.lisp"
-                          "message-dialog.lisp"
-                          "select-dialog.lisp"
-                          "y-or-n-dialog.lisp")
-          ("Dialog Items" "dialog-item.lisp"
-                          "button-dialog-item.lisp"
-                          "check-box-dialog-item.lisp"
-                          "control-dialog-item.lisp"
-                          "default-button-mixin.lisp"
-                          "editable-text-dialog-item.lisp"
-                          "focus-rect-mixin.lisp"
-                          "pop-up-menu-dialog-item.lisp"
-                          "radio-button-dialog-item.lisp"
-                          "scroll-bar-dialog-item.lisp"
-                          "sequence-dialog-item.lisp"
-                          "static-text-dialog-item.lisp"
-                          "table-dialog-item.lisp"
-                          "scroller.lisp")
-          ("Colors"       "color.lisp")
-          ("Events"       "event.lisp"
-                          "view-event.lisp"
-                          "window-event.lisp"
-                          "key-handler-mixin.lisp"
-                          "eval.lisp"
-                          "cursor.lisp")
-          ("Clipboard"    "scrap.lisp")
-          ("Apple Events" "application.lisp")
-          ("Quickdraw"    "region.lisp"
-                          "pattern.lisp"
-                          "quickdraw.lisp"
-                          "../pw-kernel/pw-graphics/controls/pw-graphics.lisp")
-          ("Files"        "file.lisp")
-          ("Divers"       "macros.lisp"
-                          "mclgui.lisp"
-                          "package.lisp"
-                          "system.lisp"
-                          "wrapper.lisp"
-                          "objc-classes.lisp"
-                          "notification.lisp"
-                          "variables.lisp"))))
+  (cl:quote (("Points"       "point.lisp")
+             ("Fonts"        "font.lisp")
+             ("Menus"        "menu.lisp")
+             ("Views"        "view-classes.lisp"
+                             "view.lisp")
+             ("Windows"      "window.lisp"
+                             "window-menu-item.lisp")
+             ("Dialogs"      "dialog.lisp"
+                             "get-string-dialog.lisp"
+                             "message-dialog.lisp"
+                             "select-dialog.lisp"
+                             "y-or-n-dialog.lisp")
+             ("Dialog Items" "dialog-item.lisp"
+                             "button-dialog-item.lisp"
+                             "check-box-dialog-item.lisp"
+                             "control-dialog-item.lisp"
+                             "default-button-mixin.lisp"
+                             "editable-text-dialog-item.lisp"
+                             "focus-rect-mixin.lisp"
+                             "pop-up-menu-dialog-item.lisp"
+                             "radio-button-dialog-item.lisp"
+                             "scroll-bar-dialog-item.lisp"
+                             "sequence-dialog-item.lisp"
+                             "static-text-dialog-item.lisp"
+                             "table-dialog-item.lisp"
+                             "scroller.lisp")
+             ("Colors"       "color.lisp")
+             ("Events"       "event.lisp"
+                             "view-event.lisp"
+                             "window-event.lisp"
+                             "key-handler-mixin.lisp"
+                             "eval.lisp"
+                             "cursor.lisp")
+             ("Clipboard"    "scrap.lisp")
+             ("Apple Events" "application.lisp")
+             ("Quickdraw"    "region.lisp"
+                             "pattern.lisp"
+                             "quickdraw.lisp"
+                             "../pw-kernel/pw-graphics/controls/pw-graphics.lisp")
+             ("Files"        "file.lisp")
+             ("Divers"       "macros.lisp"
+                             "mclgui.lisp"
+                             "package.lisp"
+                             "system.lisp"
+                             "wrapper.lisp"
+                             "objc-classes.lisp"
+                             "notification.lisp"
+                             "variables.lisp"))))
 
 ;; src/mclgui/dump.lisp
 ;; src/mclgui/graphics.lisp

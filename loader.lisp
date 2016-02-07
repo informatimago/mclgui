@@ -66,6 +66,14 @@
 (cd   (translate-logical-pathname #P"MCLGUI:"))
 (push (translate-logical-pathname #P"MCLGUI:") asdf:*central-registry*)
 ;; (pop asdf:*central-registry*)
+
+(defun remove-object-files ()
+ (mapc 'delete-file
+       (remove-if (lambda (path) (and (null (pathname-name path)) (null (pathname-type path))))
+                  (directory (merge-pathnames ".cache/common-lisp/ccl-1.11-f96-macosx-x64/**/*.*"
+                                              (user-homedir-pathname))))))
+(remove-object-files)
+
 (ql:quickload :mclgui)
 
 (ui:initialize)
@@ -76,4 +84,5 @@
   (load "layout")
   (load "scratch/sdi")
   (in-package "MCLGUI")
-  (print '(test-text-box)))
+  (print '(ui::on-main-thread (ui::test-text-box)))
+  (values))

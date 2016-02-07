@@ -96,8 +96,8 @@
 
 
 (defpackage "MCLGUI"
-  ;; (:use "COMMON-LISP-STEPPER")
-  (:use "COMMON-LISP")
+  (:use "COMMON-LISP-STEPPER")
+  ;; (:use "COMMON-LISP")
   (:use "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.SIMPLE-TEST")
   (:use "TRIVIAL-GRAY-STREAMS" "CLOSER-MOP" "SPLIT-SEQUENCE")
   (:use "COM.INFORMATIMAGO.COMMON-LISP.LISP-SEXP.SOURCE-FORM"
@@ -112,7 +112,7 @@
   (:import-from "COM.INFORMATIMAGO.OCLO"  "*NULL*" "NULLP")
   (:import-from "COM.INFORMATIMAGO.OBJCL" "YES" "NO")
 
-  (:export ; debugging
+  (:export                              ; debugging
    "NIY" "UIWARN" "FORMAT-TRACE")
 
   (:export

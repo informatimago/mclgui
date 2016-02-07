@@ -72,9 +72,9 @@
       (view-draw-contents text))))
 
 (defun make-key-window ()
-  (make-instance 'key-window
-                 :view-size #@(300 200)
-                 :window-title "Key Window"))
+  (on-main-thread/sync (make-instance 'key-window
+                                      :view-size #@(300 200)
+                                      :window-title "Key Window")))
 
 ;;;; THE END ;;;;
 

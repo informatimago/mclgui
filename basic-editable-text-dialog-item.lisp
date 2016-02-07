@@ -84,7 +84,8 @@
   #+debug-view (format-trace '(view-click-event-handler basic-editable-text-dialog-item) :where (point-to-list where) :item item)
   ;; (with-handle (texth item)
   ;;   [texth superMouseDown])
-  (call-next-method)
+  (let ((*step-mode* :trace))
+    (call-next-method))
   item)
 
 

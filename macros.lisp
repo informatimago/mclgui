@@ -169,10 +169,10 @@ RETURN:         A form building a plist of slot values.
             :for slot :in slots
             :collect  (if (symbolp slot)
                           (intern (symbol-name slot) "KEYWORD")
-                          `(quote ,(first slot)))
+                          `(cl:quote ,(first slot)))
             :collect  (if (symbolp slot)
-                        `(ignore-errors (slot-value ,ovar ',slot))
-                        `(ignore-errors ,(second slot)))))))
+                          `(ignore-errors (slot-value ,ovar ',slot))
+                          `(ignore-errors ,(second slot)))))))
 
 (defgeneric slots-for-print (object)
   (:documentation "Returns a plist of slots.")

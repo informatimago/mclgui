@@ -61,7 +61,7 @@
 
 (defun initialize/sdi ()
   (when *w* (window-close *w*))
-  (setf *w* (make-instance 'sdi-window :window-title "Test")))
+  (setf *w* (on-main-thread/sync (make-instance 'sdi-window :window-title "Test"))))
 
 
 (defgeneric first-responder (w)
@@ -258,7 +258,7 @@
     (draw-view-frame item)))
 
 
-(defun test-text-box ()
+(defun test-text-box (&optional (out *standard-output*))
   (initialize/sdi)
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
   (add-subviews *w*
@@ -273,21 +273,21 @@
                 (make-instance
                  'color-box 
                  :color *blue-color*
-                 :view-position (make-point 18 8)
+                 :view-position (make-point 218 8)
                  :view-size     (make-point 104 24)
                  :view-nick-name "blue 1")
 
                 (make-instance
                  'color-box 
                  :color *blue-color*
-                 :view-position (make-point 18 28)
+                 :view-position (make-point 218 28)
                  :view-size     (make-point 104 24)
                  :view-nick-name "blue 2")
 
                 (make-instance
                  'color-box 
                  :color *blue-color*
-                 :view-position (make-point 18 48)
+                 :view-position (make-point 218 48)
                  :view-size     (make-point 104 24)
                  :view-nick-name "blue 3")
 
@@ -296,7 +296,8 @@
                  'boxed-static-text-dialog-item
                  :dialog-item-text "STATIC TEXT"
                  :dialog-item-action (lambda (item)
-                                       (format t "~&~S~%~S~2%" item (dialog-item-text item)))
+                                       (format out "~&~S~%~S~2%"
+                                               item (dialog-item-text item)))
                  :view-position (make-point 20 10)
                  :view-size     (make-point 100 20)
                  :view-nick-name "static text")
@@ -305,7 +306,8 @@
                  'boxed-editable-text-dialog-item
                  :dialog-item-text "EDIT IT"
                  :dialog-item-action (lambda (item)
-                                       (format t "~&~S~%~S~2%" item (dialog-item-text item)))
+                                       (format out "~&~S~%~S~2%"
+                                               item (dialog-item-text item)))
                  :view-position (make-point 20 30)
                  :view-size     (make-point 100 20)
                  ::view-nick-name "edit text")
@@ -314,7 +316,8 @@
                  'boxed-editable-text-dialog-item
                  :dialog-item-text "Another edit"
                  :dialog-item-action (lambda (item)
-                                       (format t "~&~S~%~S~2%" item (dialog-item-text item)))
+                                       (format out "~&~S~%~S~2%"
+                                               item (dialog-item-text item)))
                  :view-position (make-point 20 50)
                  :view-size     (make-point 100 20)
                  :view-nick-name "another edit text")
@@ -456,7 +459,9 @@
     (view-subviews *w*))
 
 
-  (defparameter *w* (make-instance 'window :view-size (make-point 200 100) :view-position (make-point 200 100)))
+  (defparameter *w* (on-main-thread/sync (make-instance 'window
+                                                        :view-size (make-point 200 100)
+                                                        :view-position (make-point 200 100))))
 
   (add-subviews *w* (make-))
   (with-focused-view *w*
