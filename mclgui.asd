@@ -58,6 +58,9 @@
                (:file "packages"
                 :depends-on ("cocoa"))
 
+               (:file "readtable"
+                :depends-on ("packages"))
+
                (:file "mutex"
                 :depends-on ("packages"))
 
@@ -79,7 +82,7 @@
                 :depends-on ("packages" "point"))
                
                (:file "system"
-                :depends-on ("packages" "debug"))
+                :depends-on ("packages" "readtable" "debug"))
 
                (:file "circular"
                 :depends-on ("packages"))
@@ -97,7 +100,7 @@
 
                (:file "objc-classes"
                 :depends-on ("packages"
-                             "macros" "wrapper" "variables" "point" "rect"
+                             "readtable" "macros" "wrapper" "variables" "point" "rect"
                              "system" "mac-event" "debug"))
                
                (:file "graphics"
@@ -121,7 +124,7 @@
 
                (:file "font"
                 :depends-on ("packages" 
-                             "macros" "variables" "system"
+                             "readtable" "macros" "variables" "system"
                              "point" "objc-classes" "color"
                              "wrapper"))
 

@@ -31,9 +31,8 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 (in-package "MCLGUI")
-(objcl:enable-objcl-reader-macros)
 
 
 
@@ -374,7 +373,7 @@
      :where     (nsscreen-to-screen-point
                  (if (or (= what mouse-down) (= what mouse-up))
                      (let ((winh [nsevent window])
-                           (pt (get-nspoint [nsevent locationInWindow])))
+                           (pt   (get-nspoint [nsevent locationInWindow])))
                        (if (nullp winh)
                            pt
                            (nswindow-to-nsscreen-point winh pt)))

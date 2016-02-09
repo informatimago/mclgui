@@ -33,6 +33,12 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 
+
+(defpackage "MCLGUI.READTABLE"
+  (:use "COMMON-LISP")
+  (:export "ENABLE-OBJCL+CCL-READER-MACROS"))
+
+
 (defpackage "MCLGUI.MUTEX"
   (:use "COMMON-LISP")
   (:export "WITH-MUTEX" "MAKE-MUTEX"))
@@ -40,7 +46,8 @@
 
 (defpackage "MCLGUI.DEBUGGING"
   (:use "COMMON-LISP"
-        "MCLGUI.MUTEX")
+        "MCLGUI.MUTEX"
+        "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.UTILITY")
   (:export "FORMAT-TRACE" "*MCLGUI-TRACE*" "*MCLGUI-PACKAGE*"
            "UNFREQUENTLY" "NIY" "UIWARN" "TIME/STDOUT"
            "OBJECT-IDENTITY" "FUNCTION-ADDRESS"

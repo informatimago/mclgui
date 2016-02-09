@@ -101,20 +101,6 @@
                ,@body)))))
 
 
-
-(defun object-identity (object)
-  "
-RETURN:         A string containing the object identity as printed by
-                PRINT-UNREADABLE-OBJECT.
-"
-  (declare (stepper disable))
-  (let ((*print-readably* nil))
-    (let ((ident
-           (with-output-to-string (stream)
-             (print-unreadable-object (object stream :type nil :identity t)))))
-      (subseq ident 3 (1- (length ident))))))
-
-
 (defun function-address (function)
   (read-from-string (object-identity function)))
 
