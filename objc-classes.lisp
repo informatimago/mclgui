@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Defines a few Objective-C/CLOS classes.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -274,11 +274,11 @@
 (defparameter *modifier-map*
   `((,#$NSAlphaShiftKeyMask . ,alpha-lock)
     (,#$NSShiftKeyMask      . ,shift-key)
-    (,#$NSControlKeyMask    . 0) 
-    (,#$NSAlternateKeyMask  . ,option-key) 
-    (,#$NSCommandKeyMask    . ,cmd-key) 
-    (,#$NSNumericPadKeyMask . 0) 
-    (,#$NSHelpKeyMask       . 0) 
+    (,#$NSControlKeyMask    . 0)
+    (,#$NSAlternateKeyMask  . ,option-key)
+    (,#$NSCommandKeyMask    . ,cmd-key)
+    (,#$NSNumericPadKeyMask . 0)
+    (,#$NSHelpKeyMask       . 0)
     (,#$NSFunctionKeyMask   . 0)))
 
 (defun nsmodifier-to-macmodifier (nsmodifier)
@@ -328,7 +328,7 @@
 (defun nsevent-to-event (nsevent)
   (check-type nsevent ns:ns-event)
   ;; (format-trace 'wrap nsevent)
-  (let ((what (case [nsevent type]
+  (let ((what (case [(cl:the ns:ns-event nsevent) type]
                 ((#.#$NSLeftMouseDown)         mouse-down)
                 ((#.#$NSLeftMouseUp)           mouse-up)
                 ((#.#$NSRightMouseDown)        mouse-down)
@@ -404,11 +404,11 @@
 
 
 ;;;------------------------------------------------------------
-;;; coordinates 
+;;; coordinates
 
 (defmacro frame (call)
   (let ((vframe (gensym)))
-    `(oclo:slet ((,vframe ,call)) 
+    `(oclo:slet ((,vframe ,call))
        (values
         (ns:ns-rect-x ,vframe)
         (ns:ns-rect-y ,vframe)
@@ -418,7 +418,7 @@
 
 ;; wx = sx + vh
 ;; wy = sy - vv - sv
-;; 
+;;
 ;; vh = wx - sx
 ;; vv = sy - wy - sv
 
@@ -833,10 +833,10 @@ DO:             Evaluates the BODY in a lexical environment where
   body:YES]
 
 (defun *nsrect-to-nsrect (prect)
-  #+ccl (make-nsrect 
+  #+ccl (make-nsrect
          :x (ccl:pref prect :<nsr>ect.origin.x)
-         :y (ccl:pref prect :<nsr>ect.origin.y) 
-         :width (ccl:pref prect :<nsr>ect.size.width) 
+         :y (ccl:pref prect :<nsr>ect.origin.y)
+         :width (ccl:pref prect :<nsr>ect.size.width)
          :height (ccl:pref prect :<nsr>ect.size.height))
   #-ccl prect)
 
@@ -850,7 +850,7 @@ DO:             Evaluates the BODY in a lexical environment where
            (visrgn (rect-region (nsrect-to-rect nsrect))))
       (when window
         #+debug-objc (with-handle (winh window)
-                       (format-trace "progn (-[MclguiView drawRect:]" 
+                       (format-trace "progn (-[MclguiView drawRect:]"
                                      [winh viewsNeedDisplay] [[winh contentView] needsDisplay]
                                      nsrect self))
         #+debug-objc (progn
@@ -951,21 +951,21 @@ DO:             Evaluates the BODY in a lexical environment where
 ;;   body:
 ;;   (format-trace  "-[MclguiTextField acceptsFirstResponder]" self)
 ;;   YES]
-;; 
+;;
 ;; @[MclguiTextField
 ;;   method:(becomeFirstResponder)
 ;;   resultType:(:<bool>)
 ;;   body:
 ;;   (format-trace  "-[MclguiTextField becomeFirstResponder]" self
 ;;                  [super becomeFirstResponder])]
-;; 
+;;
 ;; @[MclguiTextField
 ;;   method:(resignFirstResponder)
 ;;   resultType:(:<bool>)
 ;;   body:
 ;;   (format-trace  "-[MclguiTextField resignFirstResponder]" self
 ;;                  [super resignFirstResponder])]
-;; 
+;;
 ;; @[MclguiTextField
 ;;   method:(keyDown:(:id)event)
 ;;   resultType:(:void)
@@ -1006,7 +1006,7 @@ DO:             Evaluates the BODY in a lexical environment where
         (cffi:with-foreign-object (classes :pointer num-classes)
           (#_objc_getClassList classes num-classes)
           (loop
-            :for i :below num-classes 
+            :for i :below num-classes
             :for subclass = (cffi:mem-aref classes :pointer i)
             :when (loop
                     :for superclass = (#_class_getSuperclass subclass)
@@ -1018,8 +1018,19 @@ DO:             Evaluates the BODY in a lexical environment where
                                          superclass)))
               :collect subclass)))))
 
-;; (class-get-subclasses 'ns:ns-object)
 
+;; (class-get-subclasses 'ns:ns-object)
 ;; (pushnew :debug-objc *features*)
 ;; (setf *features* (remove :debug-objc *features*))
+
+#-(and) (progn
+          '[nsevent locationInWindow]
+          (objc:send nsevent 'location-in-window)
+          (com.informatimago.objective-c.lower:send nsevent 'location-in-window)
+          (macroexpand-1 '(com.informatimago.objective-c.lower:send nsevent 'location-in-window))
+          '[nsevent locationInWindow]
+          (macroexpand-1 '(com.informatimago.objective-c.lower:send nsevent 'location-in-window))
+          (com.informatimago.objective-c.lower:stret (com.informatimago.objective-c.lower:send nsevent 'location-in-window))
+          t)
+
 ;;;; THE END ;;;;
