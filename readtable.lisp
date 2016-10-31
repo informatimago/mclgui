@@ -37,7 +37,9 @@
   `(progn
      (eval-when (:compile-toplevel :load-toplevel :execute)
        #+(and ccl darwin)
-       (setf *readtable* (copy-readtable ccl::%initial-readtable%))
+       (if mclgui.readtable:*objc-readtable*
+           (setf *readtable* (copy-readtable mclgui.readtable:*objc-readtable*))
+           (warn "Didn't catch the *OBJC-READTABLE*!"))
        #-(and ccl darwin)
        (error "We need a readtable for CCL specific dispatching reader macro #$"))
      (objcl:enable-objcl-reader-macros)))
