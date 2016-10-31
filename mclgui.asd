@@ -49,14 +49,14 @@
                ;; While developping:
                "com.informatimago.common-lisp.cesarum")
   :components ((:file "cocoa"
-                :depends-on ())
+                :depends-on ("packages"))
 
                #-ccl-1.10 
                (:file "cg"
                 :depends-on ())
 
                (:file "packages"
-                :depends-on ("cocoa"))
+                :depends-on ())
 
                (:file "readtable"
                 :depends-on ("packages"))
