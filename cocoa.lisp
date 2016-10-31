@@ -32,9 +32,24 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 
-#+(and ccl darwin)
+;; We'll try to catch in this variable the objective-c reader macros
+;; installed by ccl require cocoa.
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar mclgui.readtable:*objc-readtable* nil))
+
+#+(and ccl darwin); for now, not on non-darwin
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setf *readtable*
+        #-(and ccl darwin)
+        (copy-readtable nil)
+        #+(and ccl darwin) ; #+ccl (require :cocoa) needs the botched readtable.
+        (copy-readtable ccl::%initial-readtable%))
   (require :cocoa)
-  (pushnew :cocoa *features*))
+  (unless mclgui.readtable:*objc-readtable*
+    (setf mclgui.readtable:*objc-readtable* (copy-readtable *readtable*)))
+  (pushnew :objc-support *features*))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setf *readtable* (copy-readtable nil)))
 
 ;;;; THE END ;;;;
