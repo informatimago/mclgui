@@ -36,7 +36,8 @@
 
 (defpackage "MCLGUI.READTABLE"
   (:use "COMMON-LISP")
-  (:export "ENABLE-OBJCL+CCL-READER-MACROS"))
+  (:export "ENABLE-OBJCL+CCL-READER-MACROS"
+           "*OBJC-READTABLE*"))
 
 
 (defpackage "MCLGUI.MUTEX"
