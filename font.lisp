@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Defines the Font API.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -48,7 +48,7 @@
          (end    (or end len)))
     (check-type start fixnum "a start index in the string")
     (check-type end   fixnum "an end position in the string")
-    (flet ((are (a i) (error "Array index ~S out of bounds for ~S." i a)))    
+    (flet ((are (a i) (error "Array index ~S out of bounds for ~S." i a)))
       (unless (<= 0 end len)   (are string end))
       (unless (<= 0 start len) (are string start))
       (unless (<= start end)
@@ -147,7 +147,7 @@ RETURN:         A list of FONT-DESCRIPTION lists for members of the font FAMILY:
 ;;  (16 . :narrow) (32 . :expanded) (64 . :condensed) (128 . :small-caps)
 ;;  (256 . :poster) (512 . :compressed) (1024 . :fixed-pitch)
 ;;  (16777216 . :unitalic))
-;; 
+;;
 ;; *style-alist*
 ;; ((:plain . 0) (:bold . 1) (:italic . 2) (:underline . 4) (:outline . 8)
 ;;  (:shadow . 16) (:condense . 32) (:extend . 64))
@@ -296,7 +296,7 @@ EXAMPLE:        (style-to-font-traits '(:italic :bold :underline :outline :exten
 ;;;
 ;;; 0          system font
 ;;; 1          application font
-;;; 2 .. 24    pre-defined font numbers 
+;;; 2 .. 24    pre-defined font numbers
 ;;; 25 .. 127  apple fonts
 ;;; 128 .. 255 third-party fonts
 ;;;
@@ -396,7 +396,7 @@ EXAMPLE:        (style-to-font-traits '(:italic :bold :underline :outline :exten
 ;; |      txFont                  |   txFace      |   color       |
 ;; +------------------------------+---------------+---------------+
 ;;  31                          16 15            8 7             0
-;; 
+;;
 ;; Mode-size layout:
 ;; +------------------------------+-------------------------------+
 ;; |      txMode                  |         txSize                |
@@ -417,7 +417,7 @@ RETURN: the five font values: font, size, mode, face and color.
          (ff-code   (ldb (byte 8 8) ff-code))
          (face      (if (= ff-code 0)
                         :plain
-                        (loop 
+                        (loop
                           :for (style . code) :in *style-alist*
                           :when (plusp (logand code ff-code))
                           :collect style))))
@@ -531,14 +531,14 @@ OLD-MS:         The old mode-size code. A mode-size code is a 32-bit
     (dolist (item items)
       (cond
         ((realp item)
-         (when size 
-           (error 'invalid-font-spec-error :font-spec font-spec 
+         (when size
+           (error 'invalid-font-spec-error :font-spec font-spec
                   :reason :duplicate-size  :option item))
          (setf size item
                size-mask -1))
         ((or (stringp item) (and (symbolp item) (not (keywordp item))))
          (when font
-           (error 'invalid-font-spec-error :font-spec font-spec 
+           (error 'invalid-font-spec-error :font-spec font-spec
                   :reason :duplicate-name  :option item))
          (setf font-mask -1)
          (setf font (font-number-from-name item)))
@@ -546,25 +546,25 @@ OLD-MS:         The old mode-size code. A mode-size code is a 32-bit
          (ecase (first item)
            (:color-index
             (when color
-              (error 'invalid-font-spec-error :font-spec font-spec 
+              (error 'invalid-font-spec-error :font-spec font-spec
                      :reason :duplicate-color  :option item))
             (setf color (second item)
                   color-mask 255)
             (unless (and (fixnump color)
                          (<= 0 color 255))
-              (error 'invalid-font-spec-error :font-spec font-spec 
+              (error 'invalid-font-spec-error :font-spec font-spec
                      :reason :invalid-color  :option item)))
            (:color
             (when color
-              (error 'invalid-font-spec-error :font-spec font-spec 
+              (error 'invalid-font-spec-error :font-spec font-spec
                      :reason :duplicate-color  :option item))
             (setf color (color->ff-index (second item))
                   color-mask 255))))
-        ((let ((temp (xfer-mode-arg item :if-does-not-exist nil)))  
+        ((let ((temp (xfer-mode-arg item :if-does-not-exist nil)))
            (when temp
              (if mode
                  (unless (eql item :plain)
-                   (error 'invalid-font-spec-error :font-spec font-spec 
+                   (error 'invalid-font-spec-error :font-spec font-spec
                           :reason :duplicate-text-mode  :option item))
                  (setf mode temp
                        mode-mask -1)))))
@@ -577,7 +577,7 @@ OLD-MS:         The old mode-size code. A mode-size code is a 32-bit
                (setf face      (logior code (or face 0))
                      face-mask (logior code face-mask))))))
         (t
-         (error 'invalid-font-spec-error :font-spec font-spec 
+         (error 'invalid-font-spec-error :font-spec font-spec
                 :reason :invalid-option :option item))))
     (let ((font  (or font  (point-v old-ff)))
           (face  (if (and reset-style-p face)
@@ -871,7 +871,7 @@ MS:             Mode/Size code.
 (defun grafport-font-codes-with-color ()
   #-(and)
   (multiple-value-bind (ff ms)(grafport-font-codes)
-    (let* ((foo (grafport-fore-color))) ;; 0 is black is 0    
+    (let* ((foo (grafport-fore-color))) ;; 0 is black is 0
       (if (not (zerop foo))
           (setf ff (logior (logand ff (lognot #xff)) (fred-palette-closest-entry foo))))
       (values ff ms)))
@@ -1023,7 +1023,7 @@ DO:             Change the view font codes of view.  The font/face
         NSShadowAttributeName          (objcl:lisp-string #$NSShadowAttributeName)
         NSStrokeWidthAttributeName     (objcl:lisp-string #$NSStrokeWidthAttributeName)
         NSFontAttributeName            (objcl:lisp-string #$NSFontAttributeName))
-  ;; -- 
+  ;; --
   (setf *default-shadow* (make-shadow :blur-radius 2.0d0 :offset (make-nssize :width 2.0f0 :height 2.0f0)))
   (setf *font-traits*
         `((,#$NSItalicFontMask                  . :italic)

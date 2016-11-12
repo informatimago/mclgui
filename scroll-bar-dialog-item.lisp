@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Scroll Bar Dialog Item.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -47,7 +47,7 @@
                            :initform 0 ; #$scrollBarProc
                            )
    (direction              :initarg    :direction
-                           :reader     scroll-bar-direction)  
+                           :reader     scroll-bar-direction)
    (min                    :initarg    :min
                            :reader     scroll-bar-min
                            :documentation "The minimum setting of item.")
@@ -83,7 +83,7 @@ default value is NIL.
    (pane-splitter          :initform   nil
                            :accessor   pane-splitter)
    (pane-splitter-position :initform   nil
-                           :initarg    :pane-splitter 
+                           :initarg    :pane-splitter
                            :reader     pane-splitter-position)))
 
 
@@ -122,7 +122,7 @@ NEW-SCROLLEE: The new scrollee of item.
 
 
 (defclass pane-splitter (simple-view)
-  ((scrollee   :initarg :scrollee 
+  ((scrollee   :initarg :scrollee
                :reader   scroll-bar-scrollee)
    (direction  :initarg :direction
                :reader   scroll-bar-direction)
@@ -166,7 +166,7 @@ NEW-SCROLLEE: The new scrollee of item.
 
 (defmethod initialize-instance ((item scroll-bar-dialog-item) &rest initargs
                                 &key
-                                (min 0) 
+                                (min 0)
                                 (max (if t 10000 100))  ;; was + $scroll-bar-max $scroll-bar-max
                                 (setting 0)
                                 (direction :vertical) width length
@@ -206,7 +206,7 @@ NEW-SCROLLEE: The new scrollee of item.
                (case pane-splitter
                  (:left *left-ps-cursor*)
                  (t *right-ps-cursor*))))))
-    (let* ((splitter (make-instance (or pane-splitter-class 'pane-splitter) 
+    (let* ((splitter (make-instance (or pane-splitter-class 'pane-splitter)
                          :direction direction
                          :width width
                          :cursor pane-splitter-cursor
@@ -239,7 +239,7 @@ NEW-SCROLLEE: The new scrollee of item.
                       (set-view-position splitter view-position)
                       (setf view-position (make-point (+ p-h h) p-v)))
                     (progn
-                      (set-view-position splitter (+ p-h length) p-v)))))))))  
+                      (set-view-position splitter (+ p-h length) p-v)))))))))
   (apply #'call-next-method
          item
          :min min
@@ -318,7 +318,7 @@ NEW-SCROLLEE: The new scrollee of item.
         (mac-min (#_GetControlMinimum handle))
         (mac-max (#_GetControlMaximum handle))
         (min (scroll-bar-min scroll-bar))
-        (max (scroll-bar-max scroll-bar)))    
+        (max (scroll-bar-max scroll-bar)))
     (declare (fixnum mac-min mac-max))
     (when (and #|(osx-p)|# (not (scroll-bar-track-thumb-p scroll-bar))) ;(> (- mac-max mac-min) 3000)) ;; total kludge because osx sucks
       (if (and (/= 0 mac-setting)
@@ -400,15 +400,15 @@ NEW-SCROLLEE: The new scrollee of item.
           (#_Draw1Control handle)
           (#_ShowControl handle))
       (if (window-active-p window)
-          (progn          
+          (progn
             (if (dialog-item-enabled-p item)
                 (#_activatecontrol handle)
-                (#_deactivatecontrol handle)))        
+                (#_deactivatecontrol handle)))
           (progn
             #-(and)
-            (multiple-value-bind (tl br) (scroll-bar-and-splitter-corners item)          
-              (rlet ((rect :rect :topLeft tl :botRight br))            
-                    (#_FrameRect rect)))          
+            (multiple-value-bind (tl br) (scroll-bar-and-splitter-corners item)
+              (rlet ((rect :rect :topLeft tl :botRight br))
+                    (#_FrameRect rect)))
             (#_deactivatecontrol handle))))))
 
 
@@ -461,14 +461,14 @@ NEW-SCROLLEE: The new scrollee of item.
         (with-focused-view container
           (if (not (#_iscontrolvisible handle))
                                         ; #_ShowControl is similarly naughty - why needed  when opening a bunch of fred windows quickly ?
-              (progn 
+              (progn
                 (#_showcontrol handle)
                 #-(and)
-                (multiple-value-bind (tl br) (scroll-bar-and-splitter-corners item)          
-                  (rlet ((rect :rect :topLeft tl :botRight br))            
+                (multiple-value-bind (tl br) (scroll-bar-and-splitter-corners item)
+                  (rlet ((rect :rect :topLeft tl :botRight br))
                         (#_FrameRect rect))))
                                         ;(#_draw1control handle)
-              ) 
+              )
           (if (dialog-item-enabled-p item)
               (#_activatecontrol handle)
               (#_deactivatecontrol handle))
@@ -568,11 +568,11 @@ NEW-SCROLLEE: The new scrollee of item.
       (niy track-scroll-bar-thumb item)
       #-(and)
       (loop
-        (when (not (#_stilldown))          
+        (when (not (#_stilldown))
           (return))
         (setf mouse (view-mouse-position item))
         (when (eql mouse last-mouse)
-          (when (not (wait-mouse-up-or-moved))            
+          (when (not (wait-mouse-up-or-moved))
             (return))
           (setf mouse (view-mouse-position item)))
         (unless (eql mouse last-mouse)
@@ -589,11 +589,11 @@ NEW-SCROLLEE: The new scrollee of item.
       (unless (or real-time-tracking (not setting))
         (track-scroll-bar item setting :in-thumb)))))
 
-                                        
+
 (defgeneric track-scroll-bar (item value part)
   (:method ((item scroll-bar-dialog-item) value part)
     ;; Returns the new value for the scroll bar
-    (set-scroll-bar-setting 
+    (set-scroll-bar-setting
      item
      (case part
        (:in-up-button   (- value (scroll-bar-scroll-size item)))
@@ -621,7 +621,7 @@ NEW-SCROLLEE: The new scrollee of item.
   #-(and)
   (let* ((sb-handle (dialog-item-handle item))
          (part (#_TestControl sb-handle where)))
-    (with-timer      
+    (with-timer
         (cond ((eql part #.#$kcontrolIndicatorPart)  ;; thumb
                (if (scroll-bar-track-thumb-p item)
                    (track-scroll-bar-thumb item)
@@ -669,10 +669,10 @@ DIALOG-ITEM-ACTION-FUNCTION specified by the :dialog-item-action
 initialization argument is nil.  The scrollee argument is the value of
 \(scroll-bar-scrollee scroll-bar), as set by SET-SCROLL-BAR-SCROLLEE or
 the :scrollee initialization argument for SCROLL-BAR.  The default
-method does nothing. 
+method does nothing.
 
 Writing a scroll-bar-changed method is an easy way to cause user mouse
-clicks on a scroll-bar dialog item to update another view. 
+clicks on a scroll-bar dialog item to update another view.
 
 
 SCROLLEE:       A scroll-bar scrollee; what is scrolled by the dialog item.
@@ -704,11 +704,11 @@ SCROLL-BAR:     A scroll bar.
     (let ((handle (dialog-item-handle item)))
       (when handle
         (with-focused-view (view-container item)
-          (#_SetControlValue 
-           handle 
-           (mac-scroll-bar-setting 
-            new-value 
-            (scroll-bar-min item) 
+          (#_SetControlValue
+           handle
+           (mac-scroll-bar-setting
+            new-value
+            (scroll-bar-min item)
             (scroll-bar-max item))))))
     (setf (slot-value item 'setting) new-value))
   new-value)
@@ -879,7 +879,7 @@ NEW-LENGTH:     The new length of item.
                 ((and (eql dir :horizontal) (member pos '(:right t)))
                  (set-view-position splitter (make-point (+ (point-h bar-pos)
                                                             inner-length)
-                                                         (point-v bar-pos))))))))              
+                                                         (point-v bar-pos))))))))
     new-length))
 
 
@@ -969,12 +969,12 @@ NEW-VALUE:      The new width of item.
     (when splitter
       (set-view-container splitter new-container))
     (call-next-method)
-    (when (and new-container (not (eql old-container new-container))) 
+    (when (and new-container (not (eql old-container new-container)))
       (multiple-value-bind (tl br) (scroll-bar-and-splitter-corners item)
         (invalidate-corners new-container tl br)))))
 
 
-(defmethod set-view-position ((item scroll-bar-dialog-item) h &optional v)  
+(defmethod set-view-position ((item scroll-bar-dialog-item) h &optional v)
   (let ((pos (make-point h v))
         (splitter (pane-splitter item))
         (splitter-position (pane-splitter-position item)))
@@ -1025,7 +1025,7 @@ NEW-VALUE:      The new width of item.
           (when w
             (unless (window-active-p w)
               (multiple-value-bind (tl br) (scroll-bar-and-splitter-corners view)
-                (invalidate-corners 
+                (invalidate-corners
                  (view-container view) (add-points tl #@(1 1)) br t))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1085,13 +1085,13 @@ NEW-VALUE:      The new width of item.
                                          (:vertical (point-v new-mouse))
                                          (t (point-h new-mouse)))))
                      (in-range (and (<= min-pos pos max-pos)
-                                    (point<= #@(0 0) mouse-pos size))))                
+                                    (point<= #@(0 0) mouse-pos size))))
                 (when (and drawn  (or (not (eql new-pos pos))(not in-range)))
                   (funcall function pos)
                   (setq drawn (not drawn))
                   )
                 (setq pos new-pos mouse-pos new-mouse)
-                (when (and (not drawn) in-range)                  
+                (when (and (not drawn) in-range)
                   (setq drawn (not drawn))
                   (funcall function  pos)))
               ))
@@ -1117,7 +1117,7 @@ NEW-VALUE:      The new width of item.
               (setf min (1+ (point-h s-tl))
                     max (- (point-h s-br) 2)
                     min-pos (1+ (point-v s-tl))
-                    max-pos (- (point-v s-br) 2) 
+                    max-pos (- (point-v s-br) 2)
                     pos-accessor #'point-v
                     line-direction :horizontal)
               (setf min (1+ (point-v s-tl))
@@ -1130,7 +1130,7 @@ NEW-VALUE:      The new width of item.
                                         ; All this rigamarole is to convert from the window's coordinate system
                                         ; to the scrollee's and back again.
           (setf pos
-                (let ((pos (pane-splitter-outline-position 
+                (let ((pos (pane-splitter-outline-position
                             scrollee scroll-bar
                             (convert-coordinates mouse-pos container scrollee))))
                   (funcall pos-accessor
@@ -1147,11 +1147,11 @@ NEW-VALUE:      The new width of item.
             (multiple-value-setq (pos drawn)
               (track-and-draw container #'draw-line pos direction delta min-pos max-pos)))
                                         ; Convert back to scrollee's coordinate system
-          (setf pos (funcall pos-accessor (convert-coordinates 
+          (setf pos (funcall pos-accessor (convert-coordinates
                                            (if (eql direction :horizontal)
                                                (make-point pos 0)
                                                (make-point 0 pos))
-                                           container 
+                                           container
                                            scrollee)))
                                         ; And call the user method to actually do something.
           (split-pane scrollee scroll-bar pos direction drawn))))))
@@ -1295,7 +1295,7 @@ NEW-VALUE:      The new width of item.
                      ))
                   (t ; do it the old way on all other cases
                    (when delta
-                     (dotimes (count (abs delta)) 
+                     (dotimes (count (abs delta))
                        (track-scroll-bar scroll-bar (scroll-bar-setting scroll-bar)
                                          (if (minusp delta) :in-down-button :in-up-button))))))
             (setf res #$noerr)))))
@@ -1332,7 +1332,7 @@ NEW-VALUE:      The new width of item.
               (when w
                 (setf res (scroll-wheel-handler w delta direction wherep))
                 ))))
-    res     
+    res
     ))
 
 

@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    The view class.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
 ;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -73,8 +73,8 @@ VIEW:           A simple view.
 ;;     (make-point (- (round (ns:ns-rect-x frame-nsrect)) (point-h screen-pos))
 ;;                 (- (point-v screen-pos) (round (ns:ns-rect-y frame-nsrect))
 ;;                    (point-v size-point)))))
-;; 
-;; 
+;;
+;;
 ;; (defun view-to-nsview-origin (position size)
 ;;   "
 ;; RETURN: A NSPoint containing the origin of the nsview.
@@ -84,8 +84,8 @@ VIEW:           A simple view.
 ;;     (ns:make-ns-point (+ (point-h screen-pos) (point-h position))
 ;;                       (- (+ (point-v screen-pos) (point-v screen-siz))
 ;;                          (point-v position) (point-v size)))))
-;; 
-;; 
+;;
+;;
 ;; (defun view-to-nsview-frame (position size)
 ;;   "
 ;; RETURN: A NSRect containing the frame of the view.
@@ -136,7 +136,7 @@ VIEW:           A simple view.
 (defgeneric wptr (simple-view)
   (:documentation "
 The wptr generic function holds the pointer to a window record on the
-Macintosh heap. 
+Macintosh heap.
 This generic function returns a window pointer if the view is contained in a
 window, or nil if the view is not contained in a window.
 All views contained in a given window have the same wptr.
@@ -412,7 +412,7 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
     ;;                                                              (second x)
     ;;                                                              (first x)))
     ;;                                                        (ccl::backtrace-as-list)))
-    
+
     (labels ((call-it ()
                ;; reset the transform, a previous focus-view may have changed it.
                (refocus-view *current-view*)
@@ -625,7 +625,7 @@ NEW-CONTAINER:  The new container of the view.
     ;; changed AFTER the WPTR is changed.
     #+debug-views (format-trace 'set-view-container :view view :new-container new-container)
     (let ((old-container (view-container view)))
-      (unless (eql new-container old-container)    
+      (unless (eql new-container old-container)
         (when new-container
           (check-type new-container view)
           (when (or (eql new-container view)
@@ -664,7 +664,7 @@ NEW-CONTAINER:  The new container of the view.
             (if (and new-window (window-active-p new-window))
                 (view-activate-event-handler view)
                 (view-deactivate-event-handler view)))))))
-  
+
   (:method ((w window) new-container)
     (unless (null new-container)
       (error "Container must always be ~S for windows." nil))
@@ -715,7 +715,7 @@ SUBVIEWS:       A list of view or simple view, but not a window;
       (loop
         :for container = (view-container contained-view)
           :then (view-container container)
-        :while container 
+        :while container
           :thereis (eql container view))))
   (:method ((view null) contained-view)
     (declare (ignore contained-view))
@@ -974,9 +974,9 @@ ERASE-P:        A value indicating whether or not to add the
     (let* ((wptr (wptr view)))
       (when wptr
         (let* ((window (view-window view))
-               (view-clip-region (and window (view-clip-region view))))    
+               (view-clip-region (and window (view-clip-region view))))
           (when (and window view-clip-region)
-            (with-focused-view view         
+            (with-focused-view view
               (let* ((rgn *temp-rgn*)
                      (update-rgn *temp-rgn-2*)
                      ;; (window (view-window view)) ;; redundant - but why did it cause a problem????
@@ -988,7 +988,7 @@ ERASE-P:        A value indicating whether or not to add the
                   (when erase-rgn
                     (when offset (#_offsetrgn rgn (point-h offset)(point-v offset))) ; to window coords
                     (when erase-p
-                      (#_UnionRgn rgn erase-rgn erase-rgn))                   
+                      (#_UnionRgn rgn erase-rgn erase-rgn))
                     (get-window-updatergn wptr update-rgn)
                     (let ((offset (subtract-points #@(0 0) (view-position window))))
                       (#_OffsetRgn update-rgn (point-h offset)(point-v offset)))
@@ -999,7 +999,7 @@ ERASE-P:        A value indicating whether or not to add the
                     (let ((now-offset (subtract-points #@(0 0) offset)))
                       (#_offsetrgn rgn (point-h now-offset)(point-v now-offset)))))
                 (#_invalwindowrgn wptr rgn)
-                (when invalid-rgn                 
+                (when invalid-rgn
                   (let ((rgn3 *temp-rgn-3*))
                     (get-window-visrgn wptr rgn3)
                     (#_sectrgn rgn3 rgn rgn))
@@ -1007,7 +1007,7 @@ ERASE-P:        A value indicating whether or not to add the
                   (when offset (#_offsetrgn  rgn (point-h offset)(point-v offset))) ; to window coords
                   (#_UnionRgn rgn invalid-rgn invalid-rgn))))))))
     (values))
-  
+
   (:method ((window window) region &optional erase-p)
     #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
     (let ((bounds (if region
@@ -1166,7 +1166,7 @@ RETURN:         (make-point h v)
   (:method ((view simple-view) h &optional v)
     (let ((pos (make-point h v)))
       (unless (eql pos (view-position view))
-        (invalidate-view view t)         
+        (invalidate-view view t)
         (setf (%view-position view) pos)
         (make-view-invalid view)
         (invalidate-view view t #-(and)(maybe-erase view)))
@@ -1443,7 +1443,7 @@ DIRECT-SUBVIEWS-ONLY:
                        (return-from find-view-containing-point
                          (if direct-subviews-only
                              window
-                             (find-view-containing-point 
+                             (find-view-containing-point
                               window
                               (subtract-points point (view-position window)))))))
                    :include-windoids t)
@@ -1515,7 +1515,7 @@ CONTAINER:      The container of the view.
        ,@body)))
 
 
-#-(and)  ; not used anywhere 
+#-(and)  ; not used anywhere
 (defun view-is-invalid-p (view visrgn cliprgn)
   (or (null visrgn)
       (null cliprgn)
@@ -1658,11 +1658,11 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
         (let* ((old-ff (car codes))
                (old-ms (cdr codes))
                (ff (if ff-mask
-                       (logior (logand ff ff-mask) 
+                       (logior (logand ff ff-mask)
                                (logandc2 old-ff  ff-mask))
                        ff))
                (ms (if ms-mask
-                       (logior (logand ms ms-mask) 
+                       (logior (logand ms ms-mask)
                                (logandc2 old-ms ms-mask))
                        ms)))
           (rplacd (rplaca codes ff) ms))

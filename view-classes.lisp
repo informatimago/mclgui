@@ -5,34 +5,34 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    XXX
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
-;;;;    2012-05-15 <PJB> 
+;;;;    2012-05-15 <PJB>
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -101,8 +101,8 @@ Stack of instance screen shots. Cf. new-instance and with-instance-drawing.
 
 
 ;;;
-;;; 
-;;; 
+;;;
+;;;
 
 (defgeneric view-subviews (view)
   (:documentation "
@@ -205,14 +205,14 @@ A clip region specific to the VIEW, given in the coordinate system of the VIEW.
                                      :initform  nil)
    (window-other-attributes          :accessor  window-other-attributes
                                      :initarg   :window-other-attributes
-                                     :initform  0) 
+                                     :initform  0)
    (window-active-p                  :accessor  window-active-p
                                      :initform  nil)
    ;; The window-active-p generic function returns t if window is the active
    ;; window, nil otherwise.
    ;; Except when Macintosh Common Lisp is not the active application, it returns
    ;; t for all floating windows and for the frontmost non-floating visible window.
-   
+
    (window-erase-region              :accessor  window-erase-region
                                      :initform  (new-rgn))
    (window-invalid-region            :accessor  window-invalid-region
@@ -224,7 +224,7 @@ A clip region specific to the VIEW, given in the coordinate system of the VIEW.
                                      :initform  nil)
    (queue                            :reader    window-process-queue
                                      :initform  nil) ; (make-process-queue "Window")
-   (auto-position                    :initarg   :auto-position               
+   (auto-position                    :initarg   :auto-position
                                      :initform  :noAutoCenter
                                      :type      (member nil
                                                         :noAutoCenter
@@ -258,7 +258,7 @@ A clip region specific to the VIEW, given in the coordinate system of the VIEW.
    (window-layer                     :initarg   :window-layer
                                      :type       integer
                                      :initform   0)
-   (theme-background                 :accessor   window-theme-background 
+   (theme-background                 :accessor   window-theme-background
                                      :accessor   theme-background
                                      :initarg    :theme-background
                                      :initform   nil)
@@ -369,8 +369,8 @@ FOCUS-VIEW changes the top of the transform-stack of the view window. (NIY)
     (declare (ignore view))
     (values)))
 
-(defgeneric get-window-visrgn (window region)) 
-(defgeneric window-visrgn (window)) 
+(defgeneric get-window-visrgn (window region))
+(defgeneric window-visrgn (window))
 
 
 (defgeneric clip-region (view &optional save-region)
@@ -408,7 +408,7 @@ arguments.  It returns NIL.
 
 VIEW:           A window or a view contained in a window.
 
-LEFT:           
+LEFT:
 TOP:
 RIGHT:
 BOTTOM:

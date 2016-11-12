@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Cursors.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -122,7 +122,7 @@ RETURN:         A newly allocated bit16 containing the data of the
 ;;                   (when [rep isKindOfClass:bitmap-class]
 ;;                     (return rep))))))
 ;;     rep
-;;     #-(and)    
+;;     #-(and)
 ;;     (make-instance 'cursor
 ;;       :handle nscursor
 ;;       :hot-spot (nspoint-to-point (get-nspoint [nscursor hotSpot]))
@@ -188,7 +188,7 @@ DO:             Calls the THUNK with the *cursorhook* bound to cursor.
                 if the old *cursorhook* was a function, it's called to
                 reset the old cursor).
 "
-  (unwind-protect 
+  (unwind-protect
       (let ((*cursorhook* cursor))
         ;; (format-trace "call-with-cursor push" cursor)
         (if (or (functionp cursor) (symbolp cursor))
@@ -503,7 +503,7 @@ CURSOR:         A cursor structure, or a cursor hook function used to
                                          #*1111100000000000
                                          #*1111100000000000
                                          #*0000000000000000))
-        
+
         *right-ps-cursor* (make-cursor "right-pane-separator" 7 7
                                        #(#*0000000000000000
                                          #*0000001010000000

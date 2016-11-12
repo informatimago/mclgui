@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Basic Editable Text Dialog Item
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -125,11 +125,11 @@
       (let* ((pos      (view-position item))
              (active-p (window-active-p w))
              (rect     (make-rect pos (add-points pos (view-size item)))))
-        (if (and active-p (eql item (current-key-handler w)))                         
+        (if (and active-p (eql item (current-key-handler w)))
             (with-pen-state (:size #@(2 2))
               (inset-rect rect -3 -3)
               (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
-              (draw-rect*  (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect)))              
+              (draw-rect*  (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect)))
             (progn
               (inset-rect rect -1 -1)
               (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))
@@ -139,7 +139,7 @@
 (defmethod view-draw-contents :after ((item basic-editable-text-dialog-item))
   (let ((pos    (view-position item))
         (colorp (color-or-gray-p item)))
-    (with-slots (dialog-item-enabled-p draw-outline) item      
+    (with-slots (dialog-item-enabled-p draw-outline) item
       (when draw-outline
         (frame-key-handler item))
       (unless (or colorp dialog-item-enabled-p)

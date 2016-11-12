@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Table Dialog Item.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -175,7 +175,7 @@ the entire table is visible.
                                 &rest initargs
                                 &key (selection-type :single)
                                 (cell-colors :text)
-                                table-dimensions                                   
+                                table-dimensions
                                 table-print-function
                                 cell-fonts)
   (check-type selection-type (member :single :contiguous :disjoint))
@@ -230,14 +230,14 @@ the entire table is visible.
 (defun highlight-rect-frame (rect)
   (niy highlight-rect-frame rect)
   #-(and)
-  (with-macptrs ((rgn  (#_newrgn))  ; temp regions already in use  
+  (with-macptrs ((rgn  (#_newrgn))  ; temp regions already in use
                  (rgn2 (#_newrgn)))
     (unwind-protect
          (progn
            (#_RectRgn rgn rect)
            (#_insetrect  rect 1 1)
            (#_rectrgn rgn2 rect)
-           (#_DiffRgn  rgn rgn2 rgn)     
+           (#_DiffRgn  rgn rgn2 rgn)
            (#_LMSetHiliteMode (%ilogand2 (%ilognot (ash 1 #$hiliteBit)) (#_LMGetHiliteMode)))
            (#_InvertRgn rgn))
       (when (and rgn (not (oclo:nullp rgn)))
@@ -416,9 +416,9 @@ V:              Vertical index. If the value of v is NIL, h is assumed
             (when old-dims-greater?
               (let* ((sh (table-left-column item))
                      (sv (table-top-row item)))
-                (when (or (<= h sh) (<= v sv))                
+                (when (or (<= h sh) (<= v sv))
                   (let ((vis-dims (visible-dimensions item)))
-                    (scroll-to-cell item 
+                    (scroll-to-cell item
                                     (max 0 (- h (point-h vis-dims)))
                                     (max 0 (- v (point-v vis-dims)))))))
               (map-selected-cells item (lambda (item sh sv)
@@ -468,7 +468,7 @@ ITEM:           A table dialog item.
         (let ((size      (view-size item))
               (cell-size (cell-size item)))
           (when (and size cell-size)
-            (setf (visible-dimensions-slot item) 
+            (setf (visible-dimensions-slot item)
                   (let* ((size   (table-inner-size item))
                          (width  (point-h size))
                          (height (point-v size)))
@@ -665,7 +665,7 @@ FONT-SPEC:      A font spec.
       (declare (ignore item-pos item-size))
       (niy invalidate-cell h v)
       #-(and)
-      (rlet ((item-rect :rect :topleft item-pos :botright (add-points item-pos item-size))) 
+      (rlet ((item-rect :rect :topleft item-pos :botright (add-points item-pos item-size)))
             (multiple-value-bind (viz cell-size top-left) (cell-position item h v)
               (when viz
                 (rlet ((cell-rect :rect :topleft top-left :botright (add-points top-left cell-size)))
@@ -675,7 +675,7 @@ FONT-SPEC:      A font spec.
 
 
 (defgeneric part-color-h-v (item h v)
-  (:method ((item table-dialog-item) h v)  
+  (:method ((item table-dialog-item) h v)
     (let ((hash (table-cell-color-hash item)))
       (when hash
         (let ((key (make-point h v)))
@@ -687,7 +687,7 @@ FONT-SPEC:      A font spec.
     (let ((hash (table-cell-color-hash item)))
       (when (null hash)
         (setf hash (make-hash-table :test (function equal)))
-        (setf (table-cell-color-hash item) hash))    
+        (setf (table-cell-color-hash item) hash))
       (let ((key (make-point h v)))
         (if new-color
             (setf (gethash key hash) new-color)
@@ -707,10 +707,10 @@ FONT-SPEC:      A font spec.
 
 
 (defmethod set-part-color ((d table-dialog-item) part new-color)
-  (without-interrupts   
+  (without-interrupts
       (if (or (integerp part) (consp part))
           ;; Change the color of one cell
-          (set-part-color-h-v d (point-h part) (point-v part) new-color)     
+          (set-part-color-h-v d (point-h part) (point-v part) new-color)
           ;; Change some other color attribute
           (progn
             (call-next-method)
@@ -782,7 +782,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                   (let ((first (first-selected-cell-slot item)))
                     (and first
                          (= (point-h first) h)
-                         (= (point-v first) v))))                  
+                         (= (point-v first) v))))
           (setf (first-selected-cell-slot item) nil))
         (invert-cell-selection item h v nil)))))
 
@@ -1096,7 +1096,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 
 #-(and)
-(defun %find-nth-arg-combined-method (dt arg args)  
+(defun %find-nth-arg-combined-method (dt arg args)
   (declare (optimize (speed 3)(safety 0)))
   (flet ((get-wrapper (arg)
            (if (not (%standard-instance-p arg))
@@ -1115,7 +1115,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
              (index (%ilsl 1 (%ilogand mask (%wrapper-hash-index wrapper))))
              table-wrapper flag)
         (declare (fixnum index mask))
-        (loop 
+        (loop
           (if (eql (setq table-wrapper (%gf-dispatch-table-ref dt index)) wrapper)
             (return (%gf-dispatch-table-ref dt (the fixnum (1+ index))))
             (progn
@@ -1157,7 +1157,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 
 
-;; why not call this draw-table-cell-h-v 
+;; why not call this draw-table-cell-h-v
 (defgeneric draw-table-cell-new (item h v rect selectedp)
   (:method :around ((item table-dialog-item) h v rect selectedp)
            (let ((cm (find-1st-arg-combined-method #'draw-table-cell item)))
@@ -1171,11 +1171,11 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 (defmethod view-default-size ((item table-dialog-item))
   (let* ((max-width (table-max-width item))
-         (max-height (table-max-height item)) 
+         (max-height (table-max-height item))
          (rows (table-rows item))
          (columns (table-columns item))
          (visible-dimensions (visible-dimensions-slot item))
-         (visible-rows (if visible-dimensions 
+         (visible-rows (if visible-dimensions
                            (point-v visible-dimensions)
                            rows))
          (visible-columns (if visible-dimensions
@@ -1220,7 +1220,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
             (declare (dynamic-extent #'mapper))
             (maphash #'mapper column-widths-hash))))
       (if (eql table-hscrollp :undetermined)
-          (setf table-hscrollp 
+          (setf table-hscrollp
                 (or (> width max-width)
                     (> columns visible-columns))))
       (if (eql table-vscrollp :undetermined)  ; dont mess with the slot
@@ -1303,7 +1303,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                   (setf changed t)
                   (setf (table-hscroll-bar table) bar)))
               (when hbar ; maybe its not cool to remove existing bars??
-                (set-view-container hbar nil) 
+                (set-view-container hbar nil)
                 (setf changed t)
                 (setf (table-hscroll-bar table) nil))))
           ;; fixup-scroll-bars only does something if table installed and visible-dimensions makes sense.
@@ -1314,7 +1314,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
               (when container (set-view-container (table-vscroll-bar table) container)))
             (when hscrollp
               (when container (set-view-container (table-hscroll-bar table) container)))
-            (maybe-fix-cell-size table))          
+            (maybe-fix-cell-size table))
                                         ;(when changed (maybe-fix-cell-size table))
           changed
           )))))
@@ -1464,7 +1464,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
     (if vertical?
         (let ((size-v (point-v inner-size)))
           (if (eql *table-scroll-bar-tracked-part* :in-page-up)
-              (table-visible-row-count table 
+              (table-visible-row-count table
                                        :end-row (table-top-row table)
                                        :from-end t
                                        :size-v size-v)
@@ -1522,7 +1522,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
            )
       (unless cell-size
         (setf (cell-size-slot item)
-              (setf cell-size 
+              (setf cell-size
                     (default-cell-size
                         item
                         (truncate (point-h item-size)
@@ -1534,7 +1534,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
       (fixup-scroll-bars item)  ;; moved this
       (when changed
         (let ((container (view-container item)))
-          (when (table-vscroll-bar item)            
+          (when (table-vscroll-bar item)
             (set-view-container (table-vscroll-bar item) container))
           (when (table-hscroll-bar item)
             (set-view-container (table-hscroll-bar item) container))))
@@ -1636,20 +1636,20 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                     :end-row rows
                                     :from-end t)))
             (set-view-position vscroll (+ pos-h size-h)  pos-v)
-            (set-view-size vscroll 
+            (set-view-size vscroll
                            16
                            (+ size-v  (if (and (not hscroll) grow-icon-p) -15 0)))
             (let ((old-max (scroll-bar-max vscroll))
                   (new-max (max 0 (- rows visible-end-rows))))
               (set-scroll-bar-max vscroll new-max)
-              (when (not (eql new-max old-max))                
+              (when (not (eql new-max old-max))
                 (setf changed t)))))
         (when changed
           (scroll-bar-changed table t)
           (invalidate-view table))))))
 
 
-(defmethod remove-view-from-window :after ((item table-dialog-item))  
+(defmethod remove-view-from-window :after ((item table-dialog-item))
   (setf (visible-dimensions-slot item) nil)
   (dispose-selection-regions item))
 
@@ -1687,12 +1687,12 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 (defun dispose-selection-regions (item)
   (niy dispose-selection-regions item)
-  #-(and) 
+  #-(and)
   (let ((rgn (table-selection-region item)))
     (when rgn
       (setf (table-selection-region item) nil)
       (#_DisposeRgn rgn)))
-  #-(and) 
+  #-(and)
   (let ((rgn (table-outline-region item)))
     (when rgn
       (setf (table-outline-region item) nil)
@@ -1743,7 +1743,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
   (if (null size)
       #@(0 0)
       (let ((h (point-h size))
-            (v (point-v size)))      
+            (v (point-v size)))
         (if (table-vscroll-bar table)
             (setq h (- h 15)))
         (if (table-hscroll-bar table)
@@ -1761,7 +1761,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
   (let ((pos (view-position item)))
     (unless (eql pos new-pos)
       (without-interrupts
-          (call-next-method)   ; just plain MCL bug - set new-pos before calling fixup-scroll-bars   
+          (call-next-method)   ; just plain MCL bug - set new-pos before calling fixup-scroll-bars
         (if pos
             (let ((diff (and pos (subtract-points new-pos pos)))
                   (hscroll (table-hscroll-bar item))
@@ -1855,7 +1855,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
         (with-focused-dialog-item (item dialog)
           (let* ((dialog-item-enabled-p (dialog-item-enabled-p item))
                  (color-p               (and (not dialog-item-enabled-p)
-                                             (color-or-gray-p item))) 
+                                             (color-or-gray-p item)))
                  (color-list            (part-color-list item))
                  (back-color            (part-color item :body))
                  (pos                   (view-position item))
@@ -1878,7 +1878,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                                    (table-selection-region item)
                                                    (table-outline-region item))))
                             (with-hilite-mode
-                                (#_InvertRgn selection-rgn))))                   
+                                (#_InvertRgn selection-rgn))))
                         (let ()
                           (get-window-visrgn wptr rgn3)
                           (#_sectrgn rgn rgn3 rgn))
@@ -1917,7 +1917,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                         (loop
                                           (let ((column-width (or (and column-widths-hash (gethash column column-widths-hash))
                                                                   column-width)))
-                                            (setf (pref rect :rect.right) 
+                                            (setf (pref rect :rect.right)
                                                   (+ (pref rect :rect.left) column-width))
                                             (when (and (plusp column-width)
                                                        (#_RectInRgn rect rgn))
@@ -1933,9 +1933,9 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                                       (#_LineTo (pref rect :rect.right) (pref rect :rect.bottom)))))))
                                             (incf column)
                                             (when (or (>= column columns)
-                                                      (>= (incf (pref rect :rect.left) 
-                                                                (if (zerop column-width) 
-                                                                    0 
+                                                      (>= (incf (pref rect :rect.left)
+                                                                (if (zerop column-width)
+                                                                    0
                                                                     (+ column-width (point-h separator-size))))
                                                           right))
                                               (return))))
@@ -1949,15 +1949,15 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                               (#_LineTo (pref rect :rect.right) (pref rect :rect.bottom))))))
                                       (incf row)
                                       (when (or (>= row rows)
-                                                (>= (incf (pref rect :rect.top) 
-                                                          (if (zerop row-height) 
-                                                              0 
+                                                (>= (incf (pref rect :rect.top)
+                                                          (if (zerop row-height)
+                                                              0
                                                               (+ row-height (point-v separator-size))))
                                                     bottom))
                                         (return)))))))))))
             #-(and)
             (with-item-rect (r item)
-              (with-fore-color (getf color-list :frame nil)               
+              (with-fore-color (getf color-list :frame nil)
                 (#_insetRect r -1 -1)
                 (#_FrameRect r))
               (when (and (not dialog-item-enabled-p) (not color-p))
@@ -1976,7 +1976,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
          (hscroll-setting (if hscroll (scroll-bar-setting hscroll) 0))
          (vscroll-setting (if vscroll (scroll-bar-setting vscroll) 0)))
     (scroll-to-cell item hscroll-setting vscroll-setting)
-    (when (and (wptr item) (not (eql scroll-bar t)))  
+    (when (and (wptr item) (not (eql scroll-bar t)))
       ;; dont bother (FROM FIXUP-SCROLL-BARS), it does invalidate view after this and further
       ;; when doing list-definitions-dialog the grafport-back-color is wrong at this point
       ;; because the dialog-item-action for the editable-text-dialog-item is called
@@ -2055,9 +2055,9 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                            (if (eql ph min-h)
                              (setq min-v (min min-v pv))
                              (if (< ph min-h)
-                               (progn                               
+                               (progn
                                  (setq min-h ph min-v pv))))))
-                       hash)                                         
+                       hash)
               (setf (first-selected-cell-slot item)(make-point min-h min-v))))))))
 
 
@@ -2090,7 +2090,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
         (niy toggle-cell-outlining)
         #-(and)
         (with-temp-rgns (rgn clip-rgn update-rgn)
-          (#_GetClip clip-rgn)          
+          (#_GetClip clip-rgn)
           (get-window-updatergn (wptr item) update-rgn)
           (let ((off (subtract-points #@(0 0) (view-position (view-window item)))))
             (#_OffsetRgn update-rgn (point-h off)(point-v off)))
@@ -2123,7 +2123,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                              (let ((br (add-points pos size)))
                                                (#_setrectrgn cell-rgn (point-h pos)(point-v pos)(point-h br)(point-v br)))  ; coords?
                                              (#_sectrgn cell-rgn clip-rgn cell-rgn)
-                                             (#_sectrgn cell-rgn rgn cell-rgn)                                     
+                                             (#_sectrgn cell-rgn rgn cell-rgn)
                                              (with-hilite-mode (#_invertrgn cell-rgn)))))))))
                           (declare (dynamic-extent f))
                           (maphash f hash)))))))))))))
@@ -2181,7 +2181,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                          (not (and (eql h last-h) (eql v last-v))))
                                 (setq last-h h last-v v)
                                 (cond ((and (eql type :disjoint)
-                                            (or shift-key-p command-key-p)                                 
+                                            (or shift-key-p command-key-p)
                                             (eql h start-h)(eql v start-v))
                                        (if shift-key-p
                                            (cell-select item h v)
@@ -2219,7 +2219,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                                                (maphash f hash)))
                                                            (clrhash hash)
                                                            (setf (gethash (cons h v) hash) t)
-                                                           (setf (first-selected-cell-slot item) (make-point h v))                                          
+                                                           (setf (first-selected-cell-slot item) (make-point h v))
                                                            (with-temp-rgns (invert-region)
                                                              (let ((selection-region
                                                                     (if (view-active-p item)
@@ -2231,7 +2231,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                                                  (#_DiffRgn invert-region selection-region invert-region)
                                                                  (#_InvertRgn invert-region))
                                                                (cell-select item h v))))) ; << fixes bengtsons double click thing
-                                                     (progn 
+                                                     (progn
                                                        (when hash
                                                          (when colored-cells-p ; <<
                                                            (deselect-cells item))
@@ -2245,14 +2245,14 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                                                        (cell-select item h v))))))))
                                       ((and (eql type :contiguous)
                                             command-key-p
-                                            (eql h start-h)(eql v start-v))                          
+                                            (eql h start-h)(eql v start-v))
                                        (deselect-cells item)
                                        (when (not start-selected-p)(cell-select item h v)))
                                       ((and (eql type :contiguous)
                                             shift-key-p
                                             (cell-selected-p item h v))
-                                       (deselect-cells-above item h v))                           
-                                      (t 
+                                       (deselect-cells-above item h v))
+                                      (t
                                        (let* ((p (if (eql type :contiguous)(first-selected-cell item)))
                                               (first-h (if p (point-h p) start-h))
                                               (first-v (if p (point-v p) start-v)))
@@ -2270,7 +2270,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                         (when (not (#_stilldown))
                           (return))
                         #-(and)
-                        (if (eql where (%get-local-mouse-position))                   
+                        (if (eql where (%get-local-mouse-position))
                             (unless (wait-mouse-up-or-moved)
                               (return)))
                         (setq where (view-mouse-position container))))))
@@ -2326,8 +2326,8 @@ V:              Vertical index. If the value of v is NIL, h is assumed
   (:method ((item table-dialog-item))
     (let* ((hash (table-selection-hash item))
            (max-h -1)
-           (max-v -1))    
-      (when hash        
+           (max-v -1))
+      (when hash
         (maphash (lambda (k val)
                      (declare (ignore val))
                    (setq max-h (max max-h (car k)))
@@ -2400,7 +2400,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 (defgeneric find-clicked-cell (item where)
   (:method ((item table-dialog-item) where)
-    (setq where (convert-coordinates where (view-container item) item))  
+    (setq where (convert-coordinates where (view-container item) item))
     (let* ((top-row (table-top-row item))
            (left-column (table-left-column item))
            (cell-size (cell-size item))
@@ -2413,7 +2413,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                        (do-column-widths (item column-width column) (left-column)
                                          (when (> (incf width column-width) where-h)
                                            (return column))))
-                     (+ left-column 
+                     (+ left-column
                         (if (zerop (point-h cell-size))
                           0
                           (floor where-h (+ (point-h cell-size) sep-width))))))
@@ -2422,7 +2422,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                     (do-row-heights (item row-height row) (top-row)
                                     (when (> ( incf height row-height) where-v)
                                       (return row))))
-                  (+ top-row 
+                  (+ top-row
                      (if (zerop (point-v cell-size))
                        0
                        (floor where-v (+ (point-v cell-size) sep-height)))))))
@@ -2439,12 +2439,12 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 (defun invalidate-all-but-left-column (item old-inner-size inner-size)
   (when (installed-item-p item)
     (with-focused-dialog-item (item)
-      (let* ((pos (view-position item))                  
+      (let* ((pos (view-position item))
              (2-chars-wide (multiple-value-bind (a d w) (font-info) a d (* 2 w))))
         (let ((isize (if (< (point-h inner-size)(point-h old-inner-size))
                          inner-size
                          old-inner-size)))
-          (invalidate-corners 
+          (invalidate-corners
            *current-view*
            (add-points pos (make-point (- (point-h isize) 2-chars-wide) 0))
            (add-points pos (view-size item))   ;; was isize
@@ -2455,10 +2455,10 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                           (inner-size (table-inner-size item new-size))
                           (old-size (view-size item))
                           (visible-dimensions (visible-dimensions item)))
-  
+
   (unless (eql new-size old-size)
     (without-interrupts
-        (setf (slot-value item 'visible-dimensions) nil)     
+        (setf (slot-value item 'visible-dimensions) nil)
       (if (installed-item-p item)
           (progn
             (let ((old-inner-size (table-inner-size item)))
@@ -2467,7 +2467,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                 (let ((w (view-window item)))
                   (when (and (not (window-theme-background w))(slot-value w 'back-color))
                     (with-focused-view w
-                      (window-update-event-handler w)))))           
+                      (window-update-event-handler w)))))
               (maybe-need-scroll-bars item)
               (setq inner-size (table-inner-size item new-size))  ; may have changed
               (cond ((<= (point-h (table-dimensions item)) 1)    ; or (sequence-order wrap-length)
@@ -2477,9 +2477,9 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                     (t (fixup-scroll-bars item)))
               ;; was this wrong in original??
               (invalidate-all-but-left-column item  old-inner-size inner-size)))
-          (call-next-method))     
+          (call-next-method))
       (let* ((left-column (table-left-column item))
-             (top-row (table-top-row item)))       
+             (top-row (table-top-row item)))
         (when (installed-item-p item)
           (scroll-to-cell item left-column top-row)
           (let* ((new-left-column (table-left-column item))
@@ -2589,7 +2589,7 @@ V:              Vertical index.  If the value of V is NIL, H is
   (setf *default-cell-contents-string-combined-method*
         (find-1st-arg-combined-method (function cell-contents-string)
                                       (class-prototype (find-class 'table-dialog-item)))
-        
+
         *default-draw-table-cell-combined-method*
         (find-1st-arg-combined-method (function draw-table-cell)
                                       (class-prototype (find-class 'table-dialog-item)))

@@ -52,7 +52,7 @@
 #+swank (defvar swank::*current-terminal-io*)
 
 (defun initialize-streams ()
-  (unless *patchwork-io-initialized*    
+  (unless *patchwork-io-initialized*
     (setf *patchwork-io* (make-patchwork-io)
           *patchwork-io-initialized* t))
   #+swank (setf swank::*current-terminal-io* *patchwork-io*)

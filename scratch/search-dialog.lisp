@@ -24,7 +24,7 @@
     (add-subviews
      search-dialog
      (make-dialog-item 'default-button-dialog-item
-                       #@(7 59) #@(114 18) "Search"                       
+                       #@(7 59) #@(114 18) "Search"
                        (lambda (item) (do-search (view-container item) :forward))
                        :help-spec 12084)
      (make-dialog-item 'button-dialog-item
@@ -95,7 +95,7 @@
                          (search-text  (dialog-item-text (view-named 'search-text-item  w)))
                          (replace-text (dialog-item-text (view-named 'replace-text-item w)))
                          (search-win (target)))
-  (when (and search-win 
+  (when (and search-win
              (> (length search-text) 0))
     (window-replace-all search-win search-text replace-text 0)
     (enable-replace w)))
@@ -131,7 +131,7 @@
 ; Default's for search stuff, pass through to key-handler
 (defun funcall-key-handler (window gf beep-p &rest args)
   (declare (dynamic-extent args))
-  (apply #'funcall-if-method-exists 
+  (apply #'funcall-if-method-exists
          gf (and beep-p #'ed-beep) (current-key-handler window) args))
 |#
 

@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Dialog-item.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -90,7 +90,7 @@ own classes of dialog items.
 
 (defclass dialog-item (simple-view)
   ((width-correction            :allocation :class
-                                :initform 0 
+                                :initform 0
                                 :accessor dialog-item-width-correction)
    (text-justification          :initarg  :justification
                                 :initform :natural
@@ -279,12 +279,12 @@ ATTRIBUTES:     One or more attributes belonging to the dialog
 The generic function DIALOG-ITEM-ACTION is called whenever the user
 clicks a dialog item.  The method for DIALOG-ITEM calls item’s
 DIALOG-ITEM-ACTION-FUNCTION, if it is not NIL.  Otherwise, it does
-nothing. 
+nothing.
 
 The DIALOG-ITEM-ACTION function is normally called when the mouse
-button is released, not when it is pressed. 
+button is released, not when it is pressed.
 
-If an item is disabled, its action is not run. 
+If an item is disabled, its action is not run.
 
 Since dialog-item-action is usually called by view-click-event-handler
 as a result of event processing, event processing is ordinarily
@@ -292,7 +292,7 @@ disabled while the DIALOG-ITEM-ACTION function is running.  This means
 that other dialog items cannot be selected during the action.  To
 avoid locking out other event processing, you can use EVAL-ENQUEUE to
 insert forms into the read-eval-print loop.  For details, see Chapter
-10: Events. 
+10: Events.
 
 ITEM:           A dialog item.
 ")
@@ -404,7 +404,7 @@ The dialog item is dimmed; clicks in the item are ignored, and the
 action of the item is never run.  Disabling a checkbox does not alter
 its status as checked, and disabling a radio button does not alter its
 status as clicked (you may want to remove the check or click
-explicitly).  The function returns NIL. 
+explicitly).  The function returns NIL.
 ")
   (:method ((item dialog-item))
     (without-interrupts
@@ -434,7 +434,7 @@ DO:             Enable or disable the dialog ITEM depending on ENABLED-P.
           (old-size (view-size view)))
       (unless old-pos  (setf (%view-position view) 0))
       (unless old-size (setf (%view-size view) (view-default-size view)))
-      (multiple-value-bind (tl br) (view-corners view)        
+      (multiple-value-bind (tl br) (view-corners view)
         (setf (%view-position view) old-pos)
         (subtract-points br tl)))))
 
@@ -461,7 +461,7 @@ DO:             Enable or disable the dialog ITEM depending on ENABLED-P.
               (dovector (item (view-subviews view))
                 (let ((position (view-position item))
                       (size     (view-outer-size item)))
-                  (unless (or (eql item subview) (not position))                
+                  (unless (or (eql item subview) (not position))
                     (let ((lower-right (add-points position size)))
                       (setf (rect-topleft s-rect) position
                             (rect-bottomright s-rect) lower-right))
@@ -487,7 +487,7 @@ DO:             Enable or disable the dialog ITEM depending on ENABLED-P.
 
 
 
-(defun font-codes-string-width-with-eol (string ff ms)  
+(defun font-codes-string-width-with-eol (string ff ms)
   (let ((pos 0)
         (nextpos 0)
         (nlines 1)
@@ -526,7 +526,7 @@ DIALOG-ITEM-WIDTH-CORRECTION).
     (unless (view-size view)
       (setf (slot-value view 'view-size) (view-default-size view)))
     (or (view-position view)
-        (let ((container (or container (view-container view)))) 
+        (let ((container (or container (view-container view))))
           (when container
             (setf (%view-position view) (view-find-vacant-position container view)))))))
 

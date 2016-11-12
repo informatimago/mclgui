@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     MCLGUI
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    XXX
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,23 +15,23 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2014 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-;;;;    
+;;;;
 
 (in-package "MCLGUI")
 (objcl:enable-objcl-reader-macros)
@@ -44,7 +44,7 @@
 
 
 (defun test/cocoa/menu/1 ()
-  
+
   (setf *application-handle*
         (or *application-handle*
             [NSApplication sharedApplication]))
@@ -59,16 +59,16 @@
         (or *test-menu-handle*
             [[NSMenu alloc] initWithTitle:(objcl:objc-string "Test")]))
   [*test-menu-title-handle* setSubmenu:*test-menu-handle*]
-  
+
   (setf *test-menu-item-handle*
         (or *test-menu-item-handle*
             [[NSMenuItem alloc] initWithTitle:(objcl:objc-string "Test Item")
              action:*null*
              keyEquivalent:(objcl:objc-string "T")]))
   [*test-menu-handle* addItem:*test-menu-item-handle*]
-  
+
   [[*application-handle* mainMenu] addItem:*test-menu-title-handle*]
-  
+
   [*test-menu-item-handle* setKeyEquivalent:(objcl:objc-string "t")]
   [*test-menu-item-handle* setState:1]
 
@@ -90,7 +90,7 @@
                                     (multiple-value-bind (descriptor mode) (ui::font-descriptor-from-codes ff ms)
                                       (declare (ignore mode)) ; TODO: manage mode (:srcOr …)
                                       ;; (print descriptor)
-                                      ;; [context setCompositingOperation:(mode-to-compositing-operation (pen-mode pen))] 
+                                      ;; [context setCompositingOperation:(mode-to-compositing-operation (pen-mode pen))]
                                       [descriptor fontAttributes])))]
          [[NSGraphicsContext currentContext] flushGraphics]
          ;; [[NSColor colorWithCalibratedRed:0.33d0 green:0.33d0 blue:0.33d0 alpha:1.0d0] set]
@@ -103,12 +103,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defgeneric (setf spring-view-top-spring)        (new-value view))        
-(defgeneric (setf spring-view-vertical-spring)   (new-value view))   
-(defgeneric (setf spring-view-bottom-spring)     (new-value view))     
-(defgeneric (setf spring-view-left-spring)       (new-value view))       
-(defgeneric (setf spring-view-horizontal-spring) (new-value view)) 
-(defgeneric (setf spring-view-right-spring)      (new-value view))      
+(defgeneric (setf spring-view-top-spring)        (new-value view))
+(defgeneric (setf spring-view-vertical-spring)   (new-value view))
+(defgeneric (setf spring-view-bottom-spring)     (new-value view))
+(defgeneric (setf spring-view-left-spring)       (new-value view))
+(defgeneric (setf spring-view-horizontal-spring) (new-value view))
+(defgeneric (setf spring-view-right-spring)      (new-value view))
 
 
 (defclass spring-view (view)
@@ -320,52 +320,52 @@
 ;;                               min%  = old-pos / old-size
 ;;                               view% = old-view-size / old-size
 ;;                               max%  = 1 - min% - view%
-;; 
+;;
 ;;                               min% = new-pos / new-size
 ;;                               ==> new-pos = new-size * old-pos / old-size
-;; 
+;;
 ;;                               (min%+view%)=(old-pos+old-view-size)/old-size
 ;;                               ==> (new-pos + new-view-size) = new-size * (min% + view%)
 ;;                               ==> new-view-size = new-size * (min% + view%) - new-size * min%
 ;;                               ==> new-view-size = new-size * view%
 ;;                               ==> new-view-size = new-size * old-view-size / old-size
-;; 
+;;
 ;; /\/\/\ |---/\/\/\---| ------
-;;                               min%  = old-pos / (old-pos + old-view-size) 
+;;                               min%  = old-pos / (old-pos + old-view-size)
 ;;                               view% = 1 - min%
-;; 
+;;
 ;;                               new-pos + new-view-size = old-pos + old-view-size - old-size + new-size
-;; 
-;;                               min%  = new-pos / (new-pos + new-view-size) 
-;;                               min%  = new-pos / (old-pos + old-view-size - old-size + new-size) 
-;;                               new-pos = min% * (old-pos + old-view-size - old-size + new-size) 
+;;
+;;                               min%  = new-pos / (new-pos + new-view-size)
+;;                               min%  = new-pos / (old-pos + old-view-size - old-size + new-size)
+;;                               new-pos = min% * (old-pos + old-view-size - old-size + new-size)
 ;;                               new-pos = (old-pos / (old-pos + old-view-size)) * (old-pos + old-view-size - old-size + new-size)
 ;;                               new-view-size =  (old-pos + old-view-size - old-size + new-size) - new-pos
-;; 
+;;
 ;; /\/\/\ |------------| /\/\/\
-;;                               min% = old-pos / ( old-size - old-view-size) 
+;;                               min% = old-pos / ( old-size - old-view-size)
 ;;                               max% = 1 - min%
-;; 
+;;
 ;;                               new-pos / (new-size - new-view-size) = min%
-;;                               new-pos = old-pos * (new-size - old-view-size) / ( old-size - old-view-size) 
-;; 
+;;                               new-pos = old-pos * (new-size - old-view-size) / ( old-size - old-view-size)
+;;
 ;; /\/\/\ |------------| ------
 ;;                               new-pos = old-pos - old-size + new-size
-;; 
+;;
 ;;
 ;; ------ |---/\/\/\---| /\/\/\
-;;                               view% = old-view-size / (old-size - old-pos) 
+;;                               view% = old-view-size / (old-size - old-pos)
 ;;                               max%  = 1 - view%
-;; 
+;;
 ;;                               new-view-size / (new-size - new-pos) = old-view-size / (old-size - old-pos)
 ;;                               ==> new-view-size = old-view-size * (new-size - new-pos) / (old-size - old-pos)
-;; 
+;;
 ;; ------ |---/\/\/\---| ------
 ;;                               new-view-size = old-view-size + new-size - old-size
-;; 
+;;
 ;; ------ |------------| /\/\/\
 ;;                               ==> no change
-;; 
+;;
 ;; ------ |------------| ------
 ;;                               ==> no change
 
@@ -499,7 +499,7 @@
                                :left-spring t   :horizontal-spring t   :right-spring  t
                                :view-subviews (if (plusp level)
                                                   (make-test-subviews (/ h 3) (/ v 3) (1- level))
-                                                  '())                               
+                                                  '())
                                :id (+ (* (- 1 level) 10) 5)))
                     (view6 (make-instance 'test-view
                                :view-position (make-point 2h/3 v/3)
@@ -536,7 +536,7 @@
         :view-subviews (make-test-subviews 300 300 1))))
 
 
-;; (test/1) 
+;; (test/1)
 ;; (view-subviews (front-window))
 ;; [[[(handle(front-window)) contentView] subviews] count]
 ;;(dump-nswindow-subviews (handle (first (windows))))
@@ -623,27 +623,27 @@
   (with-pen-state (:pattern *gray-pattern* :size (make-point 20 10))
     (draw-line 20 20  200 100) ))
 
-(with-focused-view (first (windows)) 
+(with-focused-view (first (windows))
   (with-pen-state (:pattern *light-gray-pattern* :size (make-point 20 10))
     (draw-rect* 20 200 200 300)))
 
-(with-focused-view (first (windows)) 
+(with-focused-view (first (windows))
   (with-pen-state (:pattern *light-gray-pattern* :size (make-point 20 10))
     (fill-rect* 20 200 200 300)))
 
 
-(with-focused-view (first (windows)) 
+(with-focused-view (first (windows))
   (erase-rect* 220 200 300 300)
   (with-pen-state (:pattern *light-gray-pattern* :size (make-point 20 10))
     (fill-ellipse 220 200 200 100))
   (with-pen-state (:pattern *dark-gray-pattern* :size (make-point 20 10))
     (fill-ellipse 250 300 100 50)))
 
-(with-focused-view (first (windows)) 
+(with-focused-view (first (windows))
   (with-pen-state (:pattern *light-gray-pattern* :size (make-point 20 10))
     (erase-rect* 40 220 160 260)))
 
-(with-focused-view (first (windows)) 
+(with-focused-view (first (windows))
   (with-back-color *black-pattern*
     (with-pen-state (:pattern *light-gray-pattern* :size (make-point 20 10))
       (erase-rect* 40 220 160 260))))

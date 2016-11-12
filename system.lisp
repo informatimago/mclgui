@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    System functions
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -39,7 +39,7 @@
 
 ;;;
 ;;; The hairy subject of saving and reloading images, with the
-;;; restoration of resources and pointers.  
+;;; restoration of resources and pointers.
 ;;;
 
 
@@ -48,11 +48,11 @@
 ;;
 ;; quit
 ;;     on-quit
-;; 
+;;
 ;; save-application
 ;;     on-quit
 ;;     on-save
-;; 
+;;
 ;; launch
 ;;     on-restore
 ;;     on-load-and-now
@@ -106,7 +106,7 @@ Listener’s read loop).  The functions contained in
 *LISP-STARTUP-FUNCTIONS* are run after the functions specified by
 DEF-LOAD-POINTERS and before the init file is loaded.  The functions
 are called in reverse order from the order in which they appear in the
-list. 
+list.
 ")
 
 (defvar *application-should-terminate-functions* '()
@@ -195,7 +195,7 @@ If :CANCEL is thrown, the application doesn't terminate.")
     (declare (ignore notification))
     (with-simple-restart (abort "Abort (possibly crucial) startup functions.")
       (flet ((call-with-restart (f)
-               (with-simple-restart 
+               (with-simple-restart
                    (continue "Skip (possibly crucial) startup function ~S."
                              (if (symbolp f)
                                  f
@@ -206,7 +206,7 @@ If :CANCEL is thrown, the application doesn't terminate.")
     [[NSNotificationCenter defaultCenter] removeObserver:self]
     [self release]
     (setf *initializer* nil)]
-  
+
   );;eval-when
 
 

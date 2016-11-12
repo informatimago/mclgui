@@ -41,7 +41,7 @@
 ; akh unix file stuff in file menu
 ; --------- 5.0b3
 ; 1/13/03 ss add "Bring All to Front" item to Windows menu
-; akh don't add the quit menu item to file-menu if osx - 
+; akh don't add the quit menu item to file-menu if osx -
 ;--------- 4.4b5
 ; 06/01/01 see do-about-dialog - no dont - undid the change
 ; 08/08/00 akh save-menu-item-update less liberal
@@ -221,7 +221,7 @@
 
 #|
 (eval-when (:compile-toplevel :execute)
-  (deftrap "_LMGetCurApName" () 
+  (deftrap "_LMGetCurApName" ()
     (:no-trap (:pointer (:string 255)))
     (:no-trap (%int-to-ptr #$CurApName)))
 )
@@ -261,7 +261,7 @@
 #|
 (defmethod add-hide-menu-item? ((application application) menu)
   (add-new-item menu (concatenate 'string "Hide " (current-app-name)) 'hide-mcl :command-key '(:shift #\H)))
-  
+
 
 (defun hide-mcl ()
   (rlet ((psn :processSerialNumber))
@@ -315,7 +315,7 @@
                  (window-filename wob)))
          date)
     (if (and wob
-             (method-exists-p 'window-revert wob)           
+             (method-exists-p 'window-revert wob)
              (or (not (method-exists-p 'window-needs-saving-p wob))
                  (and (or (not (method-exists-p 'window-filename wob))
                           file)
@@ -357,28 +357,28 @@
   (add-new-item menu "Close" 'window-close-event-handler :class 'window-menu-item :command-key #\W
                 :help-spec 1104)
   (add-new-item menu "Save" 'window-save
-                :class 'window-menu-item :command-key #\S 
+                :class 'window-menu-item :command-key #\S
                 :update-function #'save-menu-item-update
                 :help-spec '(1105 1 2))
   (add-new-item menu "Save As…" (lambda (w)
                                            (window-do-operation w 'window-save-as))
                 :class 'window-menu-item
                 :command-key '(:shift #\S)
-                :update-function (lambda (item)(edit-menu-item-update item 'window-save-as)) 
-                :help-spec '(1106 1 2))  
-  
+                :update-function (lambda (item)(edit-menu-item-update item 'window-save-as))
+                :help-spec '(1106 1 2))
+
   (add-new-item menu "Save Copy As…" (lambda (w) (window-do-operation w 'window-save-copy-as))
                 :update-function (lambda (item)(edit-menu-item-update item 'window-save-copy-as))
-                :class 'window-menu-item                
+                :class 'window-menu-item
                 :help-spec '(1107 1 2))
   (add-new-item menu "Revert…" 'window-revert
-                :command-key #\R 
+                :command-key #\R
                 :class 'window-menu-item :update-function #'revert-menu-item-update
                 :help-spec '(1108 1 2))
   (add-new-item menu "-" nil :disabled t)
   (lds
    (progn
-     (add-new-item menu "Load File…"                
+     (add-new-item menu "Load File…"
                    (lambda (&aux (file (choose-file-dialog
                                           :mac-file-type '("TEXT"
                                                            #-ppc-target "FASL"
@@ -386,9 +386,9 @@
                                           :button-string "Load")))
                        (when file (eval-enqueue `(load ',file :verbose t))))
                    :command-key #\Y
-                   :help-spec 1303)     
+                   :help-spec 1303)
      (add-new-item *file-menu* "Compile File…"
-                   (lambda () 
+                   (lambda ()
                        (let* ((file (choose-file-dialog :mac-file-type "TEXT"
                                                         :button-string "Compile"))
                               (output-file (choose-new-file-dialog
@@ -400,21 +400,21 @@
                                             :button-string "Compile")))
                          (eval-enqueue `(compile-file ',file :verbose t
                                                       :output-file ',output-file))))
-                   :help-spec 1304)    
+                   :help-spec 1304)
      (add-new-item menu "-" nil :disabled t)))
   (add-new-item menu "Page Setup…" 'print-style-dialog :help-spec 1109)
   (add-new-item menu "Print…" 'window-hardcopy :class 'window-menu-item :command-key #\P
                 :update-function 'print-menu-item-update
-                :help-spec '(1110 1 2))  
+                :help-spec '(1110 1 2))
   )
 
 
 #|
 (defun confirmed-quit ()
   (cond ((command-key-p)
-         (when (or #-(and) 
+         (when (or #-(and)
                    (and (eql *break-level* 0)
-                        (do-all-windows w 
+                        (do-all-windows w
                           (when (window-needs-saving-p w)
                             (return T))))
                    (y-or-n-dialog (format nil "Do you really want to quit from ~A ?"
@@ -427,7 +427,7 @@
            (quit)))
         (t (quit))))
 |#
-  
+
 
 ;redefined later (make ppc-boot happy)
 (defun open-recent-menu-update (item)
@@ -472,10 +472,10 @@
     (cond
      ((and consider-window-method (method-exists-p op w))
       (funcall op w))
-     (t 
+     (t
       (let ((handler (current-key-handler w)))
         (when handler
-          (cond 
+          (cond
            ((method-exists-p op handler)
             (funcall op handler)))))))))
 
@@ -492,7 +492,7 @@
    ((and (eql op 'undo)
          (method-exists-p 'window-can-undo-p w))
     (funcall 'window-can-undo-p w))
-   ((non-window-method-exists-p op w))                          
+   ((non-window-method-exists-p op w))
    (t (let ((handler (current-key-handler w)))
         (when handler
           (cond ((method-exists-p 'window-can-do-operation handler)
@@ -569,11 +569,11 @@
 
 ;(defclass edit-menu (menu)())
 
-(defparameter *edit-menu* (make-instance 'menu :menu-title "Edit" 
+(defparameter *edit-menu* (make-instance 'menu :menu-title "Edit"
                                          :update-function 'update-edit-menu-items
                                          :help-spec 1200))
 
-(let ((menu *edit-menu*))       
+(let ((menu *edit-menu*))
 
   (add-new-item menu "Undo" #'undo
                 :class 'window-menu-item :command-key #\Z
@@ -592,11 +592,11 @@
   ; add update functions for these
   (add-new-item menu "Cut" #'cut
                 :class 'window-menu-item :command-key #\X :help-spec '(1203 1 2)
-                :update-function 
+                :update-function
                 (lambda (item) (edit-menu-item-update item 'cut)))
   (add-new-item menu "Copy" #'copy
                 :class 'window-menu-item :command-key #\C :help-spec '(1204 1 2)
-                :update-function 
+                :update-function
                 (lambda (item) (edit-menu-item-update item 'copy)))
   (add-new-item menu "Paste" #'paste
                 :class 'window-menu-item :command-key #\V :help-spec '(1205 1 2)
@@ -604,7 +604,7 @@
                 (lambda (item) (edit-menu-item-update item 'paste)))
   (add-new-item menu "Clear" #'clear
                 :class 'window-menu-item :help-spec '(1206 1 2)
-                :update-function 
+                :update-function
                 (lambda (item) (edit-menu-item-update item 'clear)))
   (add-new-item menu "Select All" #'select-all
                 :update-function (lambda (item) (edit-menu-item-update item 'select-all))
@@ -642,9 +642,9 @@
   (lds (make-instance 'menu :menu-title "Tools" :help-spec 1400)
        nil))
 
-#| 
+#|
 (defun update-windows-menu (menu &aux menu-handle)
-  (if *modal-dialog-on-top* 
+  (if *modal-dialog-on-top*
     (menu-disable menu)
     (when (setq menu-handle (slot-value menu 'menu-handle))
       (menu-enable menu)
@@ -678,7 +678,7 @@
                     :lowLongOfPSN #$kCurrentProcess))
           (#_SetFrontProcess psn)))
 
-(defvar *bring-windows-front-item* 
+(defvar *bring-windows-front-item*
   (make-instance 'menu-item
     :menu-item-title "Bring All to Front"
     :menu-item-action 'bring-all-windows-front))
@@ -687,7 +687,7 @@
 ; conses less and  faster X 1.6 when order-ok, a bit slower when not ok
 (defun update-windows-menu (menu &aux menu-handle)
   (declare (optimize (speed 3)(safety 0)))
-  (if *modal-dialog-on-top* 
+  (if *modal-dialog-on-top*
     (menu-disable menu)
     (when (setq menu-handle (slot-value menu 'menu-handle))
       (menu-enable menu)
@@ -697,7 +697,7 @@
               (items (slot-value menu 'item-list))
               (nitems 0)
               (order-ok t))
-     
+
          (declare (fixnum nitems))
          (declare (dynamic-extent new-items)(list new-items items))
          (if t #|(osx-p)|# (setq items (cddr items)))
@@ -726,7 +726,7 @@
              (setf (slot-value item 'owner) nil)
              ; always delete item 1 (they get "renumbered" !)
              (#_DeleteMenuItem menu-handle 1))
-           (setf (slot-value menu 'item-list) nil) 
+           (setf (slot-value menu 'item-list) nil)
            (when t ;(osx-p)
              (add-menu-items menu *bring-windows-front-item*)
              (add-menu-items menu (make-instance 'menu-item :menu-item-title "-")))
@@ -736,7 +736,7 @@
                (dolist (x new-items) (when x (push x copy)))
                (setq new-items (sort copy #'string-lessp :key #'ccl::menu-title))))
            (dolist (item new-items)
-             (when item               ; windoid's & da-window's have no menu-item's                     
+             (when item               ; windoid's & da-window's have no menu-item's
                (add-menu-items menu item)
                (if (not (slot-value item 'enabledp)) (menu-item-disable item))
                ))))))))
@@ -772,7 +772,7 @@
                     :help-spec 1111))))
 (pushnew 'cruddo *lisp-startup-functions*)
 |#
-    
+
 
 #|
 (queue-fixup

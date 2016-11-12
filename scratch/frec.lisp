@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Fred Record.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -67,7 +67,7 @@
   zwin                          ; pos after last char in window at last display
                                 ; .. actually distance from last char to end of buf
                                 ; .. meaningful if bmod and zmod are before it
-                                ; .. what if bmod before and zmod after? meaningless  
+                                ; .. what if bmod before and zmod after? meaningless
   bmod                          ; unchanged top area since last display
   zmod                          ; unchanged bottom area since last display
   selrgn                        ; selection at last display (mac region)
@@ -112,7 +112,7 @@
   ;;   (with-focused-view owner
   ;;     (%update-resized-lines frec)))
   (setf (fr.bmod frec) 0
-        (fr.zmod frec) 0) 
+        (fr.zmod frec) 0)
   frec)
 
 
@@ -181,8 +181,8 @@
       (setf (fr.linedescents frec) (make-array line-count :initial-element 0))
       (setf (fr.lineheights frec)  (make-array line-count :initial-element 0))
       (setf (fr.linewidths frec)   (make-array line-count :initial-element 0)))
-    (when (setf (fr.line-right-p frec) (not (eql 0 (mclgui:get-sys-just))))      
-      (setf (fr.right-justified-p frec) t)) 
+    (when (setf (fr.line-right-p frec) (not (eql 0 (mclgui:get-sys-just))))
+      (setf (fr.right-justified-p frec) t))
     (setf (fr.leading frec) nil)       ; no leading
     (when owner
       (reinit-frec frec owner))     ; Push onto *frec-list*, allocate selrgn

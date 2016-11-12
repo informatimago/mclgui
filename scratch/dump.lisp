@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    XXX
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -35,15 +35,15 @@
 
 
 
-;; (define-method-combination append 
+;; (define-method-combination append
 ;;     :identity-with-one-argument t)
-;; 
+;;
 ;; (defclass a () ())
 ;; (defclass b (a) ())
 ;; (defclass c (a) ())
 ;; (defclass d (b c) ())
 ;; (defclass e (d) ())
-;; 
+;;
 ;; (defgeneric m (o)
 ;;   (:method-combination append)
 ;;   (:method append ((o a)) '(a))
@@ -218,7 +218,7 @@
     (dotimes (i [views count] list)
       (push [views objectAtIndex:i] list))))
 
-;; (nsview-view (first (nswindow-subviews (handle (first (windows)))))) 
+;; (nsview-view (first (nswindow-subviews (handle (first (windows))))))
 ;; #<test-view #xEFBA5B6>
 
 (defun nswindow-list ()

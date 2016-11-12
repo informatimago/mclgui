@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    MCLGUI internal macros.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -36,10 +36,10 @@
 (declaim (declaration stepper))
 
 
-(define-modify-macro appendf (&rest args) 
+(define-modify-macro appendf (&rest args)
   append "Append onto list")
 
-(define-modify-macro nconcf (&rest args) 
+(define-modify-macro nconcf (&rest args)
   nconc "Nconc onto list")
 
 (declaim (inline delete/swapped-arguments))
@@ -128,7 +128,7 @@ SEE:            PRINT-PARSEABLE-OBJECT
                             (list (class-name (class-of object))))
                           (funcall thunk object)
                           (when identity
-                            (list (object-identity object))))) 
+                            (list (object-identity object)))))
           object))))
 
 

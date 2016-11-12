@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Views with scroll bars.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
 ;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -161,7 +161,7 @@
     (call-next-method)
     (when (v-scroller self)  (set-view-container (v-scroller self) new-container))
     (when (h-scroller self)  (set-view-container (h-scroller self) new-container))
-    (when (scroller-outline self)  
+    (when (scroller-outline self)
       (set-view-container (scroller-outline self) new-container))
     (when need-to-update?
       (update-scroll-bars self :length t :position t))
@@ -177,7 +177,7 @@
 
 
 (defmethod set-view-size ((self scroller-mixin) h &optional v)
-  (declare (ignore h v))  
+  (declare (ignore h v))
   (without-interrupts
    (prog1
      (call-next-method)
@@ -191,7 +191,7 @@
            (h-scroller (h-scroller self))
            (v-scroller (v-scroller self))
            (outline (scroller-outline self)))
-      (when (and pos size)   ; auto-sizing may not have happenned yet 
+      (when (and pos size)   ; auto-sizing may not have happenned yet
         (without-interrupts
             (reposition-scroll-bars self h-scroller v-scroller :length length :position position)
           (when length
@@ -250,7 +250,7 @@
            (width (point-h size))
            (height (point-v size))
            (grow-icon-p (grow-icon-p self)))
-      (when (and pos size)   ; auto-sizing may not have happenned yet 
+      (when (and pos size)   ; auto-sizing may not have happenned yet
         (without-interrupts
             (when h-scroller
               (when position
@@ -267,12 +267,12 @@
                                      ;; height ADJUSTED IF A GROW ICON:
                                      (+ 2 height (if (and grow-icon-p (not h-scroller)) -14 0))))))))))
 
- 
+
 (defmethod scroll-bar-changed ((view scroller-mixin) scroll-bar)
   (let* ((new-value (scroll-bar-setting scroll-bar))
          (horizontal-p (eql (scroll-bar-direction scroll-bar) :horizontal))
          (old-pos (view-scroll-position view)))
-    (set-view-scroll-position 
+    (set-view-scroll-position
      view
      (if horizontal-p
        (make-point new-value (point-v old-pos))
@@ -360,7 +360,7 @@
     (set-view-container self view-container))
   self)
 
-    
+
 (defgeneric scroller-size-and-position (self h-scrollp v-scrollp)
   (:method ((self scroller-pane) h-scrollp v-scrollp)
     (let ((scroller-size (view-size self))
@@ -396,7 +396,7 @@
 
 
 (defmethod set-view-size ((self scroller-pane) h &optional v)
-  (declare (ignore h v))  
+  (declare (ignore h v))
   (when (draw-scroller-outline self)
     (let* ((old-size (view-size self))
            (h (point-h old-size))

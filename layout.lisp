@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Layout of subviews in a view.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2014 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -207,7 +207,7 @@ DIMENSION: (member :width :height :match"))
 
 ;;;--------------------------------------------------------------------
 
-(defclass linear-layout (layout)                           
+(defclass linear-layout (layout)
   ((orientation          :initarg :orientation :initform :horizontal :accessor layout-orientation
                          :type (member :horizontal :vertical))
    (direction            :initarg :direction :initform :left-to-right
@@ -220,8 +220,8 @@ DIMENSION: (member :width :height :match"))
    (spacing              :initarg :spacing :initform 0 :accessor layout-spacing
                          :type (or integer (member :elastic))))
   (:documentation "Places subviews linearly.
-                                                             
-      +---(linear-layout)-----------------------------------+  :orientation :vertical       
+
+      +---(linear-layout)-----------------------------------+  :orientation :vertical
       |                            ^                        |  :vertical-alignment :top
       |                            | top-margin             |  :horizontal-alignment :center
       |                            v                        |
@@ -252,7 +252,7 @@ DIMENSION: (member :width :height :match"))
 
 
 
-;;                   
+;;
 ;;  justification    :left-to-right                :right-to-left
 ;;  :left            0                             (- box.width total-length)
 ;;  :right           (- box.width total-length)    0
@@ -398,12 +398,12 @@ as :center.
       +------------+   |           |   +---------+
                        +-----------+
 
-    :alignment :center                
+    :alignment :center
                        +------------+
       +-------------+  |            |  +---------+
     --|             |--|            |--|         |--------------
       +-------------+  |            |  +---------+
-                       +------------+  
+                       +------------+
 
     :alignment :bottom
                        +-----------+

@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    XXX
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2014 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -149,19 +149,19 @@
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
 
   (let ((red (make-instance
-              'color-box 
+              'color-box
               :color *red-color*
               :view-position (make-point 20 10)
               :view-size     (make-point 100 20)
               :view-nick-name "red"))
         (blue (make-instance
-               'color-box 
+               'color-box
                :color *blue-color*
                :view-position (make-point 2 2)
                :view-size     (make-point 12 12)
                :view-nick-name "blue"))
         (green (make-instance
-                'color-box 
+                'color-box
                 :color *green-color*
                 :view-position (make-point 2 2)
                 :view-size     (make-point 12 12)
@@ -179,19 +179,19 @@
   (apply (function remove-subviews) *w* (coerce (view-subviews *w*) 'list))
 
   (let* ((red (make-instance
-               'color-box 
+               'color-box
                :color *red-color*
                :view-position (make-point 20 10)
                :view-size     (make-point 100 20)
                :view-nick-name "red"))
          (blue (make-instance
-                'color-box 
+                'color-box
                 :color *blue-color*
                 :view-position (make-point 2 2)
                 :view-size     (make-point 12 12)
                 :view-nick-name "blue"))
          (green (make-instance
-                 'color-box 
+                 'color-box
                  :color *green-color*
                  :view-position (make-point 2 2)
                  :view-size     (make-point 72 30)
@@ -225,7 +225,7 @@
                                :spacing 10
                                :orientation :horizontal
                                :subviews (loop :for n :below 32
-                                               :collect (make-instance 'color-box 
+                                               :collect (make-instance 'color-box
                                                                        :color *green-color*
                                                                        :view-size (make-point (+ 30 (random 10))
                                                                                               (+ 10 (random 10)))
@@ -271,27 +271,27 @@
                                            :view-nick-name "positions"))
 
                 (make-instance
-                 'color-box 
+                 'color-box
                  :color *blue-color*
                  :view-position (make-point 18 8)
                  :view-size     (make-point 104 24)
                  :view-nick-name "blue 1")
 
                 (make-instance
-                 'color-box 
+                 'color-box
                  :color *blue-color*
                  :view-position (make-point 18 28)
                  :view-size     (make-point 104 24)
                  :view-nick-name "blue 2")
 
                 (make-instance
-                 'color-box 
+                 'color-box
                  :color *blue-color*
                  :view-position (make-point 18 48)
                  :view-size     (make-point 104 24)
                  :view-nick-name "blue 3")
 
-                
+
                 (make-instance
                  'boxed-static-text-dialog-item
                  :dialog-item-text "STATIC TEXT"
@@ -333,12 +333,12 @@
 (progn
 
   (initialize/sdi)
-  
+
   (let ((image (load-image #P"~/Pictures/blue-eyes-baby.jpg")))
     (with-focused-view (front-window)
       (draw-image image (view-bounds (front-window)))))
 
-  
+
   (let ((layout  (aref (view-subviews *w*) 0)))
     (setf (layout-spacing layout) 5
           (layout-line-spacing layout) 10
@@ -352,7 +352,7 @@
           (layout-horizontal-direction layout) :right-to-left
           (layout-vertical-direction layout) :bottom-up)
     (adjust-layout layout))
-  
+
   (test-flow-layout)
 
   (rect-to-list (view-bounds (aref (view-subviews *w*) 0)))
@@ -364,25 +364,25 @@
   (test-color-box)
   (test-image-box)
   (let ((red (make-instance
-              'color-box 
+              'color-box
               :color *red-color*
               :view-position (make-point 40 40)
               :view-size     (make-point 80 80)
               :view-nick-name "red"))
         (blue (make-instance
-               'color-box 
+               'color-box
                :color *blue-color*
                :view-position (make-point 10 10)
                :view-size     (make-point 60 60)
                :view-nick-name "blue"))
         (green (make-instance
-                'color-box 
+                'color-box
                 :color *green-color*
                 :view-position (make-point 10 10)
                 :view-size     (make-point 40 40)
                 :view-nick-name "green"))
         (yellow (make-instance
-                 'color-box 
+                 'color-box
                  :color *yellow-color*
                  :view-position (make-point 10 10)
                  :view-size     (make-point 20 20)
@@ -399,7 +399,7 @@
     (draw-rect* 20 10 100 20))
 
   (view-draw-contents  (front-window))
-  
+
   (let ((view (aref (view-subviews (front-window)) 0)))
     (view-draw-contents view))
 
@@ -442,10 +442,10 @@
            (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 1) *w*)
            (convert-coordinates #@(0 0)  (aref (view-subviews *w*) 0) (aref (view-subviews *w*) 1))))
   ((20 40) (2 2) (18 38))
-  
+
   (pprint (dump *w*))
 
-  
+
 
   (import '(com.informatimago.common-lisp.cesarum.utility:/apply
             com.informatimago.common-lisp.cesarum.utility:compose))
@@ -462,11 +462,11 @@
   (with-focused-view *w*
     (draw-rect* 10 10 80 50))
 
-  
+
 
 
   (identify-streams)
-  
+
   (invalidate-view *w*)
   (test-text-box)
   (position-item *w*)
@@ -475,14 +475,14 @@
   (map 'list (lambda (view) (list (point-to-list (convert-coordinates #@(0 0) view (view-window view)))
                                   (point-to-list (view-position view))))
     (view-subviews(first(windows))))
-  
+
 
   (load "scratch/dump.lisp")
   (pprint (dump (front-window)))
 
-  
+
   (set-view-position (aref (view-subviews (front-window)) 0) 20 40)
-  
+
   (point-to-list (view-position (aref (view-subviews (front-window)) 0)))
   (view-focus-and-draw-contents (front-window))
 
@@ -549,7 +549,7 @@ publié en 1962 par MIT Press, un des maîtres­livres de l'Informatique.
   (#/CGContextConcatCTM)
 
 
-  
+
   (window-close *w*)
   )
 

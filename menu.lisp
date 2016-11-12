@@ -16,24 +16,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -53,7 +53,7 @@ NOTE:           NSITEM is removed from its menu if it is in one
 "
   (unless (nullp [nsitem menu])
     ;; (format t "~&  removing item ~S from menu ~S~%" (objcl:lisp-string  [nsitem title]) (objcl:lisp-string  [[nsitem menu] title])) (finish-output)
-    [[nsitem retain] autorelease]                             
+    [[nsitem retain] autorelease]
     [[nsitem menu] removeItem:nsitem])
   ;; (format t "~&  adding item ~S to menu ~S~%" (objcl:lisp-string [nsitem title]) (objcl:lisp-string  [nsmenu title])) (finish-output)
   [nsmenu addItem:nsitem])
@@ -542,7 +542,7 @@ DO:             Set the menu item title to NEW-TITLE.  If the menu
                 item is installed, the change in title is immediately
                 reflected in the menu.  If the title is \"-\" then the
                 menu item is a separator, an unselectable dotted line.
- 
+
 RETURN:         NEW-TITLE
 ")
   (:method ((item menu-element) new-title)
@@ -700,7 +700,7 @@ NEW-STYLES:     A keyword or list of keywords. Allowable keywords are
     (setf (slot-value item 'style) newstyle)
     (let ((nsitem (handle item)))
       (when nsitem
-        [nsitem setAttributedTitle:[[NSAttributedString alloc] 
+        [nsitem setAttributedTitle:[[NSAttributedString alloc]
                                     initWithString:(objcl:objc-string (slot-value item 'title))
                                     attributes:(style-to-attributes newstyle)]]))))
 
@@ -932,7 +932,7 @@ This is the menu-item-update-function for the items in the Edit menu.
 (defun update-windows-menu (menu)
   ;; if menu items are in the right order just leave them there
   ;; conses less and  faster X 1.6 when order-ok, a bit slower when not ok
-  (if *modal-dialog-on-top* 
+  (if *modal-dialog-on-top*
       (menu-disable menu)
       (progn
         (menu-enable menu)
@@ -971,7 +971,7 @@ This is the menu-item-update-function for the items in the Edit menu.
                       (when x (push x copy)))
                     (setf new-items (sort copy #'string-lessp :key (function menu-title)))))
                 (dolist (item new-items)
-                  (when item ; windoid's & da-window's have no menu-item's                     
+                  (when item ; windoid's & da-window's have no menu-item's
                     (add-menu-items menu item)
                     (unless (slot-value item 'enabledp)
                       (menu-item-disable item))))))))))
@@ -1264,14 +1264,14 @@ RETURN:         The list of MENUs collected.
 ;;   (dotimes (i [bar numberOfItems])
 ;;     [[[bar itemAtIndex:i] menu] setAutoenablesItems:YES]
 ;;     [[[bar itemAtIndex:i] menu] update]))
-;; 
+;;
 ;; (dolist (menu *default-menubar*)
 ;;   (menu-disable menu)
 ;;   (menu-enable menu)
 ;;   (dolist (item (menu-items menu))
 ;;     (menu-item-disable item)
 ;;     (menu-item-enable item)))
-;; 
+;;
 ;; [(handle (find-menu-item (find-menu "Patchwork") "PW")) target]
 ;; #<A Null Foreign Pointer>
 ;; (menu-item :title "PW" :enabledp t :checkedp nil "x30200259B94D")

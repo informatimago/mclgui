@@ -81,7 +81,7 @@
 
 ;;------------------------------------------------------------
 
-;; (eql ccl:+null-ptr+ ccl:+null-ptr+) 
+;; (eql ccl:+null-ptr+ ccl:+null-ptr+)
 ;; (class-of )#<built-in-class ccl:macptr>
 
 #-(and)
@@ -129,9 +129,9 @@
   [NSMenu setMenuBarVisible:nil]
   [NSMenu setMenuBarVisible:YES]
   [[[NSApplication sharedApplication] mainMenu] itemAtIndex:0]
-  
+
   [[[[NSApplication sharedApplication] mainMenu] itemAtIndex:0] setTitle:@"Clozure CL"]
-  
+
   [[[[[[NSApplication sharedApplication] mainMenu] itemAtIndex:0] submenu] itemAtIndex:0] setTitle: @"About Clozure CL"]
 
   )
@@ -172,7 +172,7 @@
 
  *control-q-comtab*  *default-menubar*
 *disable-bubbles-on-inactive-windows* *font-name-number-alist*
-*foreground* 
+*foreground*
 *script-font-alist* *temp-rgn* *transfer-modes*
 
 
@@ -283,7 +283,7 @@ SET-PART-COLOR-LOOP
    (with-output-to-string (*step-trace-output*)
      (let ((*readtable* *readtable-patchwork*))
        (step (load #P"/Users/pjb/Patches/addition et multiplication" :verbose t :external-format :mac-roman)
-             :trace)))) 
+             :trace))))
   (values))
 
 
@@ -330,9 +330,9 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
 
 (in-package :ui)
 
-(defparameter *d* (get-string-from-user "Please, edit a very new name:" 
+(defparameter *d* (get-string-from-user "Please, edit a very new name:"
                                             :window-title "Rename it"
-                                            :size (make-point 200 85) 
+                                            :size (make-point 200 85)
                                             :position :centered
                                             :initial-string "hello"
                                             :modeless t))
@@ -368,9 +368,9 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
            finally (return (length text))))))
 
 ;; 98
-;; 
+;;
 ;; visible:
-;; 
+;;
 ;; took 1,645,489 microseconds (1.645489 seconds) to run.
 ;;          2,378 microseconds (0.002378 seconds, 0.14%) of which was spent in GC.
 ;; During that period, and with 4 available CPU cores,
@@ -378,9 +378,9 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
 ;;         28,833 microseconds (0.028833 seconds) were spent in system mode
 ;;  704,800 bytes of memory allocated.
 ;;  18 minor page faults, 0 major page faults, 0 swaps.
-;; 
+;;
 ;; not visible:
-;; 
+;;
 ;; took 64,703 microseconds (0.064703 seconds) to run.
 ;; During that period, and with 4 available CPU cores,
 ;;      53,366 microseconds (0.053366 seconds) were spent in user mode
@@ -423,7 +423,7 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
 
 (with-focused-view (front-window)
   (erase-rect* 20 10 200 20)
-  
+
   #-(and) (progn
             (with-pen-state (:mode :patcopy :pattern *black-pattern*)
               (fill-rect* 20 10 60 20))
