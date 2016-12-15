@@ -58,7 +58,7 @@
     
     (make-instance 'computed-view
                    :view-container win
-                   :view-positioN #@(0 0)
+                   :view-position #@(0 0)
                    :view-size #@(200 100)
                    :drawn-as (lambda (view)
                                (draw-rect (view-bounds view))
@@ -67,7 +67,7 @@
     
     (make-instance 'computed-view
                    :view-container win
-                   :view-positioN #@(200 100)
+                   :view-position #@(200 100)
                    :view-size #@(200 100)
                    :drawn-as (lambda (view)
                                (draw-rect (view-bounds view))
