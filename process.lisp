@@ -68,9 +68,9 @@ RETURN: A form performing BODY on the main thread.
              (if (null argument)
                  '*null*
                  `(let ((,varg ,argument))
-                   (if (numberp ,varg)
-                       (ccl:%int-to-ptr ,varg)
-                       ,varg))))
+                    (if (numberp ,varg)
+                        (ccl:%int-to-ptr ,varg)
+                        ,varg))))
            (general-case ()
              (if wait
                  (let ((vmb (gensym)))
@@ -89,20 +89,22 @@ RETURN: A form performing BODY on the main thread.
                (destructuring-bind (send recipient message &optional argument) form
                  (declare (ignore send))
                  ;; TODO: eval once arguments!
-                 `(progn ;; (format-trace "performSelectorOnMainThread" ',recipient ,message ,argument ,wait)
-                         [,recipient performSelectorOnMainThread: (oclo:selector ,(objcmsg message))
-                                     withObject: ,(objarg argument)
-                                     waitUntilDone: ,wait])))
+                 `(progn
+                    ;; (format-trace "performSelectorOnMainThread" ',recipient ,message ,argument ,wait)
+                    [,recipient performSelectorOnMainThread: (oclo:selector ,(objcmsg message))
+                                withObject: ,(objarg argument)
+                                waitUntilDone: ,wait])))
               ((and (listp form)
                     (<= 2 (length form) 3)
                     (eql 'objc:objc-message-send-super (first form)))
                (destructuring-bind (send message &optional argument) form
                  (declare (ignore send))
                  ;; TODO: eval once arguments!
-                 `(progn ;; (format-trace "performSelectorOnMainThread" 'super ,message ,argument ,wait)
-                         [super performSelectorOnMainThread: (oclo:selector ,(objcmsg message))
-                                withObject: ,(objarg argument)
-                                waitUntilDone: ,wait])))
+                 `(progn
+                    ;; (format-trace "performSelectorOnMainThread" 'super ,message ,argument ,wait)
+                    [super performSelectorOnMainThread: (oclo:selector ,(objcmsg message))
+                           withObject: ,(objarg argument)
+                           waitUntilDone: ,wait])))
               (t
                (general-case))))
           (general-case)))))
@@ -139,4 +141,3 @@ RETURN: A form performing BODY on the main thread.
   (setf *initial-process* (bt:current-thread)))
 
 ;;;; THE END ;;;;
-
