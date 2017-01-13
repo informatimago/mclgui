@@ -106,6 +106,8 @@
         "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.SEQUENCE")
   (:use "MCLGUI.MUTEX" "MCLGUI.DEBUGGING" "MCLGUI.SYSTEM" "MCLGUI.CIRCULAR" "MCLGUI.WRAPPER")
   (:nicknames "UI")
+  (:shadowing-import-from "MCLGUI.DEBUGGING"
+                          "OBJECT-IDENTITY")
   (:shadowing-import-from "CLOSER-MOP"
                           "STANDARD-CLASS" "STANDARD-METHOD" "STANDARD-GENERIC-FUNCTION"
                           "DEFMETHOD" "DEFGENERIC")
