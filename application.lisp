@@ -308,6 +308,8 @@ FORM:           A symbol, function or lisp form.
                                           'application))
                         (make-instance 'application)))
         #-ccl (make-instance 'application))
+  (unless (handle *application*)
+    (setf (slot-value *application* 'handle) [NSApplication sharedApplication]))
   (initialize-run-loop-evaluator)
   (values))
 
