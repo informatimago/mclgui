@@ -270,7 +270,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 
 (declaim (inline graphics-flush))
 (defun graphics-flush ()
-  (format-trace 'graphics-flush)
+  ;; (format-trace 'graphics-flush)
   [[NSGraphicsContext currentContext] flushGraphics])
 
 
