@@ -50,10 +50,6 @@
 ;;; Representation of NSPoint, NSSize and NSRect in lisp,
 ;;; with conversion between MCLGUI:POINT.
 
-(defun xor (a b)
-  "Return A ⊻ B"
-  (or (and a (not b)) (and (not a) b)))
-
 (defun nstimeinterval (value) (coerce value 'double-float))
 (defun cgfloat        (value) (coerce value 'ns:cgfloat))
 (defun sfloat         (value) (coerce value 'single-float))
@@ -383,7 +379,6 @@
      :nsevent [nsevent retain])))
 
 
-
 (defmethod wrap ((nsevent ns:ns-event))
   (nsevent-to-event nsevent))
 
@@ -399,9 +394,6 @@
            charactersIgnoringModifiers:(objcl:objcl-string (string-downcase key))
            isARepeat:nil
            keyCode:(char-code (aref key 0))])
-
-;; (nsevent-to-event (make-key-nsevent "a"))
-
 
 
 ;;;------------------------------------------------------------
@@ -535,7 +527,7 @@ DO:             Evaluates the BODY in a lexical environment where
 ;;; Application Delegate
 
 
-
+#-ccl-1.11
 @[LispApplicationDelegate
   method:(applicationShouldTerminate:(id)sender)
   resultType:(:int)
@@ -973,6 +965,7 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (with-event-environment
+    (format-trace "~S --> ~S~%" self (evaluator-thunk self))
     (if (evaluator-thunk self)
         (funcall (evaluator-thunk self))
         (warn "Evaluator got a NIL thunk")))]
