@@ -1,29 +1,28 @@
 # -*- mode:org; coding:utf-8 -*-
-
-* TODO MCLGUI Project                                                :mclgui:
+* TODO [#A] MCLGUI Project                                           :mclgui:
 
 Issues https://gitlab.com/patchwork/mclgui/issues
 
-** TODO 00022 ajustement graphiques editable-text-dialog-item        
-** TODO 00023 integration hemlock Cmd-w should close hemlock window  
+** TODO [#A] 00022 ajustement graphiques editable-text-dialog-item
+** TODO [#A] 00023 integration hemlock Cmd-w should close hemlock window
 and not try to close the Patchwork window below it.
-** TODO 00000 Classes that need to be implemented satisfactorily:    
+** TODO [#A] 00000 Classes that need to be implemented satisfactorily:
 
 - dialog
 - dialog-item
 - table-dialog-item
-- button-dialog-item 
+- button-dialog-item
 - dialog
 - fred-window
 - window
 - view
 
-** TODO 00002 Objective-C runtime exception:                         
+** TODO [#A] 00002 Objective-C runtime exception:
 Item to be removed is not in the menu in the first place
 
 #+BEGIN_QUOTE
 
-    [pjb@larissa :0.0 patchwork]$ ~/Desktop/patchwork-10.0-0.889-ccl-1.9_darwinx8664-darwin-apple-13.1.0-x86-64/Patchwork.app/Contents/MacOS/Patchwork 
+    [pjb@larissa :0.0 patchwork]$ ~/Desktop/patchwork-10.0-0.889-ccl-1.9_darwinx8664-darwin-apple-13.1.0-x86-64/Patchwork.app/Contents/MacOS/Patchwork
     MidiShare not present. PatchWork won't play Midi.
     (-[MclguiWindow close]                    (c-chord-boxmn-window-rtm :title "MN1" :view-position (10 28) :view-size (230 222) "#x30200192E70D"))
     (-[MclguiWindow doClose]                  )
@@ -46,32 +45,31 @@ Item to be removed is not in the menu in the first place
     (FUNCALL (:INTERNAL GUI::COCOA-STARTUP GUI::START-COCOA-IDE))
 
     ERROR while ((LET ((WINDOW (MCLGUI::NSWINDOW-WINDOW MCLGUI::SELF))) (FORMAT-TRACE "-[MclguiWindow close]" WINDOW) (CATCH :CANCEL (WINDOW-CLOSE WINDOW)))):
-    Objective-C runtime exception: 
+    Objective-C runtime exception:
     Item to be removed is not in the menu in the first place
 
 #+END_QUOTE
 
-** TODO 00008 integration hemlock Cmd-x Cmd-c Cmd-v w/ listener.     
+** TODO [#A] 00008 integration hemlock Cmd-x Cmd-c Cmd-v w/ listener.
 
 Le résultat ne peux pas se copier et c’est une fonction nécessaire (également impossibilité d’écrire dans le Listener).
- 
-** TODO 00021 Control modifier                                       
+
+** TODO [#A] 00021 Control modifier
 When pressing control, event-modifiers stays 0 (key is correctly the control character/code,
-but for eg. Control-4 this doesn't work. 
-** TODO 00025 key down events are not processed correctly               :bug:
-** TODO 00026 editing text boxes doesn't work                           :bug:
+but for eg. Control-4 this doesn't work.
+** TODO [#A] 00025 key down events are not processed correctly               :bug:
+** TODO [#A] 00026 editing text boxes doesn't work                           :bug:
 clicking on editable text in box (eg value in a const box) doesn't select it, and typing doesn't modify it.
-** TODO 00028 new boxes they get a bad vacant position                  :bug:
+** TODO [#A] 00028 new boxes they get a bad vacant position                  :bug:
 view-find-vacant-position
-** TODO 00029 cursors referenced by resource ID                        :port:
+** TODO [#A] 00029 cursors referenced by resource ID                        :port:
 eg. (set-cursor *cross-line-cursor*)
-** TODO 00030 spinwheel while drawing links                             :bug:
+** TODO [#A] 00030 spinwheel while drawing links                             :bug:
 - while click-and-dragging, the spinwheel cursor activates.
 find-grep :patxor
 (trace find-view-containing-point)
 make-PW-standard-box
-** TODO 00034 Unable to find class: LispApplication                     :bug:
+** TODO [#A] 00034 Unable to find class: LispApplication                     :bug:
 
 21/10/14 08:00:08,136 System Preferences[9841]: Unable to find class: LispApplication, exiting
 21/10/14 08:00:08,137 com.apple.launchd.peruser.1000[140]: (com.apple.systempreferences.39808[9841]) Exited with code: 1
-
