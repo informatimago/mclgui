@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Utility to deal with circular structures.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2013 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -82,7 +82,7 @@ EXAMPLE: (print-identified-conses '((a . b) #1=(c . d) (e . #1#)))
                             (if (atom node)
                                 (princ node stream)
                                 (progn
-                                  (princ "(" stream) 
+                                  (princ "(" stream)
                                   (print-node (car node))
                                   (princ " . " stream)
                                   (print-node (cdr node))
@@ -177,7 +177,7 @@ EXAMPLE: (print-identified-conses '((a . b) #1=(c . d) (e . #1#)))
                            (if (atom node)
                                (princ node stream)
                                (progn
-                                 (princ "(" stream) 
+                                 (princ "(" stream)
                                  (print-node (car node))
                                  (princ " . " stream)
                                  (print-node (cdr node))
@@ -200,7 +200,7 @@ EXAMPLE: (print-identified-conses '((a . b) #1=(c . d) (e . #1#)))
 ;; (with-output-to-string (stream)
 ;;   (print-identified-conses/1 '((a . #2=(b . (c . d))) #1=(c d . #2#) (e . #1#)) stream))
 ;; "((a . #2=(b . (#3=c . #1=d))) . (#4=(#3# . (#1# . #2#)) . ((e . #4#) . ())))"
-;; 
+;;
 ;; (with-output-to-string (stream)
 ;;   (print-identified-conses/2 '((a . #2=(b . (c . d))) #1=(c d . #2#) (e . #1#)) stream))
 ;; "((a . #1=(b . (#2=c . #3=d))) . (#4=(#2# . (#3# . #1#)) . ((e . #4#) . ())))"
@@ -221,7 +221,7 @@ EXAMPLE: (print-identified-conses '((a . b) #1=(c . d) (e . #1#)))
 ;;                                   (array-element-type object)
 ;;                                   )))
 ;;     ()))
-;; 
+;;
 ;; (defun archive-circularly (object)
 ;;   (let ((*circularly-archived-objects* (make-hash-table)))
 ;;     (archive-object-circularly object)))

@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Select Dialog
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,28 +15,28 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-;;;;    
+;;;;
 
 (in-package "MCLGUI")
 
@@ -57,9 +57,9 @@
 (defmethod set-view-size ((view select-dialog) h &optional v)
   (declare (ignore h v))
   (let* ((old-size (view-size view)))
-    (call-next-method)    
+    (call-next-method)
     (let* ((new-size (view-size view))
-           (delta (subtract-points new-size old-size)))      
+           (delta (subtract-points new-size old-size)))
       (dovector (v (view-subviews view))
                 (if (typep v 'sequence-dialog-item)
                     (set-view-size v (add-points (view-size v) delta))
@@ -69,7 +69,7 @@
 
 (defun select-item-from-list (the-list &key (window-title "Select an Item")
                               (selection-type :single)
-                              table-print-function 
+                              table-print-function
                               (action-function #'identity)
                               (default-button-text "OK")
                               (sequence-item-class 'arrow-dialog-item)
@@ -86,20 +86,20 @@
     (flet ((act-on-items (item)
              (let ((s-item (find-subview-of-type (view-container item)
                                                  'sequence-dialog-item)))
-               (funcall action-function 
+               (funcall action-function
                         (mapcar (lambda (c) (cell-contents s-item c))
                                 (selected-cells s-item))))))
       (when (and dialog-class (not pos-p) modeless)
         (let ((w (front-window :class 'select-dialog)))  ; or dialog-class?
           (when w (setf view-position (add-points (view-position w) #@(15 15))))))
       (setf debutton
-            (make-instance 
+            (make-instance
                 'default-button-dialog-item
                 :dialog-item-text default-button-text
                 :dialog-item-enabled-p the-list
                 :help-spec button-spec
                 :dialog-item-action
-                (cond 
+                (cond
                   ((not modeless)
                    (lambda (item)
                        (return-from-modal-dialog (act-on-items item))))
@@ -144,14 +144,14 @@
                                                       (point-v bpos))
                                           (make-point (if t #|(osx-p)|# 64 60) (point-v bsize))
                                           "Cancel"
-                                          #'return-cancel 
+                                          #'return-cancel
                                           :cancel-button t
                                           :help-spec 15012))
                        nil))))
         (cond (modeless ; select first then show is prettier
                (window-show dialog)
                dialog)
-              
+
               (t
                (niy select-item-from-list)
                #-(and) (#_changewindowattributes (wptr dialog) 0 #$kWindowCollapseBoxAttribute)

@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Implement a Text Edit Manager inspired from MacOS.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -17,19 +17,19 @@
 ;;;;          editing in various justifications.
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2014 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -104,11 +104,11 @@
   (sel-current 0   :type integer) ; current charpos (used when extending selection with shift-).
   ;; Note: lines are justified lines; there may be several lines for a given paragraph.
   (%nlines      0   :type integer)
-  %line-starts ; adjustable vector.  
+  %line-starts ; adjustable vector.
   ;; We use the a gap buffer of paragraphs, and a string gap buffer for the current paragraph.
   paragraphs ; an adjustable array of te-paragraph; newlines count one position but are not stored.
-  (nparagraphs             0 :type integer) ; number of paragraphs 
-  (current-paragraph-index 0 :type integer) 
+  (nparagraphs             0 :type integer) ; number of paragraphs
+  (current-paragraph-index 0 :type integer)
   (next-paragraph-index    0 :type integer)
   ;; current-paragraph-{before,after}-point are adjustable strings with fill-pointers,
   ;; containing the current paragraph split into before and after parts.
@@ -162,7 +162,7 @@
           (te-sel-current te) (te-sel-start te) (te-sel-end   te))
   (assert (<= 1 (te-nparagraphs te) (length (te-paragraphs te)))
           () "There must be at least one paragraph and nparagraphs = ~D must be less or equal to (length paragraphs) = ~D)."
-          (te-nparagraphs te) (length (te-paragraphs te))) 
+          (te-nparagraphs te) (length (te-paragraphs te)))
   (assert (< -1 (te-current-paragraph-index te) (te-nparagraphs te))
           () "Current paragraph (~D) must be within nparagraphs (~D)."
           (te-current-paragraph-index te) (te-nparagraphs te))
@@ -367,7 +367,7 @@ DO:   Adjust by INCREMENT the total length, paragraph and line start
 
 (defun te-line-end (lino te)
   (if (< (1+ lino) (te-nlines te))
-      (1- (aref (te-line-starts te) (1+ lino))) 
+      (1- (aref (te-line-starts te) (1+ lino)))
       (te-length te)))
 
 (defun te-line-length (lino te)
@@ -1006,7 +1006,7 @@ RETURN:  the rectangle where a caret at CHARPOS would be drawn; the lino where t
 
 
 (defun te-call-caret-hook (te)
-  (when (te-in-port te) 
+  (when (te-in-port te)
     (assert (te-has-caret te))
     (multiple-value-bind (caret-rect lino) (te-compute-caret-rect (te-sel-start te) te)
       (with-font-focused-view (te-in-port te)
@@ -1236,7 +1236,7 @@ DO:     Incorporates a copy of the specified text into the edit record
         The selection range is set to an insertion point at the end of
         the text.  TE-SET-TEXT doesn't affect the text drawn in the
         destination rectangle, so call INVAL-RECT afterward if
-        necessary. 
+        necessary.
 TEXT:   A string containing the text to be copied into the Text Edit record.
 RETURN: TE
 "
@@ -1375,7 +1375,7 @@ containing the text is active.
                          (+ start index))
                         ((minusp order)
                          ;; should not occur for above (<= h x) test.
-                         start) 
+                         start)
                         ((<= (1- (length line)) index)
                          ;; TODO: We're not handling the spaces suffix.
                          (+ start (length line)))
@@ -1435,13 +1435,13 @@ RETURN: The start and end positions of the word that contains CHARPOS.
                         (setf current-charpos new-charpos
                               current-lino new-lino)
                         (multiple-value-setq (cstart cend) (te-word-at new-charpos new-lino te))))))))
-        ;; 
+        ;;
         (loop
           :do (if extend
                   (te-set-select current-charpos (if (< current-charpos (round (+ (te-sel-start te)
                                                                                   (te-sel-end te)) 2))
                                                      (te-sel-end   te)
-                                                     (te-sel-start te)) te) 
+                                                     (te-sel-start te)) te)
                   (te-set-select current-charpos initial-charpos te))
           :until (funcall click-loop)
           :do (setf current-charpos (%te-coordinates-at-point (get-mouse) te))))))
@@ -1508,7 +1508,7 @@ respect to the middle of the selection text anyways.
 
 word & ¬extend:
 pt.charpos          -> start-word end-word
-sel.start   <- start-word 
+sel.start   <- start-word
 sel.end     <- end-word
 sel.current <- closer to pt.charpos of b.start-word b.end-word
 
@@ -2053,7 +2053,7 @@ NOTE:   We set the selection because deleting can reduce the size
 
 (defun %te-insert (charpos text te)
   "
-DO:     Inserts the TEXT at position CHARPOS. 
+DO:     Inserts the TEXT at position CHARPOS.
 NOTE:   Doesn't change the selection range.
 RETURN: The position after the last character inserted.
 "
@@ -2270,25 +2270,25 @@ RETURN: The position after the last character inserted.
 +-+-+-|-+-|-+-+-+-+-+
       s   e
           c
-    shift <-    
+    shift <-
 +-+-+-|-|-+-+-+-+-+-+
 : : : | | : : : : : :
 +-+-+-|-|-+-+-+-+-+-+
       s e
         c
-    shift <-    
+    shift <-
 +-+-+-|-+-+-+-+-+-+-+
 : : : | : : : : : : :
 +-+-+-|-+-+-+-+-+-+-+
       s
       e
       c
-    shift <-    
+    shift <-
 +-+-|-|-+-+-+-+-+-+-+
 : : | | : : : : : : :
 +-+-|-|-+-+-+-+-+-+-+
     s e
-    c  
+    c
 
 "
 
@@ -2544,14 +2544,14 @@ DO:     Compute the new selection points from the current ones and the
   (te-bind       14      'te-next-line-command            te)
   (te-bind       15      'te-open-line-command            te)
   (te-bind       16      'te-previous-line-command        te)
-  (te-bind       17      'te-beep-command                 te)            
+  (te-bind       17      'te-beep-command                 te)
   (te-bind       18      'te-beep-command                 te)
   (te-bind       19      'te-beep-command                 te)
   (te-bind       20      'te-transpose-chars-command      te)
   (te-bind       21      'te-beep-command                 te)
   (te-bind       22      'te-scroll-up-command            te)
   (te-bind       23      'te-kill-region-command          te)
-  (te-bind       24      'te-beep-command                 te)            
+  (te-bind       24      'te-beep-command                 te)
   (te-bind       25      'te-yank-command                 te)
   (te-bind       26      'te-beep-command                 te)
   (te-bind       27      'te-beep-command                 te)

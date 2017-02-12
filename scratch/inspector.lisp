@@ -85,12 +85,12 @@
          (let ((window (front-window)))
            (map nil (function adjust-size)
              (view-subviews window)))
-         
+
          (make-inspector-window)
          (make-inspector-window '(a b c))
          (length (list-all-packages))
          (map nil 'print (view-subviews (front-window)))
-         
+
          (view-draw-contents (front-window))
          )
 

@@ -5,7 +5,7 @@
  (colored ())
 
  (simple-view (colored fundamental-character-output-stream))
- 
+
  (menu-element (colored))
  (menubar (colored))
 

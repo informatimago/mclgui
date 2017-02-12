@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Implement the window class.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -83,7 +83,7 @@ RETURN: a RECT containing the position and size of the window,
 "
   (with-handle (winh window)
     (let ((frame (get-nsrect [winh contentRectForFrameRect:[winh frame]])))
-      (window-frame-from-nswindow-frame frame)))) 
+      (window-frame-from-nswindow-frame frame))))
 
 
 
@@ -196,7 +196,7 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
            (posiz  (window-frame-from-nswindow-frame window)))
       (setf (slot-value window 'window-title)         (objcl:lisp-string [winh title])
             (slot-value window 'view-position)        (rect-topleft posiz)
-            (slot-value window 'view-size)            (rect-size posiz) 
+            (slot-value window 'view-size)            (rect-size posiz)
             (slot-value window 'view-scroll-position) ori)))
   (window-size-parts window)
   (when (window-visiblep window)
@@ -443,7 +443,7 @@ close box or chooses Close from the File menu.
 
 
 
-;; (defmethod view-position ((w window) &aux (wptr (wptr w)))  
+;; (defmethod view-position ((w window) &aux (wptr (wptr w)))
 ;;   (rlet ((rect :rect))
 ;;     (#_getwindowportbounds wptr rect)
 ;;     (local-to-global wptr (pref rect :rect.topleft))))
@@ -545,7 +545,7 @@ V:              The vertical coordinate of the new position, or NIL if
                 [mswindow setFrameOrigin:(unwrap (nswindow-frame-from-window-frame window))]
                 (setf (%view-position window) (rect-topleft (window-frame-from-nswindow-frame window))))))
         (%view-position window))
-      (set-view-position window (center-window (view-size window) h)))) 
+      (set-view-position window (center-window (view-size window) h))))
 
 
 (defvar *window-growing* nil
@@ -818,7 +818,7 @@ INCLUDE-INVISIBLES:
             ;;                 relativeTo:[other windowNumber]])))
             )))
     ;; (without-interrupts
-    ;;     (let* ((wptr (wptr w)))    
+    ;;     (let* ((wptr (wptr w)))
     ;;       (when wptr
     ;;         (let* ((visible? #-carbon-compat (rref wptr windowrecord.visible) #+carbon-compat (#_iswindowvisible wptr)))
     ;;           (if (<= new-layer 0)
@@ -831,7 +831,7 @@ INCLUDE-INVISIBLES:
     ;;                     (setq *selected-window* w)
     ;;                     (view-activate-event-handler w))))
     ;;               (let ((selected *selected-window*))
-    ;;                 (if (set-window-layer-internal 
+    ;;                 (if (set-window-layer-internal
     ;;                      w (max *windoid-count* new-layer) include-invisibles)
     ;;                     (when (eql w selected)
     ;;                       (let ((new-selected (front-window)))
@@ -934,7 +934,7 @@ DO:             Bring WINDOW to the front, activate it, and show
         (unless (window-active-p window)
           (view-activate-event-handler window))
         (progn
-          (when *selected-window*        
+          (when *selected-window*
             (view-deactivate-event-handler *selected-window*))
           (window-bring-to-front window)
           (setf *selected-window* nil)
@@ -1140,7 +1140,7 @@ RETURN:         A BOOLEAN value indicating whether view can perform
       ((and (eql op 'undo)
             (method-exists-p 'window-can-undo-p view))
        (funcall 'window-can-undo-p view))
-      ((non-window-method-exists-p op view))                          
+      ((non-window-method-exists-p op view))
       (t (let ((handler (current-key-handler view)))
            (when handler
              (if (method-exists-p 'window-can-do-operation handler)
@@ -1153,10 +1153,10 @@ RETURN:         A BOOLEAN value indicating whether view can perform
     (cond
       ((and consider-window-method (method-exists-p op window))
        (funcall op window))
-      (t 
+      (t
        (let ((handler (current-key-handler window)))
          (when handler
-           (cond 
+           (cond
              ((method-exists-p op handler)
               (funcall op handler)))))))))
 
@@ -1351,7 +1351,7 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 ;; (initialize/window)
 ;; (map nil 'print *window-list*)
 ;; (mapcar 'nswindow-window (cddr *window-list*))
-;; (type-of (first *window-list*)) 
+;; (type-of (first *window-list*))
 
 
 

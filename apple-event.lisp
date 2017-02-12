@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    XXX
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -16,24 +16,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -57,19 +57,19 @@ APPLICATION:    The application.  MCL standard event handling always
 APPLEEVENT:     The Apple event, which is an MCL object of type macptr
                 and a record of type AEDesc—a record with only two
                 fields, a type and a handle.  MCL users generally do
-                not have to look at the record structure directly. 
+                not have to look at the record structure directly.
 
 REPLY:          Another Apple event record, provided by the Apple
                 Event Manager.  If a reply is required, information
                 should be copied into this record using Apple Event
-                Manager calls. 
+                Manager calls.
 
 REFCON:         The handler reference constant, which is any Lisp
                 object.  When the handler is installed, you have the
                 option of specifying some Lisp object that serves to
                 distinguish (for instance) two different installations
                 of the same handler.  The reference constant is often
-                ignored. 
+                ignored.
 ")
   (:method ((application application) appleevent reply refcon)
     (declare (ignore appleevent reply refcon))
@@ -88,19 +88,19 @@ APPLICATION:    The application.  MCL standard event handling always
 APPLEEVENT:     The Apple event, which is an MCL object of type macptr
                 and a record of type AEDesc—a record with only two
                 fields, a type and a handle.  MCL users generally do
-                not have to look at the record structure directly. 
+                not have to look at the record structure directly.
 
 REPLY:          Another Apple event record, provided by the Apple
                 Event Manager.  If a reply is required, information
                 should be copied into this record using Apple Event
-                Manager calls. 
+                Manager calls.
 
 REFCON:         The handler reference constant, which is any Lisp
                 object.  When the handler is installed, you have the
                 option of specifying some Lisp object that serves to
                 distinguish (for instance) two different installations
                 of the same handler.  The reference constant is often
-                ignored. 
+                ignored.
 ")
   (:method ((application application) appleevent reply refcon)
     (declare (ignore appleevent reply refcon))
@@ -147,19 +147,19 @@ APPLICATION:    The application.  MCL standard event handling always
 APPLEEVENT:     The Apple event, which is an MCL object of type macptr
                 and a record of type AEDesc—a record with only two
                 fields, a type and a handle.  MCL users generally do
-                not have to look at the record structure directly. 
+                not have to look at the record structure directly.
 
 REPLY:          Another Apple event record, provided by the Apple
                 Event Manager.  If a reply is required, information
                 should be copied into this record using Apple Event
-                Manager calls. 
+                Manager calls.
 
 REFCON:         The handler reference constant, which is any Lisp
                 object.  When the handler is installed, you have the
                 option of specifying some Lisp object that serves to
                 distinguish (for instance) two different installations
                 of the same handler.  The reference constant is often
-                ignored. 
+                ignored.
 ")
   (:method ((application application) appleevent reply refcon)
     (declare (ignore appleevent reply refcon))
@@ -206,19 +206,19 @@ APPLICATION:    The application.  MCL standard event handling always
 APPLEEVENT:     The Apple event, which is an MCL object of type macptr
                 and a record of type AEDesc—a record with only two
                 fields, a type and a handle.  MCL users generally do
-                not have to look at the record structure directly. 
+                not have to look at the record structure directly.
 
 REPLY:          Another Apple event record, provided by the Apple
                 Event Manager.  If a reply is required, information
                 should be copied into this record using Apple Event
-                Manager calls. 
+                Manager calls.
 
 REFCON:         The handler reference constant, which is any Lisp
                 object.  When the handler is installed, you have the
                 option of specifying some Lisp object that serves to
                 distinguish (for instance) two different installations
                 of the same handler.  The reference constant is often
-                ignored. 
+                ignored.
 ")
   (:method ((application application) appleevent reply refcon)
     (declare (ignore appleevent reply refcon))
@@ -288,14 +288,14 @@ the extent of the macro.  It is similar to the macro rlet.  It wraps
 body within an UNWIND-PROTECT, so that no matter how body is exited,
 WITH-AEDESCS disposes of all its temporary records in the correct way.
 If the data handle has anything in it, WITH-AEDESCS calls
-#_|AEDisposeDesc|. 
+#_|AEDisposeDesc|.
 
 Thus any memory allocated by the Apple Event Manager is properly
-disposed of. 
+disposed of.
 
 If you have a need for an AEDesc record with indefinite extent, you must
 use MAKE-RECORD.  When you want to dispose of the record, you must
-explicitly call #_|AEDisposeDesc|, then dispose-record. 
+explicitly call #_|AEDisposeDesc|, then dispose-record.
 "
   `(ccl:rlet (,@(mapcar (lambda (var) `(,var :<AED>esc)) vars))
      ,@(mapcar (lambda (var) `(#_|AEInitializeDesc| ,var)) vars)

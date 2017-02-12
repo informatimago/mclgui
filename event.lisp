@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Event processing
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -502,7 +502,7 @@ RETURN:         T if the click currently being processed was the
 ;; track double-click-p etc, to keep them synchronized with the
 ;; mac-event state.
 ;;
-;; (defun double-click-p ()  
+;; (defun double-click-p ()
 ;;   (and (and (boundp '*current-event*) *current-event*)
 ;;        (eql $MButDwnEvt (rref *current-event* eventrecord.what))
 ;;        (> *multi-click-count* 1)))
@@ -634,7 +634,7 @@ RETURN:         If called during event processing, return true if
 ;; (defvar *in-wait-mouse-up-or-moved* nil)
 ;; (defun wait-mouse-up-or-moved ()
 ;;   (if  (and *the-timer* (%i> *timer-count* 0))
-;;        (progn 
+;;        (progn
 ;;          (when *in-wait-mouse-up-or-moved*
 ;;            (error "Recursive call to wait-mouse-up-or-moved"))
 ;;          (let ((*in-wait-mouse-up-or-moved* t))
@@ -707,11 +707,11 @@ RETURN:         If called during event processing, return true if
 
 (defun process-event (event)
   ;; Note: we don't dispatch on menu events (menu key or menu select),
-  ;; since those events are handled by Cocoa. 
+  ;; since those events are handled by Cocoa.
   (let ((window  (front-window))
         (what    (event-what    event))
         (message (event-message event)))
-    (when (= what mouse-down) 
+    (when (= what mouse-down)
       (process-multi-clicks event))
     (case what
       ((#.null-event)

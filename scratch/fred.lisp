@@ -31,15 +31,15 @@
         (set-view-container item view-container))))
 
 
-(defmethod initialize-instance :after  ((item fred-dialog-item) &key 
+(defmethod initialize-instance :after  ((item fred-dialog-item) &key
                                 buffer filename dialog-item-text (margin 1)
                                 (view-font (view-default-font item)))
   (when view-font (set-view-font item view-font))
   (let ((color (part-color item :text)))
-    (when color 
+    (when color
       (let ((ff-color (color->ff-index color)))
         (multiple-value-bind (ff ms)(view-font-codes item)
-          (set-view-font-codes item (logior ff ff-color) ms)))))        
+          (set-view-font-codes item (logior ff ff-color) ms)))))
   (let ((frec (frec item)))
     (setf (fr.margin frec) margin            ; Just room for the selection box
           (fr.hpos frec) margin))
@@ -54,7 +54,7 @@
 
 (defmethod set-default-size-and-position ((item fred-dialog-item) &optional container)
   (declare (ignore container))
-  (let ((size (view-size item)))    
+  (let ((size (view-size item)))
     (call-next-method)
     (unless (eql size (setq size (view-size item)))
       (with-focused-view item
@@ -69,7 +69,7 @@
   (declare (ignore where))
   (when (dialog-item-enabled-p item)
     (call-next-method)))
-    
+
 (defmethod view-activate-event-handler ((item fred-dialog-item))
   (when (eql item (current-key-handler (view-window item)))
     (call-next-method)))
@@ -98,7 +98,7 @@
       (let ((pos (view-position item)))
         (invalidate-corners container pos (add-points pos (view-size item))))))
   text)
-    
+
 
 (defmethod dialog-item-text ((item fred-dialog-item))
   (or (slot-value item 'dialog-item-text)
@@ -114,7 +114,7 @@
         (with-fore-color (if (and colorp (not enabled-p))
                            *gray-color*
                            (part-color item :text))
-          (with-back-color (part-color item :body)              
+          (with-back-color (part-color item :body)
             (frec-draw-contents (frec item))
             ))))))
 

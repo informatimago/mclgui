@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Defines the global variables of the MCLGUI.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -132,7 +132,7 @@ a keyword) can be performed with the Common Lisp function ELT.")
       (and (integerp name) (< -1 name (length *transfer-modes*)) name)
       (if (eql if-does-not-exist :error)
           (error 'invalid-transfer-mode-error :mode name)
-          if-does-not-exist))) 
+          if-does-not-exist)))
 
 
 (defun xfer-mode-to-name (mode)
@@ -142,7 +142,7 @@ a keyword) can be performed with the Common Lisp function ELT.")
 
 
 
-(defparameter *style-alist* 
+(defparameter *style-alist*
   '((:plain     . 0)
     (:bold      . 1)
     (:italic    . 2)
@@ -180,27 +180,27 @@ This variable should never be changed by a program.
 (defvar *foreground-color*  nil)
 (defvar *background-color*  nil)
 
-(defvar *black-color*        nil) 
-(defvar *white-color*        nil) 
-(defvar *pink-color*         nil) 
-(defvar *red-color*          nil) 
-(defvar *orange-color*       nil) 
-(defvar *yellow-color*       nil) 
-(defvar *green-color*        nil) 
-(defvar *dark-green-color*   nil) 
-(defvar *light-blue-color*   nil) 
-(defvar *blue-color*         nil) 
-(defvar *purple-color*       nil) 
-(defvar *brown-color*        nil) 
-(defvar *tan-color*          nil) 
-(defvar *gray-color*         nil) 
-(defvar *light-gray-color*   nil) 
-(defvar *lighter-gray-color* nil) 
+(defvar *black-color*        nil)
+(defvar *white-color*        nil)
+(defvar *pink-color*         nil)
+(defvar *red-color*          nil)
+(defvar *orange-color*       nil)
+(defvar *yellow-color*       nil)
+(defvar *green-color*        nil)
+(defvar *dark-green-color*   nil)
+(defvar *light-blue-color*   nil)
+(defvar *blue-color*         nil)
+(defvar *purple-color*       nil)
+(defvar *brown-color*        nil)
+(defvar *tan-color*          nil)
+(defvar *gray-color*         nil)
+(defvar *light-gray-color*   nil)
+(defvar *lighter-gray-color* nil)
 (defvar *dark-gray-color*    nil)
 
 ;; extension colors:
-(defvar *cyan-color*         nil) 
-(defvar *magenta-color*      nil) 
+(defvar *cyan-color*         nil)
+(defvar *magenta-color*      nil)
 ;;
 
 

@@ -5,10 +5,10 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    The MCLGUI package implements the Mac OS GUI classes of MCL
 ;;;;    over the OpenStep API.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -16,19 +16,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -127,7 +127,7 @@
 
    ;; Extensions:
    "DOVECTOR"
-   
+
    "INITIALIZE"
    "COPY-OBJECT-FROM"
 
@@ -145,17 +145,17 @@
    "INSET-RECT" "INTERSECT-RECT" "UNION-RECT"
    "POINT-IN-RECT-P" "POINTS-TO-RECT" "POINT-TO-ANGLE"
    "PT2RECT")
-  
+
   (:export
-   
+
    ;; ----------------------------------------
    ;; Chapter 2: Points and Fonts
    ;; ----------------------------------------
 
    "MAKE-POINT" "POINT-STRING" "POINT-H" "POINT-V" "POINT<="
    "ADD-POINTS" "SUBTRACT-POINTS" "POINT-TO-LIST"
-   
-   
+
+
    "*FONT-LIST*" "*PEN-MODES*" "*STYLE-ALIST*"
 
    "*BLACK-PATTERN*" "*DARK-GRAY-PATTERN*" "*GRAY-PATTERN*"
@@ -169,12 +169,12 @@
    "FONT-CODES" "FONT-CODES-INFO" "FONT-CODES-LINE-HEIGHT"
    "FONT-CODES-STRING-WIDTH" "FONT-LINE-HEIGHT"
    "MERGE-FONT-CODES" "SYS-FONT-CODES"
-   
+
    "VIEW-FONT" "SET-VIEW-FONT"
    "VIEW-FONT-CODES" "SET-VIEW-FONT-CODES"
 
    ;; Extension: conditions.
-   
+
    "INVALID-VALUE-DESIGNATOR-ERROR" "INVALID-VALUE-ERROR"
    "INVALID-PEN-MODE-ERROR" "INVALID-PEN-MODE"
    "INVALID-PEN-MODE-VALUE-ERROR" "INVALID-PEN-MODE-VALUE"
@@ -189,7 +189,7 @@
 
    ;; Not implemented:
    ;; grafport-write-string
-   
+
    ;; ----------------------------------------
    ;; Chapter 3: Menus
    ;; ----------------------------------------
@@ -214,7 +214,7 @@
 
    "MENU-ALREADY-INSTALLED" "MENU-ALREADY-INSTALLED-ERROR" "MENU-ITEM"
    "MENU-ITEM-ACTION" "MENU-ITEM-ACTION-FUNCTION"
-   
+
    "*BALLOT-BOX-WITH-CHECK*" "*CHECK-MARK*" "*HEAVY-CHECK-MARK*"
    "*NOT-CHECK-MARK*"
 
@@ -230,19 +230,19 @@
    "SET-MENU-ITEM-STYLE" "SET-MENU-ITEM-TITLE"
    "SET-MENU-ITEM-UPDATE-FUNCTION"
 
-   
+
    "WITH-MENU-DETACHED"
 
    ;; Not implemented:
    ;; menu-handle menu-id *menu-id-object-alist*
-   
+
    ;; Extensions:
 
    "MENU-ALREADY-INSTALLED-ERROR" "MENU-ALREADY-INSTALLED"
    "MENU-ITEM-NOT-OWNED-ERROR" "MENU-ITEM-NOT-OWNED-ERROR-MENU"
    "MENU-ITEM-NOT-OWNED"
-   
-   
+
+
    ;; ----------------------------------------
    ;; Chapter 4: Views and Windows
    ;; ----------------------------------------
@@ -254,7 +254,7 @@
    "VIEW" "VIEW-SUBVIEWS" "VIEW-VALID"
    "*CURRENT-VIEW*" "*CURRENT-FONT-VIEW*" "*MOUSE-VIEW*"
 
-   
+
    "DIALOG"
    "WINDOW" "WINDOW-CURSOR" "WINDOW-GROW-RECT" "WINDOW-DRAG-RECT"
    "WINDOW-COLOR-LIST" "WINDOW-DO-FIRST-CLICK"
@@ -304,17 +304,17 @@
    "WINDOW-NEEDS-SAVING-P" "WINDOW-CAN-UNDO-P"
    "WINDOW-CAN-DO-OPERATION" "WINDOW-DO-OPERATION"
    "WINDOW-EVENT-HANDLER"
-   
+
    "WINDOW-CLOSE" "WINDOW-SAVE" "WINDOW-SAVE-AS" "WINDOW-SAVE-COPY-AS"
    "WINDOW-REVERT" "WINDOW-HARDCOPY" "UNDO" "UNDO-MORE" "CUT" "COPY"
-   "PASTE" "CLEAR" "SELECT-ALL" 
-   
-   
+   "PASTE" "CLEAR" "SELECT-ALL"
+
+
    ;; Extension (not exported/documented in MCL 4.1):
    "VIEW-GET" "VIEW-PUT" "VIEW-GET" "VIEW-REMPROP"
    "VIEW-CONTAINS-P"
    "OFFSET-TO-WINDOW-COORDINATES"
-   
+
    ;; Extension: condition:
    "VIEW-ERROR"
    "VIEW-ERROR-VIEW"
@@ -324,7 +324,7 @@
    ;; ----------------------------------------
 
    ;; Dialog Items:
-   
+
    "DIALOG-ITEM" "DIALOG-ITEM-WIDTH-CORRECTION" "DIALOG-ITEM-TEXT"
    "DIALOG-ITEM-ENABLED-P" "DIALOG-ITEM-ACTION-FUNCTION" "DIALOG-ITEMS"
    "MAKE-DIALOG-ITEM" "DIALOG-ITEM-ACTION"
@@ -335,11 +335,11 @@
 
    ;; not implemented:
    ;; dialog-item-handle set-dialog-item-handle
-   
+
    "BUTTON-DIALOG-ITEM" "PRESS-BUTTON" "DEFAULT-BUTTON-DIALOG-ITEM"
    "DEFAULT-BUTTON" "DEFAULT-BUTTON-P" "SET-DEFAULT-BUTTON"
    "DEFAULT-BUTTON-P"
-  
+
    "KEY-HANDLER-MIXIN" "KEY-HANDLER-P" "ALLOW-RETURNS-P"
    "ALLOW-TABS-P" "EXIT-KEY-HANDLER" "ENTER-KEY-HANDLER"
    "SET-ALLOW-RETURNS" "SET-ALLOW-TABS"
@@ -347,7 +347,7 @@
    "STATIC-TEXT-DIALOG-ITEM"
    "EDITABLE-TEXT-DIALOG-ITEM"
    "TEXT-EDIT-DIALOG-ITEM"
-   
+
    "BOX-DIALOG-ITEM"
 
    "CHECK-BOX-DIALOG-ITEM" "CHECK-BOX-CHECKED-P" "CHECK-BOX-CHECK"
@@ -374,7 +374,7 @@
    "PULL-DOWN-MENU" "TYPEIN-MENU" "ACTION-POP-UP-MENU"
    "USE-POP-UP-CONTROL" "*USE-POP-UP-CONTROL*"
 
-   
+
    "SCROLL-BAR-DIALOG-ITEM" "SCROLL-BAR-LENGTH"
    "SET-SCROLL-BAR-LENGTH" "SCROLL-BAR-MAX" "SCROLL-BAR-MIN"
    "SET-SCROLL-BAR-MAX" "SET-SCROLL-BAR-MIN" "SCROLL-BAR-SCROLL-SIZE"
@@ -391,7 +391,7 @@
    "UPDATE-SCROLL-BARS" "UPDATE-SCROLL-BAR-LIMITS"
    "UPDATE-THUMBS" "REPOSITION-SCROLL-BARS" "SCROLL-BAR-CHANGED"
    "SCROLLER" "V-SCROLLER" "H-SCROLLER"
-   
+
    "SEQUENCE-DIALOG-ITEM" "TABLE-SEQUENCE" "SET-TABLE-SEQUENCE"
    "CELL-TO-INDEX" "INDEX-TO-CELL"
 
@@ -399,15 +399,15 @@
 
    "THROW-CANCEL" "CATCH-CANCEL" "CANCEL-BUTTON"
    "LOOK-FOR-A-BUTTON-NAMED-CANCEL"
-   
+
    "MESSAGE-DIALOG" "SELECT-ITEM-FROM-LIST" "GET-STRING-FROM-USER"
 
    "MODAL-DIALOG" "RETURN-FROM-MODAL-DIALOG"
-  
+
    "FIND-DIALOG-ITEM"
-   
+
    "Y-OR-N-DIALOG"
-   
+
    ;; ----------------------------------------
    ;; Chapter 6: Color
    ;; ----------------------------------------
@@ -426,7 +426,7 @@
 
    ;; Not implemented:
    ;; color-to-rgb rgb-to-color with-rgb *black-rgb* *white-rgb*
-   
+
    ;;  Extensions:
    "COLOR-PARTS"
 
@@ -444,9 +444,9 @@
    "CHOOSE-DIRECTORY-DIALOG" "CHOOSE-FILE-DEFAULT-DIRECTORY"
    "SET-CHOOSE-FILE-DEFAULT-DIRECTORY"
    "FULL-PATHNAME"
-   "SET-MAC-FILE-TYPE"    "MAC-FILE-TYPE"   
+   "SET-MAC-FILE-TYPE"    "MAC-FILE-TYPE"
    "SET-MAC-FILE-CREATOR" "MAC-FILE-CREATOR"
-   
+
    ;; ----------------------------------------
    ;; Chapter 10: Events
    ;; ----------------------------------------
@@ -468,7 +468,7 @@
    "COMMAND-KEY-P" "CONTROL-KEY-P" "OPTION-KEY-P" "SHIFT-KEY-P"
    "CAPS-LOCK-KEY-P"
    "WAIT-MOUSE-UP-OR-MOVED"
-   
+
    "UNKNOWN-WINDOW"
 
 
@@ -495,8 +495,8 @@
    "SET-INTERNAL-SCRAP" "INTERNALIZE-SCRAP" "EXTERNALIZE-SCRAP"
 
    "EVAL-ENQUEUE" "GET-NEXT-QUEUED-FORM"
-   "WITH-TIMER" 
-   
+   "WITH-TIMER"
+
    ;; ----------------------------------------
    ;; Chapter 11: Apple Events
    ;; ----------------------------------------
@@ -514,7 +514,7 @@
    "APPLICATION-ABOUT-DIALOG" "APPLICATION-SUSPEND-EVENT-HANDLER"
    "APPLICATION-RESUME-EVENT-HANDLER" "APPLICATION-EVAL-ENQUEUE"
    "APPLICATION-NAME"
-   
+
    ;; Application AE handler methods:
    "OPEN-APPLICATION-HANDLER" "QUIT-APPLICATION-HANDLER"
    "OPEN-APPLICATION-DOCUMENT" "OPEN-DOCUMENTS-HANDLER"
@@ -531,13 +531,13 @@
    ;; Annex D: QuickDraw
    ;; ----------------------------------------
 
-   
+
    "PATTERN" "PATTERN-DATA" "MAKE-PATTERN"
-   
+
    "PEN-SHOW" "PEN-HIDE" "PEN-SHOWN-P" "PEN-SIZE" "SET-PEN-SIZE"
    "PEN-PATTERN" "SET-PEN-PATTERN" "PEN-MODE" "SET-PEN-MODE" "PEN-STATE"
    "SET-PEN-STATE" "PEN-NORMAL"
-   
+
    "PEN-STATE" "WITH-PEN-STATE"
 
    "STREAM-TYO"
@@ -566,17 +566,17 @@
    "MAP-POINT" "MAP-RECT" "MAP-REGION" "MAP-POLYGON"
    "SCALE-POINT"
    "SCROLL-RECT"
-   
+
    "ORIGIN"  "SET-ORIGIN"
    "LOCAL-TO-GLOBAL" "GLOBAL-TO-LOCAL"
 
    "WITH-RECTANGLE-ARG"
-   
+
    ;; Extension:
    "VIEW-PEN"
 
    ;; graphics:
-   
+
    "DRAW-CHAR"
    "DRAW-STRING" "DRAW-TEXT"
    "DRAW-POINT"
@@ -592,11 +592,11 @@
    ;; ----------------------------------------
 
    "FIXNUMP"
-   
+
    "WPTR"         ; this one won't be implemented, change the sources!
    )
 
-    
+
   (:export ;; EVENTS
    "NULL-EVENT" "MOUSE-DOWN" "MOUSE-UP" "KEY-DOWN" "KEY-UP" "AUTO-KEY"
    "UPDATE-EVT" "DISK-EVT" "ACTIVATE-EVT" "NETWORK-EVT" "DRIVER-EVT"
@@ -613,10 +613,10 @@
    "+TICK-PER-SECOND+" "TIMESTAMP" "TICK-COUNT"
    "*DOUBLE-CLICK-JITTER*" "*DOUBLE-CLICK-TIME*" "GET-DBL-TIME"
    "*CARET-TIME*" "GET-CARRET-TIME")
-  
+
   (:export ;; view extensions
    "VIEW-FRAME" "VIEW-BOUNDS"
-   ;; Instance drawing, to replace srcXor 
+   ;; Instance drawing, to replace srcXor
    "WITH-INSTANCE-DRAWING" "NEW-INSTANCE")
 
   (:export ;; region extensions
@@ -625,7 +625,7 @@
 
   (:export
    "DRAW-STRING-IN-RECT")
-  
+
   (:export
    ;; FRED editor
    ;; FRED-Window will be replaced by hemlock-frame and hemlock-listener-frame.
@@ -639,7 +639,7 @@
 
    "HEMLOCK-LISTENER-FRAME"
    "HEMLOCK-FRAME")
-  
+
   (:export
    "BUFFER-CHAR"
    "BUFFER-CURRENT-SEXP"
@@ -649,7 +649,7 @@
    "BUFFER-SKIP-FWD-WSP&COMMENTS"
    "BUFFER-WRITE-FILE"
    "SELECTION-RANGE" "SET-SELECTION-RANGE")
-  
+
   (:documentation "
 
 The MCLGUI package implements the Mac OS GUI classes of MCL over the

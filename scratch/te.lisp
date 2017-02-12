@@ -4,13 +4,13 @@
   click-loop-function
   te-caret-function
   te-selection-function
-  te-just-left  
-  te-just-right 
+  te-just-left
+  te-just-right
   te-just-center
-  te-no-wrap    
-  te-word-wrap  
+  te-no-wrap
+  te-word-wrap
   *caret-half-period*
-  *selection-color*                
+  *selection-color*
   terec
   te-init
   te-default-word-break
@@ -21,7 +21,7 @@
   te-get-text
   te-cal-text
 
-  
+
 
   (%te-adjust-starts charpos increment te)
   (%te-copy te)

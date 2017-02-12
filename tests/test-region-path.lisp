@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     MCLGUI
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Test region paths.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2015 - 2015
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -343,13 +343,13 @@
         (assert-true (eq :right merged))
         (assert-true (null internal))
         (assert-true (equalp (list top-line) new-top-lines))))
-    (example "    
+    (example "
     +----+
     |    |
     +--+-+----+
        |      |
        +------+
-                    ")    
+                    ")
     (let ((above (make-rect-tpath   0  0 200 20))
           (below (make-rect-tpath 100 20 300 40))
           top-line)
@@ -367,13 +367,13 @@
         (assert-true (null internal))
         (assert-true (= 1 (length new-top-lines)))
         (assert-true (tline-goes (first new-top-lines) 200 20 300 20))))
-    (example "    
+    (example "
     +----------+
     |          |
     +-----+----+
           |    |
           +----+
-                    ")    
+                    ")
     (let ((above (make-rect-tpath   0  0 200 20))
           (below (make-rect-tpath 100 20 200 40))
           top-line)
@@ -390,13 +390,13 @@
         (assert-true (tpath-goes merged 0 0 200 0 200 40 100 40 100 20 0 20 0 0))
         (assert-true (null internal))
         (assert-true (null new-top-lines))))
-    (example "    
+    (example "
     +----------+
     |          |
     +--+-----+-+
        |     |
        +-----+
-                    ")    
+                    ")
     (let ((above (make-rect-tpath   0  0 300 20))
           (below (make-rect-tpath 100 20 200 40))
           top-line)
@@ -413,13 +413,13 @@
         (assert-true (tpath-goes merged 0 0 300 0 300 20 200 20 200 40 100 40 100 20 0 20 0 0))
         (assert-true (null internal))
         (assert-true (null new-top-lines))))
-    (example "    
+    (example "
     +-----+
     |     |
     +-----+----+
     |          |
     +----------+
-                    ")    
+                    ")
     (let ((above (make-rect-tpath   0  0 100 20))
           (below (make-rect-tpath   0 20 200 40))
           top-line)
@@ -437,7 +437,7 @@
         (assert-true (null internal))
         (assert-true (= 1 (length new-top-lines)))
         (assert-true (tline-goes (first new-top-lines) 100 20 200 20))))
-    (example "    
+    (example "
     +----+
     |    |
     +----+
@@ -460,13 +460,13 @@
         (assert-true (tpath-goes merged 0 0 200 0 200 40 0 40 0 0))
         (assert-true (null internal))
         (assert-true (null new-top-lines))))
-    (example "    
+    (example "
     +----------+
     |          |
     +-----+----+
     |     |
     +-----+
-                    ")    
+                    ")
     (let ((above (make-rect-tpath   0  0 200 20))
           (below (make-rect-tpath   0 20 100 40))
           top-line)
@@ -483,7 +483,7 @@
         (assert-true (tpath-goes merged 0 0 200 0 200 20 100 20 100 40 0 40 0 0))
         (assert-true (null internal))
         (assert-true (null new-top-lines))))
-    (example "    
+    (example "
        +-----+
        |     |
     +--+-----+-+
@@ -512,7 +512,7 @@
         (assert-true (= 2 (length new-top-lines)))
         (assert-true (tline-goes (first  new-top-lines) 0 20 100 20))
         (assert-true (tline-goes (second new-top-lines) 200 20 300 20))))
-    (example "    
+    (example "
           +----+
           |    |
     +-----+----+
@@ -536,7 +536,7 @@
         (assert-true (null internal))
         (assert-true (= 1 (length new-top-lines)))
         (assert-true (tline-goes (first  new-top-lines) 0 20 100 20))))
-    (example "    
+    (example "
        +------+
        |      |
     +--+-+----+
@@ -560,7 +560,7 @@
           (assert-true (null internal))
           (assert-true (= 1 (length new-top-lines)))
           (assert-true (tline-goes (first  new-top-lines) 0 20 100 20))))
-    (example "    
+    (example "
     100 200 300 400
     +------------+  0
     |            |
@@ -600,7 +600,7 @@
           (assert-true (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
           (assert-true (= 1 (length new-top-lines)))
           (assert-true (tline-goes (first new-top-lines) 200 40 300 40)))))
-    (example "    
+    (example "
     100 200 300 400
     +------------+    0
     |            |
@@ -620,7 +620,7 @@
       (check-tpath below :name 'below)
       ;; (print `((tpath-above-lines above) ,(tpath-above-lines above)))
       ;; (print `((tpath-above-lines below) ,(tpath-above-lines below)))
-      (multiple-value-bind (merged internal new-above-lines new-top-lines)        
+      (multiple-value-bind (merged internal new-above-lines new-top-lines)
           (merge-tpaths above (first (tpath-above-lines above))
                         below (tpath-lines below))
         (declare (ignorable new-above-lines))
@@ -646,7 +646,7 @@
           (assert-true (= 2 (length new-top-lines)))
           (assert-true (tline-goes (first new-top-lines) 200 40 300 40))
           (assert-true (tline-goes (second new-top-lines) 400 40 450 40)))))
-    (example "    
+    (example "
       100 200 300 400
       +------------+  0
       |            |
@@ -689,7 +689,7 @@
             (assert-true (tpath-goes internal 200 40 300 40 300 20 200 20 200 40))
             (assert-true (= 1 (length new-top-lines)))
             (assert-true (tline-goes (first new-top-lines) 200 40 300 40)))))
-    (example "    
+    (example "
     100 200 300 400
     +------------+
     |            |
@@ -733,7 +733,7 @@
             (assert-true (tline-goes (first new-top-lines) 200 40 300 40)))))
     (example "
       100 200 300 400
-      +------------+    0 
+      +------------+    0
       |            |
       |   +----+   |   20
       |   |    |   |
@@ -842,7 +842,7 @@
   (defparameter *w* (make-instance 'region-test-window))
   (setf (coordinates-filter (find-subview-of-type *w* 'coordinates-view))
         (lambda (x y) (values (* 10 (round x 10)) (* 10 (round y 10)))))
-  
+
   (debug-region (elt *test/regions* 4))
 
   (window-close *w*)
@@ -850,14 +850,14 @@
   (update-coordinates (elt (view-subviews *w*) 1) (get-mouse))
   (view-draw-contents *w*)
   (map nil 'print (view-subviews *w*))
-  
+
   (setf (test-regions *w*) *test/regions*)
 
   (with-focused-view *w*
     (draw-line 190 200 90 200)
     (draw-line 170 170 200 170)
     (draw-line 200 170 190 170))
-  
+
   (debug-region *hole*)
   (stroke-region *hole*)
   (setf *speed* 1.0)
@@ -874,15 +874,15 @@
 
   (debug-region *hole*)
 
-  
+
   (defmethod view-draw-contents ((self (eql *w*)))
     (debug-region *hole*))
   (remove-method (function view-draw-contents)
                  (find-method (function view-draw-contents) '() (list (list 'eql *w*))))
-  
+
   (stroke-region  )
 
-  
+
   (let ((p (let ((circle (set-disc-region (new-region) 100 100 70)))
              (xor-region circle (inset-region (copy-region circle) 4 4) (new-region)))))
     (with-focused-view *w*
@@ -893,7 +893,7 @@
             [(bezier-path-from-tpath path) fill])
           [(bezier-path-from-tpath path) stroke]))))
 
-  
+
   (let ((region *f*))
     (loop :with previous = #()
           :for (y . current) :across (region-segments region)
@@ -924,7 +924,7 @@
                 ;; (progn (format t "~&** below-paths = ~{~/ui:fmt-line/~^ ~}~%" (mapcar (function car) below-paths))
                 ;;        (let ((*speed* 0.0)) (mapc (lambda (pp) (trace-path :below (cdr pp))) below-paths))
                 ;;        (sleep *speed*))
-                
+
                         ;; (format t "~&** top-line    = ~/ui:fmt-line/~%" top-line)
                               ;; (progn (format t "~&below has not path above, push it to next, and shift bottom-lines~%")
                               ;;        (trace-path :below below))
@@ -941,7 +941,7 @@
                                 ;;                (mapcar (function car) open-paths))
                                 ;;        (print `((tpath-bottom-lines merged) ,(mapcar (function tline-coordinates) (tpath-bottom-lines merged))))
                                 ;;        (trace-path :open merged))
-                
+
                 ;; (loop :for (nil . path) :in open-paths :do (trace-path :open path))
                 ;; (loop :for path :in next-paths :do (trace-path :bottom path))
                 ;; (dolist (path next-paths)

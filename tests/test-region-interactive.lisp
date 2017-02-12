@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     MCLGUI
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Implements an interactive window and view to test regions.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    AGPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2015 - 2015
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU Affero General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU Affero General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU Affero General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -83,7 +83,7 @@
 
 (defparameter *test/regions*
   (list
-   
+
    ;;        +---+
    ;;        |   |
    ;;        +---+
@@ -94,7 +94,7 @@
                  (rect-region 100 130 150 160))
    (union-region (rect-region 200 100 250 130)
                  (rect-region 150 130 200 160))
-   
+
 
    ;; +---+
    ;; |   |
@@ -106,7 +106,7 @@
                  (rect-region 150 130 200 160))
    (union-region (rect-region 250 100 300 130)
                  (rect-region 150 130 200 160))
-   
+
    ;;        +---+
    ;;        |   |
    ;; +---+  |   |
@@ -115,7 +115,7 @@
    ;; +---+
    (union-region (rect-region 200 100 250 160)
                  (rect-region 100 130 150 190))
-   
+
    ;;     +---+
    ;;     |   |
    ;; +---+   |
@@ -126,22 +126,22 @@
                  (rect-region 150 130 200 190))
 
 
-   
-   ;;   +---+       
-   ;;   |   |       
+
+   ;;   +---+
+   ;;   |   |
    ;;   |   |  +---+
    ;;   +---+  |   |
    ;;          |   |
    ;;          +---+
    (union-region (rect-region 100 100 150 160)
                  (rect-region 200 130 250 190))
-   
-   ;; +---+       
-   ;; |   |       
-   ;; |   +---+   
-   ;; +---+   |   
-   ;;     |   |   
-   ;;     +---+   
+
+   ;; +---+
+   ;; |   |
+   ;; |   +---+
+   ;; +---+   |
+   ;;     |   |
+   ;;     +---+
    (union-region (rect-region 150 100 200 160)
                  (rect-region 200 130 250 190))
 
@@ -152,7 +152,7 @@
    ;;    +------+
    (union-region (rect-region 100 100 200 130)
                  (rect-region 150 130 250 160))
-   
+
    ;; +----------+
    ;; |          |
    ;; +-----+----+
@@ -160,7 +160,7 @@
    ;;       +----+
    (union-region (rect-region 100 100 200 130)
                  (rect-region 150 130 200 160))
-   
+
    ;; +----------+
    ;; |          |
    ;; +--+-----+-+
@@ -168,7 +168,7 @@
    ;;    +-----+
    (union-region (rect-region 100 100 250 130)
                  (rect-region 150 130 200 160))
-   
+
    ;; +-----+
    ;; |     |
    ;; +-----+----+
@@ -184,7 +184,7 @@
    ;; +----+
    (union-region (rect-region 100 100 150 130)
                  (rect-region 100 130 150 160))
-   
+
    ;; +----------+
    ;; |          |
    ;; +-----+----+
@@ -192,7 +192,7 @@
    ;; +-----+
    (union-region (rect-region 100 100 200 130)
                  (rect-region 100 130 150 160))
-   
+
    ;;    +-----+
    ;;    |     |
    ;; +--+-----+-+
@@ -200,7 +200,7 @@
    ;; +----------+
    (union-region (rect-region 150 100 200 130)
                  (rect-region 100 130 250 160))
-   
+
    ;;       +----+
    ;;       |    |
    ;; +-----+----+
@@ -208,7 +208,7 @@
    ;; +----------+
    (union-region (rect-region 150 100 200 130)
                  (rect-region 100 130 200 160))
-   
+
    ;;    +------+
    ;;    |      |
    ;; +--+-+----+
@@ -217,7 +217,7 @@
    (union-region (rect-region 150 100 250 130)
                  (rect-region 100 130 200 160))
 
-   
+
    ;; +------------+  0
    ;; |            |
    ;; |   +----+   | 20
@@ -228,7 +228,7 @@
    ;; +------------+ 60
    (xor-region (rect-region 100 100 200 200)
                (rect-region 130 130 170 170))
-   
+
    ;; +------------+    0
    ;; |            |
    ;; |   +----+   |   20
@@ -240,7 +240,7 @@
    (union-region (xor-region (rect-region 100 100 200 170)
                              (rect-region 130 130 170 170))
                  (rect-region 110 170 210 200))
-   
+
    ;;   +------------+  0
    ;;   |            |
    ;;   |   +----+   | 20
@@ -252,7 +252,7 @@
    (union-region (xor-region (rect-region 100 100 200 170)
                              (rect-region 130 130 170 170))
                  (rect-region 90 170 190 200))
-   
+
    ;; (assert (tline-goes (first  (tpath-bottom-lines merged)) 100 40 050 40))
    ;; +------------+
    ;; |            |
@@ -265,9 +265,9 @@
    (union-region (xor-region (rect-region 100 100 200 170)
                              (rect-region 130 130 170 170))
                  (rect-region 110 170 190 200))
-   
+
    ;;   100 200 300 400
-   ;;   +------------+    0 
+   ;;   +------------+    0
    ;;   |            |
    ;;   |   +----+   |   20
    ;;   |   |    |   |
@@ -279,7 +279,7 @@
                              (rect-region 130 130 170 170))
                  (rect-region 90 170 210 200))
 
-   
+
    ;; +------------+  0
    ;; |            |
    ;; |   +----+   | 20
@@ -294,14 +294,14 @@
                  (rect-region 90 170 310 200))
 
    (disc-region 100 100 70)
-   
-   (let ((circle (disc-region 100 100 70)))     
+
+   (let ((circle (disc-region 100 100 70)))
      (inset-region (copy-region circle) 8 8))
-   
+
    (let* ((circle (disc-region 100 100 70))
           (i      (inset-region (copy-region circle) 8 8)))
      (difference-region circle i))
-   
+
    (difference-region (disc-region 150 100 60)
                       (disc-region 150 100 30))
 
@@ -320,7 +320,7 @@
 
    ;; ######   ##
    ;; ##  ###########
-   
+
    (reduce (function union-region)
            (list (rect-region  50  50 140  70)
                  (rect-region 150  50 170  70)
@@ -369,7 +369,7 @@
    (difference-region *hole* *f*)
    (difference-region *f* *hole*)
    (xor-region        *hole* *f*)
-   
+
    ))
 
 ;; (setf *speed* 0)

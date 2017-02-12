@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Regions.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -19,19 +19,19 @@
 ;;;;
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2015
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -101,7 +101,7 @@
     (bounds            (make-rect 0 0 0 0) :type rect)
     (segments          #()                 :type vector))
 
-  
+
   (defmethod make-load-form ((object region) &optional environment)
     (declare (ignore environment))
     ;; => creation-form[, initialization-form]
@@ -237,7 +237,7 @@ INVERSION-POINTS:   A vector of inversion points (the first element is
 RETURN:             A new segment vector made from SEGMENTS and
                     INVERSION-POINTS.
 "
-  (if (zerop (length segments)) 
+  (if (zerop (length segments))
    (loop
       :with len =  (length inversion-points)
       :with segments = (make-array (1- len))
@@ -336,7 +336,7 @@ RETURN:             A new segment vector made from SEGMENTS and
 ;;                        #(30     17 23   ))
 ;;   :for s = (subseq invpt 1) :then (update-segments s invpt)
 ;;   :collect (cons (aref invpt 0) s))
-;; 
+;;
 ;; (equalp (inversion-points-from-segments #((-1 . #())
 ;;                                           (0 . #(7 23))
 ;;                                           (2 . #(0 30))
@@ -365,7 +365,7 @@ RETURN:             A new segment vector made from SEGMENTS and
 ;;           #(30     17 23   )))
 
 ;;----------------------------------------------------------------------
-;; 
+;;
 ;;
 
 #-(and)
@@ -393,8 +393,8 @@ RETURN:    An inversion-points vector of vectors; bounds.
         (loop
           :until (done i)
           :do (setf bottom (car (aref segments i)))
-          
-          
+
+
           ))
       (values invpts
               (make-rect (or left 0) (or top 0) (or right 0) (or bottom 0))))))
@@ -405,7 +405,7 @@ RETURN:    An inversion-points vector of vectors; bounds.
 (defun segments-trim (segments)
   "
 SEGMENTS:
-RETURN:      
+RETURN:
 "
   (let ((start 0)
         (end (length segments)))
@@ -554,7 +554,7 @@ DO:             Compute the operation OP between R1 and R2, and set RD
                    (set-empty-region rd))
                   ((and (rectangular-region-p r1) (rectangular-region-p r2))
                    (set-rect-region rd bounds.intersection))
-                  (t 
+                  (t
                    (region-operate-not-easy op r1 r2 rd)))
                 ;; :difference
                 (if (empty-rect-p bounds.intersection)
@@ -720,7 +720,7 @@ the original region.
     (unless (and (zerop dh) (zerop dv))
       (flet ((inset-line (segs center delta)
                (if (plusp delta)
-                   (loop 
+                   (loop
                      ;; remove or join the center segment
                      :with center-delta = (- center delta)
                      :with center+delta = (+ center delta)
@@ -834,14 +834,14 @@ the original region.
 
 
 ;; #-(and) (progn
-;;           
+;;
 ;;           (values
 ;;            (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20)
 ;;            (rect-to-list (region-bounds (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20)))
 ;;            (inset-region (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20) -5 -7)
 ;;            (rect-to-list (region-bounds (inset-region (offset-region (set-rect-region (new-region) 10 20 100 200) -10 -20) -5 -7))))
-;; 
-;; 
+;;
+;;
 ;;           (inset-region
 ;;            (copy-region #S(region :bounds #S(rect :topleft #@(0 0) :bottomright #@(30 9))
 ;;                                   :segments #((0 . #(7 24))
@@ -850,7 +850,7 @@ the original region.
 ;;                                               (6 . #(0 31))
 ;;                                               (7 . #(17 23))
 ;;                                               (9 . #(17 23)))))
-;;            
+;;
 ;;            -10 -10)
 ;;           #S(region :bounds #S(rect :topleft 4294377462 :bottomright 1245224)
 ;;                     :segments #((-10 . #(-3 34))
@@ -859,7 +859,7 @@ the original region.
 ;;                                 (16 . #(-10 41))
 ;;                                 (17 . #(27 33))
 ;;                                 (19 . #(27 33))))
-;; 
+;;
 ;;           )
 
 
@@ -1006,7 +1006,7 @@ DO:     Sets REGION to a disc of center CX CY and given RADIUS.
   (set-disc-region (new-region) cx cy radius))
 
 #-(and) (progn
-          
+
           (inset-region (set-disc-region (new-region) 0 0 10) 1 1)
           #S(region :bounds #S(rect :topleft 4294442999 :bottomright 589833)
                     :segments #((-9 . #(-3 3))
@@ -1056,9 +1056,9 @@ DO:     Sets REGION to a disc of center CX CY and given RADIUS.
 
 
 #-(and) (progn
-          
+
          (let ((circle (set-disc-region (new-region) 0 0 10)))
-           (list    
+           (list
             (xor-region circle (inset-region (copy-region circle) 1 1) (new-region))
             (xor-region (inset-region (copy-region circle) 1 1) circle (new-region))))
 

@@ -42,7 +42,7 @@
 ;; (defclass mclgui-keyed-archiver (ns:ns-keyed-archiver)
 ;;   ()
 ;;   (:metaclass ns:+ns-object))
-;; 
+;;
 ;; (objc:define-objc-method ((:void :encode-object (:id object) :for-key (:id key)) mclgui-keyed-archiver)
 ;;   (format-trace "-[MclguiKeyedArchiver encodeObject:forKey:]" (as-string self) (as-string object) (com.informatimago.objective-cl:lisp-string key))
 ;;   (objc:send-super :encode-object object :for-key key))

@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Dialogs.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,33 +15,33 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
 
 
-(defclass dialog (window) 
+(defclass dialog (window)
   ()
-  (:default-initargs 
+  (:default-initargs
    :window-title "Untitled Dialog"
    :window-type :document))
 
@@ -106,14 +106,14 @@
 (defmacro return-from-modal-dialog (form)
   "
 The macro RETURN-FROM-MODAL-DIALOG causes one or more values to be
-returned from the most recent call to MODAL-DIALOG. 
+returned from the most recent call to MODAL-DIALOG.
 
 The dialog is hidden or closed according to the value of CLOSE-ON-EXIT
 that was passed to the call to MODAL-DIALOG.  (Any throw past the
 modaldialog call also causes the dialog box to be hidden or closed).
 If the dialog box is only hidden, its contents remain intact and it
 continues to take up memory until the window-close function is
-explicitly called. 
+explicitly called.
 
 VALUES:         Any values.  The following two values have special
                 meanings:
@@ -121,13 +121,13 @@ VALUES:         Any values.  The following two values have special
                 :CLOSED:        If a dialog that is used modally has
                                 a close box and the window is closed,
                                 RETURN-FROM-MODAL-DIALOG is called
-                                with the value :CLOSED. 
+                                with the value :CLOSED.
 
                 :CANCEL:        If the user selects the cancel
                                 button, RETURN-FROM-MODAL-DIALOG is
                                 called returning :CANCEL.  The
                                 function MODAL-DIALOG then performs a
-                                THROW-CANCEL. 
+                                THROW-CANCEL.
 "
   `(multiple-value-call (function %return-from-modal-dialog) ,form))
 
@@ -150,27 +150,27 @@ The MODAL-DIALOG generic function displays dialog modally.  That is,
 it makes dialog the active window, displays it, and then intercepts
 subsequent user events until a RETURN-FROM-MODAL-DIALOG is executed.
 The function returns the value(s) supplied by
-RETURN-FROM-MODAL-DIALOG. 
+RETURN-FROM-MODAL-DIALOG.
 
 If CLOSE-ON-EXIT is true (the default), the window is closed on exit;
-otherwise, it is hidden. 
+otherwise, it is hidden.
 
 Closing the dialog box automatically prevents the accumulation of
 numerous hidden windows during development.  Modal dialog boxes may be
-nested. 
+nested.
 
 NOTE:           The body of MODAL-DIALOG is unwind protected, and so
                 any throw past MODAL-DIALOG will close or hide the
-                window, as appropriate. 
+                window, as appropriate.
 
 
-WINDOW:         A window. 
+WINDOW:         A window.
 
 CLOSE-ON-EXIT:  An argument determining whether the window should be
                 closed or simply hidden when the call to modaldialog
                 returns.  If this argument is true, the window is
                 closed.  If it is false, the window is hidden but not
-                closed.  The default is T. 
+                closed.  The default is T.
 
 EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
                 in order to intercept all event processing; this hook
@@ -186,7 +186,7 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
                 the event.  The variable *current-event* is bound to
                 an event record for the current event when each hook
                 function is called.  The default value of eventhook is
-                NIL. 
+                NIL.
 
 ")
   (:method ((dialog window) &optional (close-on-exit t) eventhook)
@@ -231,10 +231,10 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
                                      (if (eql #$mouseDown what)
                                          (%stack-block ((wp 4))
                                            (let* ((code (#_FindWindow (rref event eventrecord.where) wp)))
-                                             (cond 
+                                             (cond
                                                ((eql code #$inMenubar) nil)
                                                ((%ptr-eql (wptr dialog) (%get-ptr wp))
-                                                nil)                          
+                                                nil)
                                                (t  (#_Sysbeep 5) t))))
                                          (if nil ; (or (eql what #$keyDown) (eql what #$autoKey))
                                              (when (menukey-modifiers-p (rref event eventrecord.modifiers))
@@ -246,7 +246,7 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
           (setf *processing-events* nil)
           (unwind-protect
                (with-focused-view nil
-                 (with-cursor 'cursorhook 
+                 (with-cursor 'cursorhook
                    (setf ret (multiple-value-list
                               (restart-case
                                   (catch '%modal-dialog
@@ -262,7 +262,7 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
                                           ))
                                       (set-window-layer dialog 0)
                                         ;(#_hidefloatingwindows)
-                                      
+
                                       #-(and) (setf (window-process dialog) *current-process*) ; do this first
                                       (setf *modal-dialog-on-top* (cons (list dialog *current-process* eventhook) *modal-dialog-on-top*)
                                         ;*eventhook* eventhook
@@ -270,7 +270,7 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
                                       (when (not old-modal-dialog)
                                         (setf *first-menustate* (update-menus :disable))
                                         )
-                                      
+
                                       (window-show dialog)
                                         ;(setf ms (update-menus :disable))
                                       (loop
@@ -291,7 +291,7 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
                   (when mdot
                     (when (not (wptr (caar mdot)))
                       (setf *modal-dialog-on-top* (cdr *modal-dialog-on-top*)))))
-                                        ;(setf *eventhook* nil)  ; kill the same bug 2 ways.             
+                                        ;(setf *eventhook* nil)  ; kill the same bug 2 ways.
                                         ; moved update-menus back to after window-close - fixes do-about-dialog when carbon (weird)
                 (if close-on-exit
                     (window-close dialog)
@@ -360,7 +360,7 @@ STRING:         A string against which to compare the text of the
 (defgeneric find-subview-of-type (view subview-type)
   (:method ((view view) subview-type)
     (let ((subs (view-subviews view)))
-      (when subs 
+      (when subs
         (dotimes (i (length subs))
           (let ((it (aref subs i)))
             (when (typep  it subview-type)
@@ -382,7 +382,7 @@ STRING:         A string against which to compare the text of the
     (error "~s is either disabled or is not a key-handler item of ~s" item dialog))
   (without-interrupts
     (if (and (not (eql item (setf old (%get-current-key-handler dialog))))
-             (if old 
+             (if old
                  (when (exit-key-handler old item)
                    (multiple-value-bind (s e) (selection-range old)
                      (declare (ignore s))
@@ -417,9 +417,9 @@ STRING:         A string against which to compare the text of the
          (items (%get-key-handler-list dialog))
          (old-handler (current-key-handler dialog))
          (rest (member old-handler items)))
-    (set-current-key-handler 
+    (set-current-key-handler
      dialog
-     (or 
+     (or
       (dolist (x (cdr rest))
         (if (key-handler-p x)(return x)))
       (dolist(x items)
@@ -476,7 +476,7 @@ STRING:         A string against which to compare the text of the
 
 
 
-;;;;;;;;;; 
+;;;;;;;;;;
 ;; draw-theme-text-box
 ;; moved from pop-up-menu.lisp
 
@@ -500,7 +500,7 @@ STRING:         A string against which to compare the text of the
 
 (defun draw-theme-text-box (text rect &optional (text-justification :center) truncwhere (active-p t))
   ;; could add a truncate option and use TruncateThemeText
-  (let ((start 0) 
+  (let ((start 0)
         (end (length text)))
     (when (not (simple-string-p text))
       (multiple-value-setq (text start end) (string-start-end text start end)))
@@ -520,9 +520,9 @@ STRING:         A string against which to compare the text of the
                                (current-pixel-depth) (current-port-color-p)))
       (let ((len (- end start)))
         (%stack-block ((the-chars (%i+ len len)))
-          (copy-string-to-ptr text start len the-chars)          
+          (copy-string-to-ptr text start len the-chars)
           (if (not truncwhere)
-              (with-macptrs ((cfstr (#_CFStringCreatewithcharacters (%null-ptr) the-chars len))) 
+              (with-macptrs ((cfstr (#_CFStringCreatewithcharacters (%null-ptr) the-chars len)))
                 (#_Drawthemetextbox cfstr #$kThemeCurrentPortFont #$Kthemestateactive t rect text-justification (%null-ptr))
                 (#_CFRelease cfstr))
               (progn
@@ -530,9 +530,9 @@ STRING:         A string against which to compare the text of the
                       (case truncwhere
                         (:end #$truncend)
                         (:middle #$truncmiddle)
-                        (t #$truncend)))              
+                        (t #$truncend)))
                 (with-macptrs ((cfstr (#_CFStringCreateMutable (%null-ptr) 0)))
-                  (#_CFStringAppendCharacters cfstr the-chars len)                
+                  (#_CFStringAppendCharacters cfstr the-chars len)
                   (unwind-protect
                        (progn
                          (rlet ((foo :boolean))

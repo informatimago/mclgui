@@ -6,7 +6,7 @@
 (defun get-alert-type (type)
   (cond ((cdr (assq type *alert-types*)))
         ((and (fixnump type)(rassoc type *alert-types*))
-         type)        
+         type)
         (t (error  "Unknown alert type ~S" type))))
 
 
@@ -29,12 +29,12 @@
           (when (> char-code #x7f)  ;; not perfect but better than nothing for e.g. Finnish keyboard or option-something
             (setq char (convert-char-to-unicode char (get-key-script))))
           (cond ((and *no-char* (char-equal char *no-char*))
-                 (%put-word index #$kAlertStdAlertOtherButton) 
+                 (%put-word index #$kAlertStdAlertOtherButton)
                  (setq res -1))  ;; aka #$true
                 ((and *yes-char* (or (eql char #\return)(eql char :enter)(char-equal char *yes-char*)))
                  (%put-word index #$kAlertStdAlertOKButton)
                  (setq res -1))
-                ((and *cancel-char* (or (eql char #\escape)(char-equal char *cancel-char*))) 
+                ((and *cancel-char* (or (eql char #\escape)(char-equal char *cancel-char*)))
                  (%put-word index #$kAlertStdAlertCancelButton)
                  (setq res -1))))))
     res))
@@ -57,7 +57,7 @@
             (:center-front-window #.#$kWindowCenterParentWindow)
             (:main-screen #.#$kWindowAlertPositionMainScreen)
             (:center-main-screen #.#$kWindowCenterMainScreen)  ;; lower
-            (t #.#$kWindowDefaultPosition))))  
+            (t #.#$kWindowDefaultPosition))))
   (when (not (or (stringp message)(encoded-stringp message)))
     (setq message (coerce message 'string)))
   (when (and explanation-text (not (or (stringp explanation-text)(encoded-stringp explanation-text))))
@@ -79,7 +79,7 @@
           (setf (pref params :AlertStdCFStringAlertParamRec.defaultText) yes-str))
         (if help
           (setf (pref params :AlertStdCFStringAlertParamRec.helpButton) T))
-        ;; #-(and)  ;; dont know how to set the actual on screen position - now we know some options        
+        ;; #-(and)  ;; dont know how to set the actual on screen position - now we know some options
         (setf (pref params :AlertStdCFStringAlertParamRec.position) position)
         (flet ((first-char (text)(if (characterp text) text (char text 0))))
           (let ((*yes-char* (and yes-text (char-downcase (first-char yes-text))))
@@ -89,19 +89,19 @@
                            alert-type
                            message-str
                            (if explanation-text explanation-str *null-ptr*)  ;; some other string
-                           params                         
+                           params
                            the-alert-ptr)))
               (when (/= result #$noerr)
                 (throw-cancel :cancel))
               ;; doesn't draw fully when called from Listener if more than 17 windows or so and timer is enabled
               (let () ;(*event-loop-initial-fire-time* 0.4d0))  ;; this helps but why?? - just change initial-fire-time
-                (with-foreign-window 
+                (with-foreign-window
                   (setq result (#_RunStandardAlert (%get-ptr the-alert-ptr) modal-key-handler-proc alert-res))))
               (WHEN (/= result #$noerr) (throw-cancel :cancel))
               (let ((action (%get-signed-word alert-res)))
                 (if action-function
                   (funcall action-function action)
-                  (case action 
+                  (case action
                     (#.#$kAlertStdAlertOKButton t)
                     (#.#$kAlertStdAlertOtherButton nil)
                     (t (throw-cancel :cancel))))))))))))

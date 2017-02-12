@@ -18,7 +18,7 @@
   (let* ((pos (or (slot-value item 'view-position) #@(0   0)))
          (siz (or (slot-value item 'view-size)     #@(10 10)))
          (texth [[MclguiTextField alloc] initWithFrame:(ns:make-ns-rect (point-h pos) (point-v pos)
-                                                                        (point-h siz) (point-v siz))])) 
+                                                                        (point-h siz) (point-v siz))]))
     ;; -- NSControl attributes:
     [texth setTarget:texth]
     [texth setAction:(objc:@selector "mclguiAction:")]

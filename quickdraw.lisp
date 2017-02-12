@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    The drawing functions of QuickDraw.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,23 +15,23 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -186,7 +186,7 @@
       )))
 
 (defgeneric frame-round-rect (view oval-width oval-height left &optional top right bottom))
-(defmethod frame-round-rect ((view simple-view) oval-width oval-height 
+(defmethod frame-round-rect ((view simple-view) oval-width oval-height
                              left &optional top right bottom)
   (niy frame-round-rect view oval-width oval-height left top right bottom)
   (with-focused-view view
@@ -195,7 +195,7 @@
       )))
 
 (defgeneric paint-round-rect (view oval-width oval-height left &optional top right bottom))
-(defmethod paint-round-rect ((view simple-view) oval-width oval-height 
+(defmethod paint-round-rect ((view simple-view) oval-width oval-height
                              left &optional top right bottom)
   (niy paint-round-rect view oval-width oval-height left top right bottom)
   (with-focused-view view
@@ -204,7 +204,7 @@
       )))
 
 (defgeneric erase-round-rect (view oval-width oval-height left &optional top right bottom))
-(defmethod erase-round-rect ((view simple-view) oval-width oval-height 
+(defmethod erase-round-rect ((view simple-view) oval-width oval-height
                              left &optional top right bottom)
   (niy erase-round-rect view oval-width oval-height left top right bottom)
   (with-focused-view view
@@ -213,7 +213,7 @@
       )))
 
 (defgeneric invert-round-rect (view oval-width oval-height left &optional top right bottom))
-(defmethod invert-round-rect ((view simple-view) oval-width oval-height 
+(defmethod invert-round-rect ((view simple-view) oval-width oval-height
                               left &optional top right bottom)
   (niy invert-round-rect view oval-width oval-height left top right bottom)
   (with-focused-view view
@@ -222,7 +222,7 @@
       )))
 
 (defgeneric fill-round-rect (view pattern oval-width oval-height left &optional top right bottom))
-(defmethod fill-round-rect ((view simple-view) pattern oval-width oval-height 
+(defmethod fill-round-rect ((view simple-view) pattern oval-width oval-height
                             left &optional top right bottom)
   (niy fill-round-rect view pattern oval-width oval-height left top right bottom)
   (with-focused-view view
@@ -231,7 +231,7 @@
       )))
 
 (defgeneric frame-arc (view start-angle arc-angle left &optional top right bottom))
-(defmethod frame-arc ((view simple-view) start-angle arc-angle 
+(defmethod frame-arc ((view simple-view) start-angle arc-angle
                       left &optional top right bottom)
   (niy frame-arc view start-angle arc-angle left top right bottom)
   (with-focused-view view
@@ -240,7 +240,7 @@
       )))
 
 (defgeneric paint-arc (view start-angle arc-angle left &optional top right bottom))
-(defmethod paint-arc ((view simple-view) start-angle arc-angle 
+(defmethod paint-arc ((view simple-view) start-angle arc-angle
                       left &optional top right bottom)
   (niy paint-arc view start-angle arc-angle left top right bottom)
   (with-focused-view view
@@ -249,7 +249,7 @@
       )))
 
 (defgeneric erase-arc (view start-angle arc-angle left &optional top right bottom))
-(defmethod erase-arc ((view simple-view) start-angle arc-angle 
+(defmethod erase-arc ((view simple-view) start-angle arc-angle
                       left &optional top right bottom)
   (niy erase-arc view start-angle arc-angle left top right bottom)
   (with-focused-view view
@@ -258,7 +258,7 @@
       )))
 
 (defgeneric invert-arc (view start-angle arc-angle left &optional top right bottom))
-(defmethod invert-arc ((view simple-view) start-angle arc-angle 
+(defmethod invert-arc ((view simple-view) start-angle arc-angle
                        left &optional top right bottom)
   (niy invert-arc view start-angle arc-angle left top right bottom)
   (with-focused-view view
@@ -316,15 +316,15 @@
 ;;;---------------------------------------------------------------------
 
 (defgeneric start-picture (view &optional left top right bottom))
-(defmethod start-picture ((view simple-view) &optional left top right bottom) 
+(defmethod start-picture ((view simple-view) &optional left top right bottom)
   (niy start-picture view left top right bottom)
-  ;; (rlet ((arect :rect))      
+  ;; (rlet ((arect :rect))
   ;;   (with-macptrs ((port (#_getwindowport wptr)))
   ;;     (when (#_isportpicturebeingdefined port)
   ;;       (error "A picture may not be started for window: ~a.
   ;;        since one is already started" view))
   ;;     ;; wtf is this
-  ;;     (unless left 
+  ;;     (unless left
   ;;       (#_getportbounds port arect)
   ;;       (setq left arect))
   ;;     (with-rectangle-arg (r left top right bottom)
@@ -502,11 +502,11 @@
 (defun make-bitmap (left &optional top right bottom)
   (niy make-bitmap left top right bottom)
   ;; (with-rectangle-arg (r left top right bottom)
-  ;;   (setq rowbytes 
+  ;;   (setq rowbytes
   ;;         (logand
-  ;;          #xfffe 
+  ;;          #xfffe
   ;;          (+ 2  (ash (- (pref r rect.right) (pref r rect.left) 1) -3))))
-  ;;   (setq bm 
+  ;;   (setq bm
   ;;         (#_NewPtr :errchk
   ;;                   (+ 14 (* rowbytes (- (pref r rect.bottom) (pref r rect.top))))))
   ;;   (setf (pref bm bitmap.bounds) r)
@@ -603,9 +603,9 @@ RETURN: the update-region
                      (view-draw-contents (front-window))
                      (scroll-rect (front-window) (make-rect 370 100 570 300) (round dx) (round dy)))
                    (sleep 0.1)
-               :finally (view-draw-contents (front-window))) 
-         
-                 
+               :finally (view-draw-contents (front-window)))
+
+
          (flet ((d (r) (fill-rect (front-window) *black-pattern* r))
                 (reset ()
                   (erase-rect (front-window) (view-bounds  (front-window)))
@@ -630,7 +630,7 @@ RETURN: the update-region
            (erase-rect (front-window) (view-bounds  (front-window)))
            (view-draw-contents (front-window)))
 
-         
+
          (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) 50 20)))
          (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) -50 20)))
          (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) 50 -20)))
@@ -640,7 +640,7 @@ RETURN: the update-region
          (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) 0 20)))
          (progn (r) (mapcar 'd (scroll-rect (front-window) (make-rect 0 0 200 100) 0 -20)))
 
-         
+
          (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100)  50  20))
          (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100) -50  20))
          (mapcar 'rect-to-ltrb (scroll-rect (front-window) (make-rect 0 0 200 100)  50 -20))

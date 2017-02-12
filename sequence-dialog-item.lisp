@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Sequence Dialog Item
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -69,7 +69,7 @@ dialog item wraps to the next row or column. This number overrides the
 
 (defmethod initialize-instance ((item sequence-dialog-item) &rest rest
                                 &key
-                                  (table-sequence nil sequencep) table-dimensions 
+                                  (table-sequence nil sequencep) table-dimensions
                                   sequence-order sequence-wrap-length)
   (declare (dynamic-extent rest))
   (let ((sequence-length))
@@ -90,7 +90,7 @@ dialog item wraps to the next row or column. This number overrides the
                 (:horizontal
                  (make-big-point dimen-prime dimen-aux)))))))
   (apply #'call-next-method
-         item 
+         item
          :table-sequence table-sequence
          :sequence-order sequence-order
          :sequence-wrap-length sequence-wrap-length
@@ -151,7 +151,7 @@ NEW-SEQUENCE:   The sequence to be associated with the sequence dialog
           (map-selected-cells item f))
         (without-interrupts
           (setf (slot-value item 'table-sequence) new-seq)
-          (set-table-dimensions 
+          (set-table-dimensions
            item
            (setf new-dims
                  (if (eql sequence-order :horizontal)

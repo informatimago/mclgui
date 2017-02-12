@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     MCLGUI
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Tests text-edit.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2015 - 2015
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -240,18 +240,18 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
                                 :view-size #@(200 400)
                                 :view-font '("Times" 18 :plain :srcor)))
          (text   (format nil "~
-Hao Wang, logicien americain. 
+Hao Wang, logicien americain.
 
 L'algorithme en question a été publié en 1960 dans l'IBM Journal, ~
 article intitule \"Toward Mechanical Mathematics\", avec des variantes et ~
 une extension au calcul des prédicats. Il s'agit ici du \"premier ~
-programme\" de Wang, systeme \"P\". 
+programme\" de Wang, systeme \"P\".
 
 L'article a été écrit en 1958, et les expériences effectuées sur IBM 704 ~
 -- machine à lampes, 32 k mots de 36 bits, celle-là même qui vit naître ~
 LISP à la même époque. Le programme a été écrit en assembleur (Fortran ~
 existait, mais il ne s'était pas encore imposé) et l'auteur estime que ~
-\"there is very little in the program that is not straightforward\". 
+\"there is very little in the program that is not straightforward\".
 
 Il observe que les preuves engendrées sont \"essentiellement des arbres\", ~
 et annonce que la machine a démontré 220 théorèmes du calcul des ~
@@ -259,13 +259,13 @@ propositions (tautologies) en 3 minutes. Il en tire argument pour la ~
 supériorité d'une approche algorithmique par rapport à une approche ~
 heuristique comme celle du \"Logic Theorist\" de Newell, Shaw et Simon (à ~
 partir de 1956 sur la machine JOHNNIAC de la Rand Corporation): un débat ~
-qui dure encore... 
+qui dure encore...
 
 Cet algorithme a été popularisé par J. McCarthy, comme exemple-fanion ~
 d'application de LISP. Il figure dans le manuel de la première version ~
 de LISP (LISP 1, sur IBM 704 justement, le manuel est daté de Mars ~
 1960), et il a été repris dans le celebre \"LISP 1.5 Programmer's Manual\" ~
-publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique. 
+publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
 
 "))
          (te     (te-new (make-rect 0 0 200 400) (make-rect 0 0 200 400) window)))
@@ -295,7 +295,7 @@ fifth1 fifth2 fifth3 fifth4 fifth5
          (third3 (search "third3" text)))
 
     (te-set-text text te)
-    
+
     (macrolet ((check (expression s e c)
                  (let ((vs (gensym))
                        (ve (gensym))
@@ -305,10 +305,10 @@ fifth1 fifth2 fifth3 fifth4 fifth5
                           (,vc ,c))
                       ,expression
                       (assert (= ,vs (te-sel-start   te)) () "after ~S, ~A should be ~A instead of ~A" ',expression 'start   ,vs (te-sel-start te))
-                      (assert (= ,ve (te-sel-end     te)) () "after ~S, ~A should be ~A instead of ~A" ',expression 'end     ,ve (te-sel-end te)) 
+                      (assert (= ,ve (te-sel-end     te)) () "after ~S, ~A should be ~A instead of ~A" ',expression 'end     ,ve (te-sel-end te))
                       (assert (= ,vc (te-sel-current te)) () "after ~S, ~A should be ~A instead of ~A" ',expression 'current ,vc (te-sel-current te))))))
 
-      
+
       (check (te-set-select 0 6 te)
              0 6 6)
 
@@ -360,7 +360,7 @@ fifth1 fifth2 fifth3 fifth4 fifth5
              third3 (+ third3 6) (+ third3 6))
 
       ;; expand back:
-      
+
       (check (te-change-selection t third3 te)
              third3 third3 third3))
     :success))
@@ -399,18 +399,18 @@ fifth1 fifth2 fifth3 fifth4 fifth5
 
 
 (defparameter *test/text* (format nil "~
-Hao Wang, logicien americain. 
+Hao Wang, logicien americain.
 
 L'algorithme en question a été publié en 1960 dans l'IBM Journal, ~
 article intitule \"Toward Mechanical Mathematics\", avec des variantes et ~
 une extension au calcul des prédicats. Il s'agit ici du \"premier ~
-programme\" de Wang, systeme \"P\". 
+programme\" de Wang, systeme \"P\".
 
 L'article a été écrit en 1958, et les expériences effectuées sur IBM 704 ~
 -- machine à lampes, 32 k mots de 36 bits, celle-là même qui vit naître ~
 LISP à la même époque. Le programme a été écrit en assembleur (Fortran ~
 existait, mais il ne s'était pas encore imposé) et l'auteur estime que ~
-\"there is very little in the program that is not straightforward\". 
+\"there is very little in the program that is not straightforward\".
 
 Il observe que les preuves engendrées sont \"essentiellement des arbres\", ~
 et annonce que la machine a démontré 220 théorèmes du calcul des ~
@@ -418,13 +418,13 @@ propositions (tautologies) en 3 minutes. Il en tire argument pour la ~
 supériorité d'une approche algorithmique par rapport à une approche ~
 heuristique comme celle du \"Logic Theorist\" de Newell, Shaw et Simon (à ~
 partir de 1956 sur la machine JOHNNIAC de la Rand Corporation): un débat ~
-qui dure encore... 
+qui dure encore...
 
 Cet algorithme a été popularisé par J. McCarthy, comme exemple-fanion ~
 d'application de LISP. Il figure dans le manuel de la première version ~
 de LISP (LISP 1, sur IBM 704 justement, le manuel est daté de Mars ~
 1960), et il a été repris dans le celebre \"LISP 1.5 Programmer's Manual\" ~
-publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique. 
+publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
 
 "))
 
@@ -436,7 +436,7 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
 
           (te-init)
           ;; Use one of those to create a text window:
-          (test/te-set-text) 
+          (test/te-set-text)
           (test/te-wrap-paragraph)
           (test/te-field)
           (test/text-dialog-item)
@@ -448,7 +448,7 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
           (te-set-wrapping +te-no-wrap+ *te*)
           (te-set-wrapping +te-word-wrap+ *te*)
           (te-update (view-bounds (te-in-port *te*)) *te*)
-          
+
           (te-set-select start end te)
           (te-change-selection extend new-point te)
 
@@ -458,8 +458,8 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
           (defparameter *te* (test-window-te (front-window)))
           (te-set-text *text* *te*)
           (setf (te-click-stuff (test-window-te (front-window))) nil)
-          
-          
+
+
           (dotimes (i (te-nlines (test-window-te (front-window))))
             (write-line (te-line i (test-window-te (front-window)))))
 
@@ -482,16 +482,16 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
             (values (te-length te)
                     (TE-line-starts te)))
 
-          
+
           (let ((te (test-window-te (front-window))))
             (te-line 25 te))
-          
+
           (let ((te (test-window-te (front-window))))
             (te-invariant te))
-          
+
           (let ((te (test-window-te (front-window))))
             (te-paragraphs te))
-          
+
           (let ((te (test-window-te (front-window))))
             (test/paragraph te))
 
@@ -506,13 +506,13 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
           (let ((te (test-window-te (front-window))))
             (dotimes (i (te-nparagraphs te))
               (write-line (cdr (te-paragraph i te)))))
-          
+
           (let ((te (test-window-te (front-window))))
             (setf (te-high-hook te) (function te-default-high-hook)))
 
           (let ((te (test-window-te (front-window))))
             (te-set-default-bindings te))
-          
+
           (let ((te (test-window-te (front-window))))
             (setf (te-just te) te-just-center)
             (te-cal-text te)
@@ -522,7 +522,7 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
             (setf (te-just te) te-just-right)
             (te-cal-text te)
             (view-draw-contents  (front-window)))
-          
+
           (te-set-select 0 10 (test-window-te (front-window)))
           (te-updates (test-window-te (front-window)))
           (view-draw-contents (test-window-te (front-window)))
@@ -533,7 +533,7 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
                     (rect-top rect)
                     (rect-right rect)
                     (rect-bottom rect))))
-          
+
 
           (let* ((te  (test-window-te (front-window)))
                  (caret-position (te-sel-start te))
@@ -545,11 +545,11 @@ publié en 1962 par MIT Press, un des maîtres-livres de l'Informatique.
           608
           (rect-to-list #S(rect :topleft 594 :bottomright 13107812)) (:topleft (594 0) :size (18 200))
           ""
-          
+
           (te-line-coordinates lino te)
 
           (defstruct e (v (make-array 2000 :element-type 'integer :initial-element 0)))
-          (time (loop with v = (e-v (make-e)) 
+          (time (loop with v = (e-v (make-e))
                       for i below 2000
                       do (incf (aref v i))))
 
@@ -582,7 +582,7 @@ monde!
                  :view-size #@(200 100)
                  :view-font '("Times" 18 :plain :srcor)
                  :view-subviews '())
-  
+
   (make-instance 'frame
                  :view-size #@(200 30)
                  :view-position #@(10 10)
@@ -596,23 +596,23 @@ monde!
                                   nil
                                   :view-font '("Monaco" 9 :plain :srcor)
                                   :allow-returns nil))
-  
+
   (make-instance 'image-box
                  :view-position #@(10 80)
                  :view-size #@(200 200)
                  :image #P"~/Pictures/funny/we-attack-at-dawn.png"
                  :view-container (front-window))
-  
+
   (set-view-size     (elt (view-subviews (front-window)) 0) 200 30)
   (set-view-position (elt (view-subviews (front-window)) 1) 10 80)
-  
+
   (view-draw-contents (front-window))
   (view-focus-and-draw-contents (front-window))
   (test/text-dialog-item)
   (pprint (subview-tree (front-window)))
   (subview-tree (front-window))
 
-  
+
   (view-draw-contents (elt (view-subviews (front-window)) 1))
 
   (remove-subviews (front-window) (elt (view-subviews (front-window)) 1))

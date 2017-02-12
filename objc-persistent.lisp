@@ -5,13 +5,13 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    This module saves NSObject in the image that are referenced by
 ;;;;    the live wrappers into a byte vector, so the image can be
 ;;;;    saved, and when relaunched, restores those NSObjects frmo that
 ;;;;    byte vector, re-establishing the links with their respective
 ;;;;    wrappers.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -19,19 +19,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2013 - 2014
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -401,7 +401,7 @@ to generate the current object do
 ;;                      (setf (handle (elt *wi* 0)) d1
 ;;                            (handle (elt *wi* 1)) d2)
 ;;                      (make-weak-list *wi*))))
-;; 
+;;
 ;; (defparameter *wo* (unarchive-objects *a*))
 
 ;; [(handle (elt *wo* 0)) description]
@@ -493,10 +493,10 @@ to generate the current object do
 
           ;; COM.INFORMATIMAGO.OBJECTIVE-CL
           ;;    Symbols:         14 exported, 1130 total.
-          ;;    Nicknames:     COM.INFORMATIMAGO.OBJCL OBJCL 
-          ;;    Uses:          COM.INFORMATIMAGO.SIMPLE-TEST COMMON-LISP 
-          ;;    Exported:      *OBJECTIVE-CL-READTABLE* @ DISABLE-OBJCL-READER-MACROS ENABLE-OBJCL-READER-MACROS 
-          ;;                   LISP-STRING NO OBJC-DEFINITION-READER-MACRO OBJC-EXPRESSION-READER-MACRO OBJC-STRING 
+          ;;    Nicknames:     COM.INFORMATIMAGO.OBJCL OBJCL
+          ;;    Uses:          COM.INFORMATIMAGO.SIMPLE-TEST COMMON-LISP
+          ;;    Exported:      *OBJECTIVE-CL-READTABLE* @ DISABLE-OBJCL-READER-MACROS ENABLE-OBJCL-READER-MACROS
+          ;;                   LISP-STRING NO OBJC-DEFINITION-READER-MACRO OBJC-EXPRESSION-READER-MACRO OBJC-STRING
           ;;                   READ-ERROR READ-ERROR-ARGUMENTS READ-ERROR-CONTROL-STRING SET-OBJECTIVE-CL-SYNTAX YES
           ;; nil
 

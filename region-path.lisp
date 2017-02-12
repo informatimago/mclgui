@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Implements conversion of regions to paths.
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,19 +15,19 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2015 - 2015
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -168,7 +168,7 @@ RETURN:         :left or :right or above;
     (let ((bleft  (tpoint-x (tline-from-point top-line)))
           (bright (tpoint-x (tline-to-point   top-line)))
           (aleft  (tpoint-x (tline-to-point   above-line)))
-          (aright (tpoint-x (tline-from-point above-line)))) 
+          (aright (tpoint-x (tline-from-point above-line))))
       (cond
         ((<= bright aleft)  ; ___---
          ;;        +---+
@@ -262,7 +262,7 @@ RETURN:         :left or :right or above;
                       (right-line  (tline above-line top-line)))
                  (declare (ignorable left-vert))
                  (merge-tpath above below nil above-line (list right-line) top-line '())))))
-           (t ; (> aleft bleft) ;; *** may split path            
+           (t ; (> aleft bleft) ;; *** may split path
             (cond
               ((< aright bright) ; ___===___
                ;;    +-----+
@@ -339,11 +339,11 @@ RETURN: A list of tpaths surrounding each connected part of the given
                                          ;; there's only one bottom to those just generated paths.
                                          (cons (first (tpath-above-lines path)) path))
                                        (generate-paths-for-row)))
-              
+
               ;; Otherwise, the new row of segments is used to build
               ;; below paths, and they're merged with the currently open
               ;; paths:
-              
+
               (let ((below-paths (mapcar (lambda (path)
                                            ;; there's only one top-line to those just generated paths.
                                            ;; The top-line is the first line in those just generated paths.
@@ -382,7 +382,7 @@ RETURN: A list of tpaths surrounding each connected part of the given
                                   #+region/run-time-checks (check-tpath internal :name 'internal)
                                   #+debug-region-path(trace-path :disjoint internal)
                                   (push internal disjoint-paths))
-                                
+
                                 #+debug-region-path(trace-path :merged merged)
                                 #+region/run-time-checks (check-tpath merged :name 'merged)
                                 #+region/run-time-checks (assert (tpath-bottom-lines merged))

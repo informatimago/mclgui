@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Control Dialog Item
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -40,7 +40,7 @@
 (in-package "MCLGUI")
 
 
-(defclass control-dialog-item (dialog-item) 
+(defclass control-dialog-item (dialog-item)
   ((procid :allocation :class
            :reader control-dialog-item-procid)
    (hilite-state :initarg :hilite-state
@@ -77,7 +77,7 @@
              (dialog-item-handle button))  ;; it's a reset
     ;;(set-dialog-item-text button (dialog-item-text button))
     ))
- 
+
 
 
 (defmethod set-dialog-item-text ((item control-dialog-item) text)
@@ -97,14 +97,14 @@
 (defmethod set-control-title-cfstring ((item control-dialog-item) text)
   (let* ((len (length text)))
     (declare (fixnum len))
-    (%stack-block ((sb  (%i+ len len)))      
+    (%stack-block ((sb  (%i+ len len)))
       (copy-string-to-ptr text 0 len sb)
       (with-macptrs ((cfstr (#_CFStringCreatewithCharacters (%null-ptr) sb len)))
         (#_SetControlTitleWithCFString (dialog-item-handle item) cfstr)
         (#_cfrelease cfstr)))))
 
 
-(defmethod install-view-in-window :before ((dialog-item control-dialog-item) dialog)  
+(defmethod install-view-in-window :before ((dialog-item control-dialog-item) dialog)
   (set-default-size-and-position dialog-item (view-container dialog-item))
   (niy install-view-in-window dialog-item dialog)
   #-(and)
@@ -113,14 +113,14 @@
       (with-pstrs ((sp (dialog-item-text dialog-item)))
         (with-item-rect (rect dialog-item)
           (setf (dialog-item-handle dialog-item)
-                (#_NewControl (wptr dialog) 
-                               rect 
+                (#_NewControl (wptr dialog)
+                               rect
                                sp
                                nil
                                0
-                               0 
+                               0
                                1
-                               (control-dialog-item-procid dialog-item)             
+                               (control-dialog-item-procid dialog-item)
                                0)))
         (let ((text (dialog-item-text dialog-item)))
           (if (not (7bit-ascii-p text))
@@ -145,7 +145,7 @@
           (with-focused-view (view-container item)
             (niy set-view-position item h v)
             #-(and)
-            (let* ((handle (dialog-item-handle item)))           
+            (let* ((handle (dialog-item-handle item)))
               (#_MoveControl handle (point-h new-pos) (point-v new-pos))
               (validate-control-dialog-item item)
               (invalidate-view item))))))
@@ -165,7 +165,7 @@
             (niy set-view-size item h v)
             #-(and)
             (let* ((handle (dialog-item-handle item)))
-              (invalidate-view item t)           
+              (invalidate-view item t)
               (#_SizeControl handle (point-h new-size)(point-v new-size))
               ;; (validate-control-dialog-item item)   ; remove erase region - no dont <<
               (invalidate-view item))))))
@@ -196,7 +196,7 @@
       (#_deactivatecontrol (dialog-item-handle item))))
   (setf (dialog-item-enabled-p item) nil))
 
-        
+
 (defmethod dialog-item-enable ((item control-dialog-item))
   (when (and (installed-item-p item) (not (dialog-item-enabled-p item)))
     (with-focused-dialog-item (item)
@@ -256,7 +256,7 @@
   (niy font-codes-string-width-for-control string ff ms start end)
   #-(and) (with-port  %temp-port%
             (with-font-codes ff ms
-                             (with-cfstrs-hairy ((x string start end))    
+                             (with-cfstrs-hairy ((x string start end))
                                (rlet ((bounds :point)
                                       (baseline :signed-integer))
                                      (#_GetThemeTextDimensions x #$kThemeCurrentPortFont #$kthemestateactive
@@ -265,7 +265,7 @@
   100)
 
 
-(defun font-codes-string-width-with-eol-for-control (string ff ms)  
+(defun font-codes-string-width-with-eol-for-control (string ff ms)
   (let ((pos     0)
         (nextpos 0)
         (nlines  1)

@@ -5,9 +5,9 @@
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
-;;;;    
+;;;;
 ;;;;    Get String From User Dialog
-;;;;    
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -15,24 +15,24 @@
 ;;;;BUGS
 ;;;;LEGAL
 ;;;;    GPL3
-;;;;    
+;;;;
 ;;;;    Copyright Pascal J. Bourguignon 2012 - 2014
-;;;;    
+;;;;
 ;;;;    Some code extracted from MCL (LGPL):
 ;;;;    Copyright 1985-1988 Coral Software Corp.
 ;;;;    Copyright 1989-1994 Apple Computer, Inc.
 ;;;;    Copyright 1995-2000 Digitool, Inc.
-;;;;    
+;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
 ;;;;    it under the terms of the GNU General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
-;;;;    
+;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;;;    GNU General Public License for more details.
-;;;;    
+;;;;
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
@@ -80,7 +80,7 @@
     (multiple-value-bind (ff ms) (view-font-codes view)
       (font-codes-line-height ff ms))))
 
-(defun get-string-from-user (message 
+(defun get-string-from-user (message
                              &key
                                (initial-string "")
                                (size #@(365 100))
@@ -95,7 +95,7 @@
                                (action-function #'identity)
                                (cancel-function nil)
                                (theme-background t))
-  (when message 
+  (when message
     (flet ((act-on-text (item)
              (let ((e-item (find-subview-of-type (view-container item)
                                                  'editable-text-dialog-item)))
@@ -130,9 +130,9 @@
                                     (- (point-h size) left-margin right-margin)))
              (wh               (+ left-margin mh right-margin))
              (edit-top         (+ top-margin (point-v message-size) interline))
-             (edit-item        (make-dialog-item 'editable-text-dialog-item 
+             (edit-item        (make-dialog-item 'editable-text-dialog-item
                                                  (make-point left-margin edit-top)
-                                                 (make-point mh input-height) 
+                                                 (make-point mh input-height)
                                                  initial-string))
              (button-top       (+ edit-top input-height interline))
              (ok-item          (make-dialog-item 'default-button-dialog-item
@@ -149,7 +149,7 @@
                                                  cancel-text
                                                  (or cancel-function
                                                      (lambda (item)
-                                                       (if modeless 
+                                                       (if modeless
                                                            (window-close (view-window item))
                                                            (return-from-modal-dialog :cancel))))
                                                  :cancel-button t))
