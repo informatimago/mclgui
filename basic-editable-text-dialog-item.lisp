@@ -85,6 +85,7 @@
   ;; (with-handle (texth item)
   ;;   [texth superMouseDown])
   (let ((*step-mode* :trace))
+    (declare (special *step-mode*))
     (call-next-method))
   item)
 
