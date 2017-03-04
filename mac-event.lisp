@@ -55,7 +55,7 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
         (aget *event-environment-bindings* '*debug-io*)        *debug-io*)
   (values))
 
-(defparameter *allow-print-backtrace* nil)
+(defparameter *allow-print-backtrace* t)
 (defun print-backtrace (&optional (output *error-output*))
   (when *allow-print-backtrace*
    #+ccl (format output "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~&"
