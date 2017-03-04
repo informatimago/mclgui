@@ -77,16 +77,16 @@
   (flet ((out (message)
            (with-mutex *format-trace-mutex*
              (fresh-line *mclgui-trace*)
-             (write-string message *mclgui-trace*)
-             (terpri *mclgui-trace*)
+             (write-line message *mclgui-trace*)
              (force-output *mclgui-trace*)
-             (let ((listeners (gui::active-listener-windows)))
-               (when listeners
-                 (let ((hi::*current-buffer* (hi:hemlock-view-buffer
-                                              (gui::hemlock-view
-                                               (slot-value (first listeners)
-                                                           'gui::echo-area-view)))))
-                   (hemlock::end-of-buffer-command nil)))))))
+             (when mclgui::*initialized*
+               (let ((listeners (gui::active-listener-windows)))
+                 (when listeners
+                   (let ((hi::*current-buffer* (hi:hemlock-view-buffer
+                                                (gui::hemlock-view
+                                                 (slot-value (first listeners)
+                                                             'gui::echo-area-view)))))
+                     (hemlock::end-of-buffer-command nil))))))))
     (declare (inline out))
     (let ((*print-case* :downcase)
           (*package*    *mclgui-package*))
