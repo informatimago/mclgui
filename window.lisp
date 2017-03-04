@@ -240,12 +240,13 @@ RETURN:     REGION.
   #+debug-views (format-trace "%set-clip" region)
   ;; #+debug-views (let ((*allow-print-backtrace* t)) (print-backtrace))
   (setf (view-clip-region-slot win) region)
+  #-(and)
   (let ((path (bezier-path-from-region region))
         (saved-view *current-view*))
     (unwind-protect
          (progn
-           ;; (focus-view win)
-           ;; [path setClip]
+           (focus-view win)
+           [path setClip]
            #-(and) (progn #| DEBUG-PJB |#
                      [path setLineWidth:(cgfloat 4.0)]
                      [(unwrap *gray-color*) set]
