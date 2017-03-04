@@ -82,7 +82,7 @@
                 :depends-on ("packages" "point"))
 
                (:file "system"
-                :depends-on ("packages" "readtable" "debug"))
+                :depends-on ("packages" "readtable" "debug" "mac-event"))
 
                (:file "circular"
                 :depends-on ("packages"))
@@ -139,8 +139,7 @@
                (:file "menu"
                 :depends-on ("packages"
                              "macros" "variables" "color"
-                             "point" "font" "wrapper" "notification" "view-classes"
-                             "application"))
+                             "point" "font" "wrapper" "notification" "view-classes"))
 
                (:file "window-menu-item"
                 :depends-on ("packages"
@@ -156,7 +155,7 @@
                (:file "view"
                 :depends-on ("packages"
                              "process"
-                             "macros" "variables" "color"
+                             "macros" "variables" "color" "quickdraw"
                              "point" "region" "font" "pen"
                              "wrapper" "view-classes" "objc-classes"
                              "region-view"
@@ -396,7 +395,7 @@
                 :depends-on ("packages"
                              "process"
                              "macros" "variables" "wrapper"
-                             "objc-classes"))
+                             "objc-classes" "event"))
 
                ;; Appendix D: Quickdraw Graphics:
 
@@ -466,7 +465,7 @@
 
                (:file "mclgui"
                 :depends-on ("packages"
-                             "macros" "variables" "process"
+                             "macros" "variables" "process" "wrapper"
                              "objc-classes"
                              "point" "font" "pen" "pattern" "cursor" "view-stream"
                              "menu" "view" "window" "dialog" "fred-window"

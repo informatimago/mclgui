@@ -396,7 +396,7 @@ RETURN:         NIL.
 RETURN:         Whether the menu is installed.
 ")
   (:method ((menu menu))
-    (eql (menubar-menu *menubar*) (menu-owner menu))))
+    (and *menubar* (eql (menubar-menu *menubar*) (menu-owner menu)))))
 
 
 
@@ -1206,18 +1206,21 @@ DO:             Inspect the application main menu, and build the
 
 RETURN:         The list of MENUs collected.
 "
-  (setf *menubar* (make-instance 'menubar))
-  (let ((menu (wrap [[NSApplication sharedApplication] mainMenu])))
-    (setf (slot-value *menubar* 'menu) menu)
-    (let ((menubar (menu-items menu)))
-      (setf *default-menubar* menubar
-            *apple-menu*      (change-class (first menubar) 'apple-menu)
-            *file-menu*       (find "File"    menubar :key (function menu-title) :test (function string=))
-            *edit-menu*       (find "Edit"    menubar :key (function menu-title) :test (function string=))
-            *lisp-menu*       (find "Lisp"    menubar :key (function menu-title) :test (function string=))
-            *tools-menu*      (find "Tools"   menubar :key (function menu-title) :test (function string=))
-            *windows-menu*    (find "Window"  menubar :key (function menu-title) :test (function string=))))
-    (values)))
+  ;; (com.informatimago.common-lisp.interactive.interactive:repl)
+  (unless *menubar*
+    (let ((menu (wrap [[NSApplication sharedApplication] mainMenu])))
+      (when menu
+        (setf *menubar* (make-instance 'menubar))
+        (setf (slot-value *menubar* 'menu) menu)
+        (let ((menubar (menu-items menu)))
+          (setf *default-menubar* menubar
+                *apple-menu*      (change-class (first menubar) 'apple-menu)
+                *file-menu*       (find "File"    menubar :key (function menu-title) :test (function string=))
+                *edit-menu*       (find "Edit"    menubar :key (function menu-title) :test (function string=))
+                *lisp-menu*       (find "Lisp"    menubar :key (function menu-title) :test (function string=))
+                *tools-menu*      (find "Tools"   menubar :key (function menu-title) :test (function string=))
+                *windows-menu*    (find "Window"  menubar :key (function menu-title) :test (function string=)))))
+      (values))))
 
 
 (defun initialize/menu ()

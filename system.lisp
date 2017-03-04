@@ -65,7 +65,7 @@
 (defvar *lisp-cleanup-functions* '()
   "
 The *LISP-CLEANUP-FUNCTIONS* variable contains a list of functions of
-no arguments on which funcall is run just before Macintosh Common Lisp
+no arguments that are called just before Macintosh Common Lisp
 exits (via QUIT or SAVE-APPLICATION).  These functions are called just
 after the windows are closed.
 
@@ -108,12 +108,14 @@ are called in reverse order from the order in which they appear in the
 list.
 ")
 
-(defvar *application-should-terminate-functions* '()
-  "Functions called when the delegate of NSApplication receives -applicationShouldTerminate:.
-If :CANCEL is thrown, the application doesn't terminate.")
 
 (defvar *application-did-finish-launching-functions* '()
   "Functions called when NSApplication sends the -applicationDidFinishLaunching: notification.")
+
+
+(defvar *application-should-terminate-functions* '()
+  "Functions called when the delegate of NSApplication receives -applicationShouldTerminate:.
+If :CANCEL is thrown, the application doesn't terminate.")
 
 
 #| in ccl:
@@ -142,6 +144,13 @@ If :CANCEL is thrown, the application doesn't terminate.")
 |#
 
 
+
+;; Note:
+;; - no I/O on-quit for finish-output on COCOA-LISTENER-OUTPUT-STREAM fails then.
+;; - no I/O on-restore, startup, application-did-finish-launching for
+;;   finish-output on COCOA-LISTENER-OUTPUT-STREAM fails then.
+
+
 (defmacro define-on-operators (base-name list-var &key and-now)
   (let ((fname (intern (format nil "ON-~A*" (symbol-name base-name))))
         (mname (intern (format nil "ON-~A"  (symbol-name base-name)))))
@@ -162,13 +171,12 @@ If :CANCEL is thrown, the application doesn't terminate.")
        ',mname)))
 
 
-(define-on-operators quit         *lisp-cleanup-functions*)
-(define-on-operators save         *save-exit-functions*)
-
-(define-on-operators restore      *restore-lisp-functions*)
+(define-on-operators quit                              *lisp-cleanup-functions*)
+(define-on-operators save                              *save-exit-functions*)
+(define-on-operators restore                           *restore-lisp-functions*)
+(define-on-operators startup                           *lisp-startup-functions*)
 (define-on-operators application-did-finish-launching  *application-did-finish-launching-functions*)
 (define-on-operators application-should-terminate      *application-should-terminate-functions*)
-
 
 #-ccl
 (define-on-operators load-and-now *lisp-user-pointer-functions*  :and-now t)
@@ -178,11 +186,15 @@ If :CANCEL is thrown, the application doesn't terminate.")
   `(progn
      (setf (symbol-function ',function-name) (lambda () (block ,function-name ,@body)))
      (def-load-pointers ,function-name () ,@body)))
-(define-on-operators startup      *lisp-startup-functions*)
 
+
+;;;
+;;;---------------------------------------------------------------------
+;;;
+
+(defvar *initializer* nil)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defvar *initializer* nil)
 
   @[NSObject subClass:MclguiInitializer
              slots:()]
@@ -192,6 +204,8 @@ If :CANCEL is thrown, the application doesn't terminate.")
     resultType:(:void)
     body:
     (declare (ignore notification))
+    (format-trace "-[MclguiInitializer applicationDidFinishLaunching:]")
+    ;; (com.informatimago.common-lisp.interactive.interactive:repl)
     (with-simple-restart (abort "Abort (possibly crucial) startup functions.")
       (flet ((call-with-restart (f)
                (with-simple-restart
@@ -209,13 +223,15 @@ If :CANCEL is thrown, the application doesn't terminate.")
   );;eval-when
 
 
-(on-restore add-application-did-finish-launching-initializer
-  (setf *initializer* [MclguiInitializer new])
-  [[NSNotificationCenter defaultCenter]
-   addObserver:*initializer*
-   selector:(objc:@selector "applicationDidFinishLaunching:")
-   name:#$NSApplicationDidFinishLaunchingNotification
-   object:nil])
+(on-startup add-application-did-finish-launching-initializer
+  (ui::reporting-errors
+    (setf *initializer* [MclguiInitializer new])
+    [[NSNotificationCenter defaultCenter]
+     addObserver:*initializer*
+     selector:(objc:@selector "applicationDidFinishLaunching:")
+     name:#$NSApplicationDidFinishLaunchingNotification
+     object:nil]))
+
 
 
 ;;;

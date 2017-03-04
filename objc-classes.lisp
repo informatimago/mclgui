@@ -525,39 +525,39 @@ DO:             Evaluates the BODY in a lexical environment where
   #+cocoa-10.6 (not (zerop [NSEvent pressedMouseButtons])))
 
 
+
+;;;------------------------------------------------------------
+;;; Objective-C
+
+(defun class-get-subclasses (class)
+  (if (symbolp class)
+      (class-get-subclasses (find-class class))
+      (let ((num-classes (#_objc_getClassList *null* 0)))
+        (cffi:with-foreign-object (classes :pointer num-classes)
+          (#_objc_getClassList classes num-classes)
+          (loop
+            :for i :below num-classes
+            :for subclass = (cffi:mem-aref classes :pointer i)
+            :when (loop
+                    :for superclass = (#_class_getSuperclass subclass)
+                      :then (#_class_getSuperclass superclass)
+                    :while (and (not (nullp superclass))
+                                (eql superclass class))
+                    :finally (return (if (nullp superclass)
+                                         nil
+                                         superclass)))
+              :collect subclass)))))
+
+
+;; (class-get-subclasses 'ns:ns-object)
+;; (pushnew :debug-objc *features*)
+;; (setf *features* (remove :debug-objc *features*))
+
+
 ;;;------------------------------------------------------------
 ;;; Types.
 
 #+ccl (ccl:def-foreign-type ns-rect-ptr (:* :<NSR>ect))
-
-;;;------------------------------------------------------------
-;;; Application Delegate
-
-(defun application-shoud-terminate ()
-  (with-event-environment
-    (block nil
-      (catch :cancel
-        (mapc (function funcall) *application-should-terminate-functions*)
-        (return #$NSTerminateNow))
-      #$NSTerminateCancel)))
-
-#+(and ccl ccl-1.11)
-@[IDEApplicationDelegate
-  method:(applicationShouldTerminate:(id)sender)
-  resultType:(:int)
-  body:
-  (declare (ignore sender))
-  (application-shoud-terminate)]
-
-#+(and ccl (not ccl-1.11))
-@[LispApplicationDelegate
-  method:(applicationShouldTerminate:(id)sender)
-  resultType:(:int)
-  body:
-  (declare (ignore sender))
-  (application-shoud-terminate)]
-
-
 ;;;------------------------------------------------------------
 ;;; NSWindow
 
@@ -569,15 +569,12 @@ DO:             Evaluates the BODY in a lexical environment where
   [self setFrame:rect display:YES]]
 
 
-
 @[NSWindow
   method:(orderBelow:(:id)otherWindow)
   resultType:(:void)
   body:
   #+debug-objc (format-trace "-[NSWindow orderBelow:]")
   [self orderWindow:#$NSWindowBelow relativeTo:[otherWindow windowNumber]]]
-
-
 
 ;;;------------------------------------------------------------
 ;;; MclguiWindow
@@ -996,32 +993,63 @@ DO:             Evaluates the BODY in a lexical environment where
         (warn "Evaluator got a NIL thunk")))]
 
 
+
 ;;;------------------------------------------------------------
-;;; Objective-C
+;;; Application Delegate
 
-(defun class-get-subclasses (class)
-  (if (symbolp class)
-      (class-get-subclasses (find-class class))
-      (let ((num-classes (#_objc_getClassList *null* 0)))
-        (cffi:with-foreign-object (classes :pointer num-classes)
-          (#_objc_getClassList classes num-classes)
-          (loop
-            :for i :below num-classes
-            :for subclass = (cffi:mem-aref classes :pointer i)
-            :when (loop
-                    :for superclass = (#_class_getSuperclass subclass)
-                      :then (#_class_getSuperclass superclass)
-                    :while (and (not (nullp superclass))
-                                (eql superclass class))
-                    :finally (return (if (nullp superclass)
-                                         nil
-                                         superclass)))
-              :collect subclass)))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (import 'gui::ide-application-delegate))
+
+#+ccl-1.11
+@[IDEApplicationDelegate
+  subClass:MclguiApplicationDelegate
+  slots:()]
 
 
-;; (class-get-subclasses 'ns:ns-object)
-;; (pushnew :debug-objc *features*)
-;; (setf *features* (remove :debug-objc *features*))
+#-ccl-1.11
+@[LispApplicationDelegate
+  subClass:MclguiApplicationDelegate
+  slots:()]
+
+
+;; (ccl::with-cfstring (s "LispApplicationDelegate") (#_NSClassFromString s))
+;; #<objc:objc-class gui::ide-application-delegate (#x30EC70)>
+
+(defun application-should-terminate ()
+  (with-event-environment
+    (block nil
+      (catch :cancel
+        (mapc (function funcall) *application-should-terminate-functions*)
+        (return #$NSTerminateNow))
+      #$NSTerminateCancel)))
+
+
+@[MclguiApplicationDelegate
+  method:(applicationShouldTerminate:(id)sender)
+  resultType:(:int)
+  body:
+  (declare (ignore sender))
+  (application-should-terminate)]
+
+
+@[MclguiApplicationDelegate
+  method:(applicationDidFinishLaunching:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  (format-trace "-[MclguiApplicationDelegate applicationDidFinishLaunching:]" self notification)
+  (format-trace "calling (initialize)")
+  (initialize) ; mclgui
+  (format-trace "calling (application-did-finish-launching *application*)")
+  (application-did-finish-launching *application*)
+  (format-trace "done")]
+
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setf gui::*delegate-class-name* "MclguiApplicationDelegate"))
+
+
+
 
 #-(and) (progn
           '[nsevent locationInWindow]
@@ -1030,7 +1058,10 @@ DO:             Evaluates the BODY in a lexical environment where
           (macroexpand-1 '(com.informatimago.objective-c.lower:send nsevent 'location-in-window))
           '[nsevent locationInWindow]
           (macroexpand-1 '(com.informatimago.objective-c.lower:send nsevent 'location-in-window))
-          (com.informatimago.objective-c.lower:stret (com.informatimago.objective-c.lower:send nsevent 'location-in-window))
+          (com.informatimago.objective-c.lower:stret
+           (com.informatimago.objective-c.lower:send nsevent 'location-in-window))
           t)
+
+
 
 ;;;; THE END ;;;;
