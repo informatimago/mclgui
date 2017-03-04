@@ -967,7 +967,7 @@ REGION:         A region, in the coordinate system of the VIEW.
 
 ")
   (:method ((view simple-view) region)
-    (let* ((rgn            (intersect-region region (view-clip-region view)))
+    (let* (;; (rgn            (intersect-region region (view-clip-region view)))
            (window         (view-window view))
            (erase-region   (window-erase-region   window))
            (invalid-region (window-invalid-region window))
