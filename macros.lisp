@@ -144,10 +144,11 @@ POSITION:       0 means insert in front of the list.
            (defmethod slots-for-print append ((self ,class-name))
              ,(gen-extract-slots 'self slots))
            (defmethod print-object ((self ,class-name) stream)
-             (call-print-parseable-object self stream ,type ,identity
-                                          (lambda (self)
-                                            (declare (ignorable self) (stepper disable))
-                                            (slots-for-print self))))))))
+             (com.informatimago.common-lisp.cesarum.utility::call-print-parseable-object
+              self stream ,type ,identity
+              (lambda (self)
+                (declare (ignorable self) (stepper disable))
+                (slots-for-print self))))))))
 
 
 
