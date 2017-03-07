@@ -76,7 +76,7 @@
 
 (ql:quickload :mclgui)
 
-(ui:initialize)
+(ui:on-main-thread (ui:initialize))
 
 (defun load-sdi ()
   (load "scratch/dump")
