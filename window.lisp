@@ -257,11 +257,11 @@ RETURN:     REGION.
 (defun set-clip (region)
   (let ((win (and *current-view* (view-window *current-view*))))
     (when win
-     (%set-clip win
-                (if region
-                    (copy-region region (or (view-clip-region-slot win) (new-region)))
-                    (set-rect-region    (or (view-clip-region-slot win) (new-region))
-                                        -32767 -32767 32767 32767))))))
+      (%set-clip win
+                 (if region
+                     (copy-region region (or (view-clip-region-slot win) (new-region)))
+                     (set-rect-region    (or (view-clip-region-slot win) (new-region))
+                                         -32767 -32767 32767 32767))))))
 
 
 
@@ -324,6 +324,7 @@ INCLUDE-WINDOIDS
                 included.  Floating windows are also included if the
                 value of the CLASS argument is WINDOID.
 "
+  ;; We don't care about the array, just that the window instances be updated:
   (wrap [[NSApplication sharedApplication] orderedWindows])
   (delete-if (lambda (window)
                (not (and (if include-windoids
