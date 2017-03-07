@@ -576,6 +576,7 @@ DO:             Evaluates the BODY in a lexical environment where
   #+debug-objc (format-trace "-[NSWindow orderBelow:]")
   [self orderWindow:#$NSWindowBelow relativeTo:[otherWindow windowNumber]]]
 
+
 ;;;------------------------------------------------------------
 ;;; MclguiWindow
 
@@ -700,6 +701,12 @@ DO:             Evaluates the BODY in a lexical environment where
       (when window
         (window-do-zoom window))))]
 
+@[MclguiWindow
+  method:(acceptsFirstResponder)
+  resultType:(:<bool>)
+  body:
+  (format-trace  "-[MclguiWindow acceptsFirstResponder]" self)
+  YES]
 
 @[MclguiWindow
   method:(becomeMainWindow)
@@ -708,7 +715,7 @@ DO:             Evaluates the BODY in a lexical environment where
   (with-event-environment
     [super becomeMainWindow]
     (let* ((window (nswindow-window self)))
-      ;; (format-trace "-[MclguiWindow becomeMainWindow]" window)
+      (format-trace "-[MclguiWindow becomeMainWindow]" window)
       ;; TODO: move after windoids.
       (when window
         (delete-from-list *window-list* window)
@@ -723,7 +730,6 @@ DO:             Evaluates the BODY in a lexical environment where
           ;; (view-activate-event-handler window)
           (post-event event)))))]
 
-
 @[MclguiWindow
   method:(resignMainWindow)
   resultType:(:void)
@@ -731,7 +737,7 @@ DO:             Evaluates the BODY in a lexical environment where
   (with-event-environment
     [super resignMainWindow]
     (let ((window (nswindow-window self)))
-      ;; (format-trace "-[MclguiWindow resignMainWindow]" window)
+      (format-trace "-[MclguiWindow resignMainWindow]" window)
       (when window
         (let ((event (get-null-event))
               (*multi-click-count* 0))
