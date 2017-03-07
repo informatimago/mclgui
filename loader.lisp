@@ -76,6 +76,7 @@
 
 (ql:quickload :mclgui)
 
+(format t "Initializing UI on the main thread…")
 (ui:on-main-thread (ui:initialize))
 
 (defun load-sdi ()
