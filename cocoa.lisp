@@ -35,7 +35,8 @@
 ;; We'll try to catch in this variable the objective-c reader macros
 ;; installed by ccl require cocoa.
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defvar mclgui.readtable:*objc-readtable* nil))
+  (defvar mclgui.readtable:*objc-readtable*
+    (copy-readtable com.informatimago.objective-cl:*objc-readtable*)))
 
 #+(and ccl darwin); for now, not on non-darwin
 (eval-when (:compile-toplevel :load-toplevel :execute)

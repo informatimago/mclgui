@@ -48,8 +48,10 @@
                "com.informatimago.clext" ; closer-weak: wrapper.lisp uses weak lists
                ;; While developping:
                "com.informatimago.common-lisp.cesarum")
-  :components ((:file "cocoa"
-                :depends-on ("packages"))
+  :components (
+
+               ;; (:file "cocoa"
+               ;;  :depends-on ("packages"))
 
                #-ccl-1.10
                (:file "cg"
@@ -155,7 +157,7 @@
                (:file "view"
                 :depends-on ("packages"
                              "process"
-                             "macros" "variables" "color" "quickdraw"
+                             "macros" "variables" "color"
                              "point" "region" "font" "pen"
                              "wrapper" "view-classes" "objc-classes"
                              "region-view"
@@ -379,7 +381,7 @@
                (:file "cursor"
                 :depends-on ("packages"
                              "macros" "variables" "point"
-                             "wrapper" "pattern"))
+                             "wrapper" "pattern" "readtable"))
 
                (:file "scrap"
                 :depends-on ("packages"
@@ -433,7 +435,7 @@
                 :depends-on ("packages"
                              "macros" "variables" "point"
                              "objc-classes" "objc-region-path"
-                             "view-classes"
+                             "view-classes" "view"
                              "pattern" "rect" "region" "pen"))
 
                ;; Managers:

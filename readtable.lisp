@@ -34,14 +34,7 @@
 (in-package "MCLGUI.READTABLE")
 
 (defmacro enable-objcl+ccl-reader-macros ()
-  `(progn
-     (eval-when (:compile-toplevel :load-toplevel :execute)
-       #+(and ccl darwin)
-       (if mclgui.readtable:*objc-readtable*
-           (setf *readtable* (copy-readtable mclgui.readtable:*objc-readtable*))
-           (warn "Didn't catch the *OBJC-READTABLE*!"))
-       #-(and ccl darwin)
-       (error "We need a readtable for CCL specific dispatching reader macro #$"))
-     (objcl:enable-objcl-reader-macros)))
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (setf *readtable* (copy-readtable com.informatimago.objective-cl:*objective-cl-readtable*))))
 
 ;;;; THE END ;;;;
