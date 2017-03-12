@@ -1,4 +1,7 @@
-    ;; #|PJB-DEBUG|# #-(and) (format-trace 'call-with-focused-view
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
+(enable-sharp-at-reader-macro)
+
+;; #|PJB-DEBUG|# #-(and) (format-trace 'call-with-focused-view
     ;;                                     :view view
     ;;                                     :backtrace (mapcar (lambda (x)
     ;;                                                          (if (member (first x) '(ccl::%call-next-method-with-args

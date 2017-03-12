@@ -32,6 +32,8 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
+(enable-sharp-at-reader-macro)
 
 
 
@@ -56,28 +58,30 @@
 
 
 
-
-(defun extract-slots-unique (ovar slots)
-  "RETURN: A form building a plist of slot values."
-  (cons 'list
-        (loop
-          :for slot :in slots
-          :collect  (if (symbolp slot)
-                        (intern (symbol-name slot) "KEYWORD")
-                        `(quote ,(first slot)))
-          :collect  (if (symbolp slot)
-                        `(slot-value ,ovar ',slot)
-                        (second slot)))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun extract-slots-unique (ovar slots)
+    "RETURN: A form building a plist of slot values."
+    (cons 'list
+          (loop
+            :for slot :in slots
+            :collect  (if (symbolp slot)
+                          (intern (symbol-name slot) "KEYWORD")
+                          `(quote ,(first slot)))
+            :collect  (if (symbolp slot)
+                          `(slot-value ,ovar ',slot)
+                          (second slot))))))
 
 (defmacro collect-slots (object &rest slots)
   (if (symbolp object)
       `((cl:lambda (,object)
           (declare (ignorable ,object))
-          ,(extract-slots object slots)) ,object)
+          ,(extract-slots-unique object slots))
+        ,object)
       (destructuring-bind (ovar oval) object
         `((cl:lambda (,ovar)
             (declare (ignorable ,ovar))
-            ,(extract-slots object slots))  ,oval))))
+            ,(extract-slots-unique object slots))
+          ,oval))))
 
 
 (defgeneric object-slots (object)

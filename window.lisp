@@ -37,8 +37,8 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 (enable-sharp-at-reader-macro)
-(objcl:enable-objcl-reader-macros)
 
 
 (defvar *window-list* '()
@@ -1285,7 +1285,8 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 ;; TODO: use get-fore-color when drawing in the window…
 (defmethod set-fore-color ((window window) color)
   (setf (slot-value window 'fore-color) color)
-  (%set-fore-color (or color *foreground-color*)))
+  (when *color-available*
+    (%set-fore-color (or color *foreground-color*))))
 
 
 (defmethod set-back-color ((window window) color &optional (redisplay-p t))

@@ -33,6 +33,8 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
+(enable-sharp-at-reader-macro)
 
 (defclass key-window (window)
   ((text-item :initform nil :initarg :text-item :accessor key-window-text-item)))
@@ -77,4 +79,3 @@
                                       :window-title "Key Window")))
 
 ;;;; THE END ;;;;
-

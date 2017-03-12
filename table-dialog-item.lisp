@@ -2465,7 +2465,8 @@ V:              Vertical index. If the value of v is NIL, h is assumed
               (call-next-method)
               (when t ;(osx-p)  ;; << workaround for resize turds - the real bug is elsewhere, but where?
                 (let ((w (view-window item)))
-                  (when (and (not (window-theme-background w))(slot-value w 'back-color))
+                  (when (and (not (window-theme-background w))
+                             (get-back-color w))
                     (with-focused-view w
                       (window-update-event-handler w)))))
               (maybe-need-scroll-bars item)

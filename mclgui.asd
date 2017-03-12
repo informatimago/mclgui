@@ -61,7 +61,7 @@
                 :depends-on ())
 
                (:file "readtable"
-                :depends-on ("packages"))
+                :depends-on ("packages" "point"))
 
                (:file "mutex"
                 :depends-on ("packages"))

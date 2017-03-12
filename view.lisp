@@ -37,8 +37,8 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 (enable-sharp-at-reader-macro)
-(objcl:enable-objcl-reader-macros)
 
 
 
@@ -803,10 +803,9 @@ RETURN:  The VIEW rectangle in the view coordinates.
       (make-rect topleft (add-points topleft (view-size view))))))
 
 
-
 (defun erase (window bounds)
   (with-focused-view window
-    (with-back-color (or (slot-value window 'back-color) *white-color*)
+    (with-back-color (get-back-color window)
       (erase-rect* (rect-left bounds) (rect-top bounds) (rect-width bounds) (rect-height bounds)))))
 
 

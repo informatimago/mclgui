@@ -671,13 +671,12 @@ DO:             Evaluates the BODY in a lexical environment where
       (when (eql (window-type window) :document-with-zoom)
         (window-zoom-event-handler
          window
-         (if (< (format-trace '(self frame) (multiple-value-bind (x y w h) (frame [self frame])
-                                              (declare (ignore x y))
-                                              (* w h)))
-                (format-trace 'newframe
-                              (let ((frame (<nsr>ect-to-nsrect newFrame)))
-                                (* (nsrect-width frame)
-                                   (nsrect-height frame)))))
+         (if (< (multiple-value-bind (x y w h) (frame [self frame])
+                  (declare (ignore x y))
+                  (* w h))
+                (let ((frame (<nsr>ect-to-nsrect newFrame)))
+                  (* (nsrect-width frame)
+                     (nsrect-height frame))))
              inZoomOut
              inZoomIn))
         t)))]
@@ -830,10 +829,15 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:<bool>)
   body:YES]
 
+
+;; If the contentView of the window is opaque, then the NSWindow won't
+;; erase itself with its background color and we'll get a black
+;; background, and no corner drawn!  MclguiViews are contentViews!
+
 @[MclguiView
   method:(isOpaque)
   resultType:(:<bool>)
-  body:YES]
+  body:NO]
 
 (defun *nsrect-to-nsrect (prect)
   #+ccl (make-nsrect

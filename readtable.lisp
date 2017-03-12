@@ -33,8 +33,14 @@
 ;;;;**************************************************************************
 (in-package "MCLGUI.READTABLE")
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *mclgui-readtable*
+    (let ((rt (copy-readtable com.informatimago.objective-cl:*objective-cl-readtable*)))
+      (set-dispatch-macro-character #\# #\@ (function mclgui::sharp-at-dispatch-reader-macro) rt)
+      rt)))
+
 (defmacro enable-objcl+ccl-reader-macros ()
   `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (setf *readtable* (copy-readtable com.informatimago.objective-cl:*objective-cl-readtable*))))
+     (setf *readtable* (copy-readtable *mclgui-readtable*))))
 
 ;;;; THE END ;;;;

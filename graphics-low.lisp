@@ -32,7 +32,7 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
-(objcl:enable-objcl-reader-macros)
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 (enable-sharp-at-reader-macro)
 
 (defmacro with-saved-graphic-state ((&key restore-form) &body body)

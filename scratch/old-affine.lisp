@@ -1,3 +1,5 @@
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
+(enable-sharp-at-reader-macro)
 
 
 (defun get-at (ctm)
@@ -36,5 +38,3 @@
   (let ((trans (make-affine-transform)))
     [trans setTransformStruct:(get-ctm window)]
     trans))
-
-

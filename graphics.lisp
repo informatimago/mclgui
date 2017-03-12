@@ -38,7 +38,7 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
-(objcl:enable-objcl-reader-macros)
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 (enable-sharp-at-reader-macro)
 
 
@@ -210,7 +210,7 @@
 (defun erase-rect* (x y w h)
   (let ((color (unwrap (or (and *current-view*
                                 (view-window *current-view*)
-                                (slot-value (view-window *current-view*) 'back-color))
+                                (get-back-color (view-window *current-view*)))
                            *background-color*))))
     #+debug-graphics (format-trace "erase-rect*" x y w h :brightness [color brightnessComponent]
                                    :view *current-view* :window (when *current-view* (view-window *current-view*)))
@@ -282,7 +282,7 @@
                (size (pen-size pen))
                (color (unwrap (or (and *current-view*
                                        (view-window *current-view*)
-                                       (slot-value (view-window *current-view*) 'back-color))
+                                       (get-back-color (view-window *current-view*)))
                                   *background-color*))))
           ;; TODO: deal with rectangular pen sizes.
           [NSBezierPath setDefaultLineWidth:(cgfloat (average (point-h size) (point-v size)))]

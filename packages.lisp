@@ -582,7 +582,7 @@
    "WITH-RECTANGLE-ARG"
 
    ;; Extension:
-   "VIEW-PEN"
+   "VIEW-PEN" "INSET-CORNERS"
 
    ;; graphics:
 
