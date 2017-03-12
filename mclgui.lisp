@@ -132,9 +132,7 @@
   (ui::reporting-errors
     (redirect-trace-output-to-file (merge-pathnames #P"Desktop/Patchwork-trace.txt"
                                                     (user-homedir-pathname)))
-    (format-trace "Welcome to the Machine!")
-    ;; (com.informatimago.common-lisp.interactive.interactive:repl)
-    ))
+    (format-trace "Welcome to the Machine!")))
 
 ;;; --------------------------------------------------------------------
 ;;; Initialization of patchwork

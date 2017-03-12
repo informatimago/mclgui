@@ -205,7 +205,6 @@ If :CANCEL is thrown, the application doesn't terminate.")
     body:
     (declare (ignore notification))
     (format-trace "-[MclguiInitializer applicationDidFinishLaunching:]")
-    ;; (com.informatimago.common-lisp.interactive.interactive:repl)
     (with-simple-restart (abort "Abort (possibly crucial) startup functions.")
       (flet ((call-with-restart (f)
                (with-simple-restart

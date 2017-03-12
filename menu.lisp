@@ -1206,7 +1206,6 @@ DO:             Inspect the application main menu, and build the
 
 RETURN:         The list of MENUs collected.
 "
-  ;; (com.informatimago.common-lisp.interactive.interactive:repl)
   (unless *menubar*
     (let ((menu (wrap [[NSApplication sharedApplication] mainMenu])))
       (when menu
