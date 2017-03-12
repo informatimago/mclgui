@@ -32,7 +32,12 @@
 ;;;;    You should have received a copy of the GNU Affero General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-(in-package :ui)
+(defpackage "MCLGUI.EXAMPLE.COORDINATES-WINDOW"
+  (:use "COMMON-LISP" "MCLGUI")
+  (:export "COORDINATES-WINDOW"
+           "RUN"))
+(in-package "MCLGUI.EXAMPLE.COORDINATES-WINDOW")
+(enable-sharp-at-reader-macro)
 
 (defgeneric draw-coordinates (view))
 (defgeneric erase-coordinates (view))
@@ -146,8 +151,13 @@
   (call-next-method))
 
 
+(defun run ()
+  (initialize)
+  (let ((win (make-instance 'coordinated-window)))
+    win))
+
+
 #-(and) (progn
-          (make-instance 'coordinated-window)
           (class-of (front-window))
           (window-null-event-handler (front-window))
           (with-focused-view  (front-window)
@@ -156,8 +166,6 @@
             (mapcar (lambda (f) (funcall f v))
                     '(coordinates-ascent
                       coordinates-text
-                      coordinates-view-coordinates)))
-
-          )
+                      coordinates-view-coordinates))))
 
 ;;;; THE END ;;;;
