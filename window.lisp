@@ -108,8 +108,6 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     (get-nsrect [winh frameRectForContentRect:(nswindow-frame-from-window-frame (view-frame window))])))
 
 
-
-
 (defmethod update-handle ((window window))
   (setf (%view-position window) (center-window (view-size window) (view-position window)))
   (setf (view-valid window) (list nil))
@@ -125,59 +123,60 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
                 :siz (point-to-list (view-size window))
                 :frame (rect-to-list (view-frame window))
                 :content-rect (nswindow-frame-from-window-frame (view-frame window)))
-  (let ((winh [[MclguiWindow alloc]
-               initWithContentRect:(nswindow-frame-from-window-frame (view-frame window))
-               styleMask:(ecase (window-type window)
-                           ((:document)
-                            (logior #$NSTitledWindowMask
-                                    #$NSMiniaturizableWindowMask
-                                    (if (window-close-box-p window)
-                                        #$NSClosableWindowMask
-                                        0)))
-                           ((:document-with-zoom
-                             :document-with-grow)
-                            (logior #$NSTitledWindowMask
-                                    #$NSMiniaturizableWindowMask
-                                    (if (window-close-box-p window)
-                                        #$NSClosableWindowMask
-                                        0)
-                                    #$NSResizableWindowMask))
-                           ((:double-edge-box
-                             :single-edge-box
-                             :shadow-edge-box)
-                            #$NSBorderlessWindowMask)
-                           ((:tool)
-                            (logior #$NSTitledWindowMask
-                                    (if (window-close-box-p window)
-                                        #$NSClosableWindowMask
-                                        0))))
-               backing:#$NSBackingStoreBuffered
-               defer:NO]))
-    (setf (slot-value winh 'window) window)
-    (setf (handle window) winh) ; must be done before setDelegate.
-    #+debug-views
-    (format-trace '(update-handle window)
-                  :cview-frame  (nswindow-frame-from-window-frame window))
-    (let ((cviewh [[MclguiView alloc]
-                   initWithFrame:(unwrap (nswindow-frame-from-window-frame window))]))
-      (setf (slot-value cviewh 'view) window)
-      [cviewh setAutoresizingMask:(logior #$NSViewWidthSizable #$NSViewHeightSizable)]
-      [winh setContentView:cviewh] window)
-    [winh setReleasedWhenClosed:YES]
-    [winh setHasShadow:yes]
-    [winh invalidateShadow]
-    [winh setAcceptsMouseMovedEvents:YES]
-    ;; [winh setDelegate:(make-instance 'mclgui-window-delegate :window window)]
-    [winh setDelegate:winh]
-    [winh setTitle:(objcl:objc-string (window-title window))]
-    ;; (setf (window-affine-transform window) (current-affine-transform window))
-    #+debug-views
-    (format-trace '(update-handle window)
-                  :wintitle (window-title window)
-                  :pos (point-to-list (view-position window))
-                  :size (point-to-list (view-size window))
-                  :nsframe (nswindow-frame-from-window-frame window))
-    winh))
+  (on-main-thread/sync
+    (let ((winh [[MclguiWindow alloc]
+                 initWithContentRect:(nswindow-frame-from-window-frame (view-frame window))
+                 styleMask:(ecase (window-type window)
+                             ((:document)
+                              (logior #$NSTitledWindowMask
+                                      #$NSMiniaturizableWindowMask
+                                      (if (window-close-box-p window)
+                                          #$NSClosableWindowMask
+                                          0)))
+                             ((:document-with-zoom
+                               :document-with-grow)
+                              (logior #$NSTitledWindowMask
+                                      #$NSMiniaturizableWindowMask
+                                      (if (window-close-box-p window)
+                                          #$NSClosableWindowMask
+                                          0)
+                                      #$NSResizableWindowMask))
+                             ((:double-edge-box
+                               :single-edge-box
+                               :shadow-edge-box)
+                              #$NSBorderlessWindowMask)
+                             ((:tool)
+                              (logior #$NSTitledWindowMask
+                                      (if (window-close-box-p window)
+                                          #$NSClosableWindowMask
+                                          0))))
+                 backing:#$NSBackingStoreBuffered
+                 defer:NO]))
+      (setf (slot-value winh 'window) window)
+      (setf (handle window) winh)   ; must be done before setDelegate.
+      #+debug-views
+      (format-trace '(update-handle window)
+                    :cview-frame  (nswindow-frame-from-window-frame window))
+      (let ((cviewh [[MclguiView alloc]
+                     initWithFrame:(unwrap (nswindow-frame-from-window-frame window))]))
+        (setf (slot-value cviewh 'view) window)
+        [cviewh setAutoresizingMask:(logior #$NSViewWidthSizable #$NSViewHeightSizable)]
+        [winh setContentView:cviewh] window)
+      [winh setReleasedWhenClosed:YES]
+      [winh setHasShadow:yes]
+      [winh invalidateShadow]
+      [winh setAcceptsMouseMovedEvents:YES]
+      ;; [winh setDelegate:(make-instance 'mclgui-window-delegate :window window)]
+      [winh setDelegate:winh]
+      [winh setTitle:(objcl:objc-string (window-title window))]
+      ;; (setf (window-affine-transform window) (current-affine-transform window))
+      #+debug-views
+      (format-trace '(update-handle window)
+                    :wintitle (window-title window)
+                    :pos (point-to-list (view-position window))
+                    :size (point-to-list (view-size window))
+                    :nsframe (nswindow-frame-from-window-frame window))
+      winh)))
 
 
 
@@ -202,7 +201,7 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
   (when (window-visiblep window)
     (setf (slot-value window 'visiblep) nil)
     (window-show window)
-    [(handle window) display]))
+    (on-main-thread [(handle window) display])))
 
 
 (defmethod view-allocate-clip-region ((window window))

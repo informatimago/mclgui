@@ -35,9 +35,10 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defvar *mclgui-readtable*
-    (let ((rt (copy-readtable com.informatimago.objective-cl:*objective-cl-readtable*)))
-      (set-dispatch-macro-character #\# #\@ (function mclgui::sharp-at-dispatch-reader-macro) rt)
-      rt)))
+    (let ((*readtable* (copy-readtable com.informatimago.objcl.readtable:*cocoa-readtable*)))
+      (objcl:enable-objcl-reader-macros)
+      (set-dispatch-macro-character #\# #\@ (function mclgui::sharp-at-dispatch-reader-macro))
+      *readtable*)))
 
 (defmacro enable-objcl+ccl-reader-macros ()
   `(eval-when (:compile-toplevel :load-toplevel :execute)

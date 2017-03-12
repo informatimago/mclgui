@@ -304,7 +304,6 @@ FORM:           A symbol, function or lisp form.
   (with-event-environment
     (event-dispatch)))
 
-
 ;; (application-eval-enqueue *application* '(invoke-debugger (make-condition 'error)))
 ;; (setf (evaluator-thunk *run-loop-evaluator*) (function run-loop-task))
 
