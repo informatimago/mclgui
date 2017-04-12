@@ -1043,16 +1043,51 @@ DO:             Evaluates the BODY in a lexical environment where
 
 
 @[MclguiApplicationDelegate
+  method:(applicationWillFinishLaunching:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  (application-will-finish-launching *application*)]
+
+@[MclguiApplicationDelegate
   method:(applicationDidFinishLaunching:(id)notification)
   resultType:(:void)
   body:
   (declare (ignore notification))
-  (format-trace "-[MclguiApplicationDelegate applicationDidFinishLaunching:]" self notification)
-  (format-trace "calling (initialize)")
-  (initialize) ; mclgui
-  (format-trace "calling (application-did-finish-launching *application*)")
-  (application-did-finish-launching *application*)
-  (format-trace "done")]
+  (initialize)
+  (application-did-finish-launching *application*)]
+
+
+
+@[MclguiApplicationDelegate
+  method:(applicationWillBecomeActive:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  ;; (initialize)
+  (application-will-become-active *application*)]
+
+@[MclguiApplicationDelegate
+  method:(applicationDidBecomeActive:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  (application-did-become-active *application*)]
+
+@[MclguiApplicationDelegate
+  method:(applicationWillResignActive:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  (application-will-resign-active *application*)]
+
+@[MclguiApplicationDelegate
+  method:(applicationDidResignActive:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  (application-did-resign-active *application*)]
+
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute)

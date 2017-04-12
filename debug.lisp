@@ -35,8 +35,12 @@
 (declaim (declaration stepper))
 
 
-(defvar *mclgui-trace*   (make-synonym-stream '*trace-output*))
+;; (defvar *mclgui-trace*   (make-synonym-stream '*trace-output*))
+(defvar *mclgui-trace*   (make-broadcast-stream
+                          (make-synonym-stream '*trace-output*)
+                          (make-synonym-stream '*error-output*)))
 (defvar *mclgui-package* (load-time-value (find-package "MCLGUI")))
+(defvar mclgui::*initialized* nil)
 
 (defmacro unfrequently (frequency &body body)
   (let ((vcount (gensym))
@@ -50,24 +54,6 @@
          ,@body))))
 
 
-(defmacro niy (operator &rest parameters)
-  (let ((vonce (gensym)))
-   `(let ((*print-case* :downcase)
-          (*package*    *mclgui-package*)
-          (,vonce (load-time-value (list t))))
-      (when (prog1 (car ,vonce) (setf (car ,vonce) nil))
-        (format *mclgui-trace* "~&(~40A (~S~:{ (~S ~S)~}))~%"
-                "not implemented yet:"
-                ',operator (mapcar (lambda (var) (list var (type-of var)))
-                                   (list ,@parameters)))
-        (force-output *mclgui-trace*)))))
-
-
-(defmacro uiwarn (control-string &rest args)
-  `(let ((*print-case* :downcase)
-         (*package*    *mclgui-package*))
-     (format *mclgui-trace* "~&(~?)~%" ',control-string (list ,@args))
-     (force-output *mclgui-trace*)))
 
 (defvar *format-trace-mutex* nil)
 (defun format-trace (method &rest arguments)
@@ -76,9 +62,9 @@
     (setf *format-trace-mutex* (make-mutex "FORMAT-TRACE Mutex")))
   (flet ((out (message)
            (with-mutex *format-trace-mutex*
-             (fresh-line *mclgui-trace*)
+             (fresh-line         *mclgui-trace*)
              (write-line message *mclgui-trace*)
-             (force-output *mclgui-trace*)
+             (force-output       *mclgui-trace*)
              (when mclgui::*initialized*
                (let ((listeners (gui::active-listener-windows)))
                  (when listeners
@@ -92,6 +78,22 @@
           (*package*    *mclgui-package*))
       (out (format nil "(~40A ~{~S~^ ~})" method arguments)))
     (first arguments)))
+
+
+(defmacro niy (operator &rest parameters)
+  (let ((vonce (gensym)))
+    `(let ((*print-case* :downcase)
+           (*package*    *mclgui-package*)
+           (,vonce (load-time-value (list t))))
+       (when (prog1 (car ,vonce) (setf (car ,vonce) nil))
+         (format-trace "not implemented yet:"
+                       (cons ',operator
+                             (mapcar (lambda (var) (list var (type-of var)))
+                                     (list ,@parameters))))))))
+
+
+(defmacro uiwarn (control-string &rest args)
+  `(format-trace 'uiwarn (format nil ',control-string (list ,@args))))
 
 
 (defmacro time/stdout (&body body)

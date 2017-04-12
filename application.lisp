@@ -51,7 +51,14 @@
   *application-name*)
 
 (defmethod (setf application-name) (new-name (application t))
-  (setf *application-name* new-name))
+  (format-trace (format nil "(setf application-name) t ~S :new-name ~S" application new-name))
+  (setf *application-name* new-name)
+  (set-menu-title *apple-menu* new-name)
+  (let ((about (first (menu-items *apple-menu*))))
+    (when (prefixp "About " (menu-item-title about))
+      (set-menu-item-title about (format nil "About ~A" new-name))))
+  (format-trace (format nil "~&set application name to ~A~%" (application-name application)))
+  new-name)
 
 
 (defclass named-application-mixin ()
@@ -65,8 +72,10 @@ APPLICATION:    The application.  MCL standard event handling always
 ")))
 
 (defmethod (setf application-name) (new-name (application named-application-mixin))
+  (format-trace (format nil "(setf application-name) named-application-mixin ~S :newname ~S" application new-name))
   (when (next-method-p) (call-next-method))
-  (setf (slot-value application 'name) new-name))
+  (setf (slot-value application 'name) new-name)
+  (format-trace (format nil "~&set application name to ~A~%" (application-name application))))
 
 
 
@@ -82,10 +91,20 @@ APPLICATION:    The application.  MCL standard event handling always
 
 
 (defclass cocoa-ide-application (#-ccl lisp-development-system
-                                 #+ccl wrapper #+ccl gui::cocoa-ide #+ccl named-application-mixin)
+                                 ;; #+ccl wrapper
+                                 #+ccl gui::cocoa-ide #+ccl named-application-mixin)
   ())
 
 
+#+ccl
+(defmethod handle ((self cocoa-ide-application))
+  (ccl::application-ui-object self))
+
+#+ccl
+(objc:defmethod (#/stringToPasteBoard:  :void) ((self ccl::ccl-application) string)
+  (let ((pb (#/generalPasteboard ns:ns-pasteboard)))
+    (#/declareTypes:owner: pb (#/arrayWithObject: ns:ns-array #&NSStringPboardType) nil)
+    (#/setString:forType: pb string #&NSStringPboardType)))
 
 
 (defgeneric  application-command-line-arguments (application)
@@ -239,7 +258,8 @@ APPLICATION:    The application.  MCL standard event handling always
                 uses the value of *APPLICATION*.
 ")
   (:method ((application application))
-    (niy application-suspend-event-handler)))
+    #| Nothing to do, Cocoa manages everything for us.
+    || Subclasses may attach methods. |#))
 
 
 (defgeneric application-resume-event-handler (application)
@@ -253,7 +273,8 @@ APPLICATION:    The application.  MCL standard event handling always
                 uses the value of *APPLICATION*.
 ")
   (:method ((application application))
-    (niy application-resume-event-handler)))
+    #| Nothing to do, Cocoa manages everything for us.
+    || Subclasses may attach methods. |#))
 
 
 (defgeneric application-eval-enqueue (application form)
@@ -284,9 +305,28 @@ FORM:           A symbol, function or lisp form.
     (call-next-method)))
 
 
+(defgeneric application-will-finish-launching (application)
+  (:method ((application t)) (values)))
+
 (defgeneric application-did-finish-launching (application)
+  (:method ((application t)) (values)))
+
+(defgeneric application-will-become-active (application)
   (:method ((application t))
+    (application-suspend-event-handler application)
     (values)))
+
+(defgeneric application-did-become-active (application)
+  (:method ((application t)) (values)))
+
+(defgeneric application-will-resign-active (application)
+  (:method ((application t)) (values)))
+
+(defgeneric application-did-resign-active (application)
+  (:method ((application t))
+    (application-resume-event-handler application)
+    (values)))
+
 
 ;;;---------------------------------------------------------------------
 ;;;

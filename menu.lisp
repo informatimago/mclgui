@@ -232,7 +232,7 @@ NOTE:           You can never remove the Apple menu. Even if you call
     (empty-menubar *menubar*)
     (mapc (function menu-install) new-menubar-list))
   (draw-menubar-if)
-  (reset-application-in-menubar *apple-menu*)
+  ;; (reset-application-in-menubar *apple-menu*)
   new-menubar-list)
 
 
@@ -904,17 +904,17 @@ This is the menu-item-update-function for the items in the Edit menu.
   (:default-initargs :menu-title "Apple"))
 
 
-(defun reset-application-in-menubar (menu)
-  (let ((title (menu-title menu)))
-    (format-trace 'reset-application-in-menubar title)
-    (set-menu-title menu "Application") ; we need to reset it so it's updated in the menubar.
-    (set-menu-title menu title)
-    (unless (application-name *application*)
-      (setf (application-name *application*) title))))
-
-(defmethod update-instance-for-different-class :after (menu (new-menu apple-menu) &key &allow-other-keys)
-  (declare (ignore menu))
-  (reset-application-in-menubar new-menu))
+;; (defun reset-application-in-menubar (menu)
+;;   (let ((title (menu-title menu)))
+;;     (format-trace 'reset-application-in-menubar title)
+;;     (set-menu-title menu "Application") ; we need to reset it so it's updated in the menubar.
+;;     (set-menu-title menu title)
+;;     (unless (application-name *application*)
+;;       (setf (application-name *application*) title))))
+;; 
+;; (defmethod update-instance-for-different-class :after (menu (new-menu apple-menu) &key &allow-other-keys)
+;;   (declare (ignore menu))
+;;   (reset-application-in-menubar new-menu))
 
 (defmethod menu-deinstall ((menu apple-menu))
   ;;The apple menu cannot be removed by the user (it causes multifinder
@@ -1197,6 +1197,23 @@ RETURN:         A new instance of MENU representing the NSMenu NSMENU.
 
 
 
+(defun initialize-menus-from-menubar (menubar)
+  (setf *default-menubar* menubar
+        *apple-menu*      (change-class (first menubar) 'apple-menu)
+        *file-menu*       (find "File"    menubar :key (function menu-title) :test (function string=))
+        *edit-menu*       (find "Edit"    menubar :key (function menu-title) :test (function string=))
+        *lisp-menu*       (find "Lisp"    menubar :key (function menu-title) :test (function string=))
+        *tools-menu*      (find "Tools"   menubar :key (function menu-title) :test (function string=))
+        *windows-menu*    (find "Window"  menubar :key (function menu-title) :test (function string=))))
+
+
+(defun create-default-menubar ()
+  (let ((app (make-instance 'menu :menu-title "App")))
+    (add-menu-items app (make-instance 'menu-item
+                                       :menu-item-title "Quit"
+                                       :menu-item-action (lambda () (ccl:quit))))
+    (list app)))
+
 (defun initialize-menubar ()
   "
 DO:             Inspect the application main menu, and build the
@@ -1212,17 +1229,14 @@ RETURN:         The list of MENUs collected.
         (setf *menubar* (make-instance 'menubar))
         (setf (slot-value *menubar* 'menu) menu)
         (let ((menubar (menu-items menu)))
-          (setf *default-menubar* menubar
-                *apple-menu*      (change-class (first menubar) 'apple-menu)
-                *file-menu*       (find "File"    menubar :key (function menu-title) :test (function string=))
-                *edit-menu*       (find "Edit"    menubar :key (function menu-title) :test (function string=))
-                *lisp-menu*       (find "Lisp"    menubar :key (function menu-title) :test (function string=))
-                *tools-menu*      (find "Tools"   menubar :key (function menu-title) :test (function string=))
-                *windows-menu*    (find "Window"  menubar :key (function menu-title) :test (function string=)))))
+          (if menubar
+              (initialize-menus-from-menubar menubar)
+              (apply (function add-menu-items) menu (create-default-menubar)))))
       (values))))
 
 
 (defun initialize/menu ()
+  #+(and ccl cocoa) (gui::initialize-menus)
   (initialize-menubar)
   (with-handle (main-menu (menubar-menu *menubar*))
     (setf *menubar-bottom* (if (nullp main-menu)

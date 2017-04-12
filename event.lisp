@@ -741,6 +741,7 @@ RETURN:         If called during event processing, return true if
       #-(and)
       ((#.os-evt)
        (when (= 1 (ldb (byte 8 24) (event-message event))) ; suspend or resume event
+         ;; Those are dispatched from applicationWillBecomeActive: applicationDidResignActive:
          (if (setq *foreground* (logbitp 0 (event-message event)))
              (application-resume-event-handler  *application*)
              (application-suspend-event-handler *application*))))
