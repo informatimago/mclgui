@@ -87,7 +87,9 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
                                                       :external-format :utf-8
                                                       :if-exists :append
                                                       :if-does-not-exist :create)
-                                   (let ((errs (make-broadcast-stream errf *error-output*)))
+                                   (let ((errs (make-broadcast-stream errf
+                                                                      *error-output*
+                                                                      *trace-output*)))
                                      (format errs "~%~A~2%" (date))
                                      (print-backtrace errs)
                                      (format errs "~%ERROR while ~S:~%~A~2%"
@@ -108,7 +110,6 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
                                (return-from ,vhandler nil))))
          ,@body))))
 
-;; (push :debug-on-error *features*)
 
 (defmacro with-event-environment (&body body)
   `(let ((*idle* nil))
