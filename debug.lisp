@@ -56,6 +56,10 @@
 
 
 (defvar *format-trace-mutex* nil)
+#-debug-trace
+(defmacro format-trace (method &rest arguments)
+  'nil)
+#+debug-trace
 (defun format-trace (method &rest arguments)
   (declare (stepper disable))
   (unless *format-trace-mutex*
