@@ -101,7 +101,6 @@
                                (make-output-filter-stream
                                 queue
                                 (lambda (operation queue &rest arguments)
-                                  (format *trace-output*  "~S~%" (list 'filter-stream operation arguments)) (force-output *trace-output*)
                                   (ecase operation
                                     ;; character
                                     ;; (read-char            (read-char         stream nil :eof))
