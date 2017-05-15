@@ -3,6 +3,9 @@
 
 Issues https://gitlab.com/patchwork/mclgui/issues
 
+** TODO [#A]       buttons don't switch to black when clicked           :bug:
+(the action function is called).
+
 ** TODO [#A] 00022 ajustement graphiques editable-text-dialog-item
 ** TODO [#A] 00023 integration hemlock Cmd-w should close hemlock window
 and not try to close the Patchwork window below it.
