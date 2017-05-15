@@ -106,6 +106,11 @@ APPLICATION:    The application.  MCL standard event handling always
     (#/declareTypes:owner: pb (#/arrayWithObject: ns:ns-array #&NSStringPboardType) nil)
     (#/setString:forType: pb string #&NSStringPboardType)))
 
+#+(and ccl :debug-application)
+(defmethod ccl::application-ui-operation ((a cocoa-ide-application) operation &rest args)
+  (call-next-method)
+  (format t "~&Hello from application-ui-operation cocoa-ide-application~%   (operation ~S ~{ ~S~})~%"
+          operation args))
 
 (defgeneric  application-command-line-arguments (application)
   (:method ((application application))
