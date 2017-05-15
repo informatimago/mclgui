@@ -1,6 +1,38 @@
+-*- mode:org-mode -*-
+
+* MCLGUI
+
 This is an implementation of the MCL GUI (CLOS layer on MacOS
 Toolbox), targetting CCL on MacOSX.
 
 Some parts of the code may come from the rmcl 5.1b2 sources (LGPL).
 
 This library is under the GPL3 license.
+
+
+
+** features used by mclgui
+
+    :test                    activate running tests upon loading.
+
+    :has-appleevent          set by patchwork/load-libraries. (=!=) used by mclgui to detect whether to use AppleEvents.
+
+    :report-error-in-dialog  display error and backtrace in a dialog window.
+    :debug-on-error          invokes the debugger when reporting a detected error.
+
+
+The following features produce a lot of trace output.
+
+    :debug-application       activates debugging application class..
+    :debug-event             activates debugging events.
+    :debug-objc              activates debugging objc-classes.
+    :debug-focused-view      activates debugging of call-with-focused-view.
+    :debug-views-colors      activates debugging views (with colors).
+    :debug-views             activates debugging views.
+    :debug-wrapper           activates debugging wrappers.
+
+
+    (pushnew :debug-objc     *features*)
+    (pushnew :debug-graphics *features*)
+    (pushnew :debug-on-error *features*)
+
