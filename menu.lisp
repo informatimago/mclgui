@@ -911,7 +911,7 @@ This is the menu-item-update-function for the items in the Edit menu.
 ;;     (set-menu-title menu title)
 ;;     (unless (application-name *application*)
 ;;       (setf (application-name *application*) title))))
-;; 
+;;
 ;; (defmethod update-instance-for-different-class :after (menu (new-menu apple-menu) &key &allow-other-keys)
 ;;   (declare (ignore menu))
 ;;   (reset-application-in-menubar new-menu))

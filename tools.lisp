@@ -9,7 +9,7 @@
 
 (defun hemlock-listener-window-process (window)
   (find (handle window) (remove-if-not (lambda (process)
-                                         (typep process 'gui::cocoa-listener-process)) 
+                                         (typep process 'gui::cocoa-listener-process))
                                        (bt:all-threads))
         :key (function gui::cocoa-listener-process-window)))
 
@@ -43,18 +43,18 @@
 
 #-(and)
 (progn
-  
+
   (mapcar (lambda (process) (list (gui::cocoa-listener-process-input-stream process)
                                   (gui::cocoa-listener-process-output-stream process)
                                   (gui::cocoa-listener-process-window process)))
-          (remove-if-not (lambda (process) (typep process 'gui::cocoa-listener-process)) 
+          (remove-if-not (lambda (process) (typep process 'gui::cocoa-listener-process))
                          (bt:all-threads)))
 
 
   (defun hemlock-listener-window-process (window)
     (find (ui::handle window)
           (remove-if-not (lambda (process)
-                           (typep process 'gui::cocoa-listener-process)) 
+                           (typep process 'gui::cocoa-listener-process))
                          (bt:all-threads))
           :key (function gui::cocoa-listener-process-window)))
 
@@ -69,7 +69,7 @@
         ))
 
 
-  
+
   );;#-(and)
 
 
@@ -100,7 +100,7 @@
                                :view-position #@(10 40)
                                :view-size (make-point (- width 20) 20)))
         (setf b (make-instance 'button-dialog-item
-                               :dialog-item-enabledp t 
+                               :dialog-item-enabledp t
                                :dialog-item-action (function eval-expression)
                                :default-button t
                                :dialog-item-text "Eval"
