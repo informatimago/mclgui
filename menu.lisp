@@ -1234,9 +1234,13 @@ RETURN:         The list of MENUs collected.
               (apply (function add-menu-items) menu (create-default-menubar)))))
       (values))))
 
+#+(and ccl cocoa)
+(defun cocoa-menu-initializedp ()
+  (< 1 [[[NSApplication sharedApplication]mainMenu] numberOfItems]))
 
 (defun initialize/menu ()
-  #+(and ccl cocoa) (gui::initialize-menus)
+  #+(and ccl cocoa) (unless (cocoa-menu-initializedp)
+                      (gui::initialize-menus))
   (initialize-menubar)
   (with-handle (main-menu (menubar-menu *menubar*))
     (setf *menubar-bottom* (if (nullp main-menu)
