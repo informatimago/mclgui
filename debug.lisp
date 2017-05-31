@@ -97,7 +97,7 @@
 
 
 (defmacro uiwarn (control-string &rest args)
-  `(format-trace 'uiwarn (format nil ',control-string (list ,@args))))
+  `(format-trace 'uiwarn (format nil ',control-string ,@args)))
 
 
 (defmacro time/stdout (&body body)

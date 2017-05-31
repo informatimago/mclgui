@@ -51,18 +51,18 @@
   *application-name*)
 
 (defmethod (setf application-name) (new-name (application t))
-  (format-trace (format nil "(setf application-name) t ~S :new-name ~S" application new-name))
+  (format-trace (format nil "(setf application-name) T ~S :new-name ~S" application new-name))
   (setf *application-name* new-name)
   (set-menu-title *apple-menu* new-name)
   (let ((about (first (menu-items *apple-menu*))))
     (when (prefixp "About " (menu-item-title about))
       (set-menu-item-title about (format nil "About ~A" new-name))))
-  (format-trace (format nil "~&set application name to ~A~%" (application-name application)))
+  (format-trace (format nil "set application name to ~A" (application-name application)))
   new-name)
 
 
 (defclass named-application-mixin ()
-  ((name :initform nil :initarg :name :reader application-name
+  ((name :initform nil :initarg :name
          :documentation "
 RETURN:         The name of the application (a string). The default
                 value is \"App\".
@@ -71,11 +71,15 @@ APPLICATION:    The application.  MCL standard event handling always
                 uses the value of *APPLICATION*.
 ")))
 
+(defmethod application-name ((application named-application-mixin))
+  (or (slot-value application 'name)
+      (when (next-method-p)  (call-next-method))))
+
 (defmethod (setf application-name) (new-name (application named-application-mixin))
-  (format-trace (format nil "(setf application-name) named-application-mixin ~S :newname ~S" application new-name))
+  (format-trace (format nil "(setf application-name) NAMED-APPLICATION-MIXIN ~S :newname ~S" application new-name))
   (when (next-method-p) (call-next-method))
   (setf (slot-value application 'name) new-name)
-  (format-trace (format nil "~&set application name to ~A~%" (application-name application))))
+  (format-trace (format nil "set application name to ~A" (application-name application))))
 
 
 

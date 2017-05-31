@@ -126,7 +126,8 @@
   (:import-from "COM.INFORMATIMAGO.OBJCL" "YES" "NO")
   #+ccl (:import-from "CCL"
                       "*APPLICATION*" "APPLICATION-INIT-FILE"
-                      "APPLICATION" "LISP-DEVELOPMENT-SYSTEM")
+                      "APPLICATION" "LISP-DEVELOPMENT-SYSTEM"
+                      "APPLICATION-NAME" "APPLICATION-ERROR")
 
   (:export                              ; debugging
    "NIY" "UIWARN" "FORMAT-TRACE")

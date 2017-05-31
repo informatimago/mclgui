@@ -64,6 +64,50 @@ WINDOW:         A window.
 "))
 
 
+;;;---------------------------------------------------------------------
+
+(defclass unknown-window (window)
+  ())
+
+(defclass hemlock-frame (window)
+  ())
+
+(defclass hemlock-listener-frame (hemlock-frame)
+  ())
+
+(defmethod view-draw-contents ((window hemlock-frame))
+  (values))
+
+(defmethod wrap ((nswindow ns:ns-window))
+  ;; (format-trace 'wrap nswindow)
+  (or (find nswindow *window-list* :key (function handle))
+      (make-instance 'unknown-window :handle nswindow)))
+
+(defmethod wrap ((nswindow gui::hemlock-listener-frame))
+  ;; (format-trace 'wrap nswindow)
+  (or (find nswindow *window-list* :key (function handle))
+      (make-instance 'hemlock-listener-frame :handle nswindow)))
+
+(defmethod wrap ((nswindow gui::hemlock-frame))
+  ;; (format-trace 'wrap nswindow)
+  (or (find nswindow *window-list* :key (function handle))
+      (make-instance 'hemlock-frame :handle nswindow)))
+
+(defgeneric wrap-only-my-windows (nswindow)
+  (:method   ((nswindow ns:ns-window))
+    (find nswindow *window-list* :key (function handle)))
+  (:method   ((nswindow gui::hemlock-listener-frame))
+    ;; (format-trace 'wrap nswindow)
+    (or (find nswindow *window-list* :key (function handle))
+        (make-instance 'hemlock-listener-frame :handle nswindow)))
+  (:method   ((nswindow gui::hemlock-frame))
+    ;; (format-trace 'wrap nswindow)
+    (or (find nswindow *window-list* :key (function handle))
+        (make-instance 'hemlock-frame :handle nswindow))))
+
+;;;---------------------------------------------------------------------
+
+
 (defmethod window-frame-from-nswindow-frame ((frame nsrect))
   "
 FRAME:  A NSRECT (in screen coordinates).
@@ -323,8 +367,14 @@ INCLUDE-WINDOIDS
                 included.  Floating windows are also included if the
                 value of the CLASS argument is WINDOID.
 "
+
+
   ;; We don't care about the array, just that the window instances be updated:
-  (wrap [[NSApplication sharedApplication] orderedWindows])
+  ;; (wrap [[NSApplication sharedApplication] orderedWindows])
+  ;; Instead, let's avoid creating window instance for NSWindows and NSPanel we don't manage.
+  (do-nsarray (nswindow [[NSApplication sharedApplication] orderedWindows])
+    (when (find nswindow *window-list* :key (function handle))
+      (wrap-only-my-windows nswindow)))
   (delete-if (lambda (window)
                (not (and (if include-windoids
                              (or (typep window class)
@@ -660,10 +710,11 @@ NEW-TITLE:      A string to be used as the new title.
 
 (defgeneric window-show (window)
   (:method ((window window))
-    #+debug-views (format-trace 'window-show window)
+    #+debug-views (format-trace 'window-show window *mclgui-trace*)
     (unless (window-visiblep window)
       (setf (slot-value window 'visiblep) t)
       (window-bring-to-front window))
+    #+debug-views (reporting-errors (print-backtrace *mclgui-trace*))
     window))
 
 
@@ -1315,46 +1366,14 @@ RETURN:         A BOOLEAN value indicating whether view can perform
           (call-next-method))))))
 
 
+
 ;;;---------------------------------------------------------------------
-
-(defclass unknown-window (window)
-  ())
-
-(defclass hemlock-frame (window)
-  ())
-
-(defclass hemlock-listener-frame (hemlock-frame)
-  ())
-
-(defmethod view-draw-contents ((window hemlock-frame))
-  (values))
-
-(defmethod wrap ((nswindow ns:ns-window))
-  ;; (format-trace 'wrap nswindow)
-  (or (find nswindow *window-list* :key (function handle))
-      (make-instance 'unknown-window :handle nswindow)))
-
-(defmethod wrap ((nswindow gui::hemlock-listener-frame))
-  ;; (format-trace 'wrap nswindow)
-  (or (find nswindow *window-list* :key (function handle))
-      (make-instance 'hemlock-listener-frame :handle nswindow)))
-
-(defmethod wrap ((nswindow gui::hemlock-frame))
-  ;; (format-trace 'wrap nswindow)
-  (or (find nswindow *window-list* :key (function handle))
-      (make-instance 'hemlock-frame :handle nswindow)))
-
 
 (defun initialize/window ()
   (setf *window-list* '()) ; wrapping windows modify *window-list*, so let's start from a blank state.
-  (setf *window-list* (nsarray-to-list [[NSApplication sharedApplication] windows]))
+  (setf *window-list* (delete nil (map-nsarray 'list (function wrap-only-my-windows)
+                                               [[NSApplication sharedApplication] orderedWindows])))
   (values))
-
-;; (initialize/window)
-;; (map nil 'print *window-list*)
-;; (mapcar 'nswindow-window (cddr *window-list*))
-;; (type-of (first *window-list*))
-
 
 
 ;;;; THE END ;;;;

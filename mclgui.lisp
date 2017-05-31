@@ -56,6 +56,14 @@
       ))
 
 
+(defun ccl::display-cocoa-listener-output-buffer (stream)
+  (with-slots (ccl::hemlock-view gui::buffer) stream
+    (unwind-protect
+         (gui::with-dob-output-data (gui::data ccl::buffer)
+           (when (and gui::data (> (fill-pointer gui::data) 0))
+             (gui::append-output ccl::hemlock-view gui::data)
+             (setf (fill-pointer gui::data) 0)))
+      (gui::dob-return-output-data ccl::buffer))))
 
 ;; (com.informatimago.common-lisp.cesarum.stream:stream-input-stream  *terminal-io*)
 ;; (com.informatimago.common-lisp.cesarum.stream:stream-output-stream *terminal-io*)

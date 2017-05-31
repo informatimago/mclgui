@@ -568,13 +568,13 @@ DO:             Evaluates the BODY in a lexical environment where
   #+debug-objc (format-trace "-[NSWindow setFrame:]")
   [self setFrame:rect display:YES]]
 
-
-@[NSWindow
-  method:(orderBelow:(:id)otherWindow)
-  resultType:(:void)
-  body:
-  #+debug-objc (format-trace "-[NSWindow orderBelow:]")
-  [self orderWindow:#$NSWindowBelow relativeTo:[otherWindow windowNumber]]]
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  @[NSWindow
+    method:(orderBelow:(:id)otherWindow)
+    resultType:(:void)
+    body:
+    #+debug-objc (format-trace "-[NSWindow orderBelow:]")
+    [self orderWindow:#$NSWindowBelow relativeTo:[otherWindow windowNumber]]])
 
 
 ;;;------------------------------------------------------------

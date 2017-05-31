@@ -245,6 +245,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 (declaim (inline graphics-flush))
 (defun graphics-flush ()
   #+debug-view (format-trace 'graphics-flush)
+  ;; (#_CGContextSynchronize [[NSGraphicsContext currentContext] CGContext])
   [[NSGraphicsContext currentContext] flushGraphics])
 
 (defun set-window-origin (window h v)
@@ -262,6 +263,9 @@ view-scroll-position.
 "
   (let ((p (view-origin window)))
     (set-window-origin window (point-h p) (point-v p))))
+
+(defgeneric origin (view))
+(defgeneric set-origin (view h &optional v))
 
 (defmethod set-origin ((window window) h &optional v)
   (let ((p (make-point h v)))
@@ -1729,7 +1733,7 @@ RETURN:         The cursor shape to display when the mouse is at
                       :from-rect (rect-to-list (convert-rectangle (view-bounds view)
                                                                   view
                                                                   (view-window view)))
-                      :ctm (get-at* (get-ctm (view-window view)))
+                      ;; :ctm (get-at* (get-ctm (view-window view)))
                       :viewh viewh
                       :bitmap bitmap
                       :image image)
@@ -1795,6 +1799,19 @@ RETURN:         The cursor shape to display when the mouse is at
       (sleep 5)
       (new-instance view))))
 
+(defun example/instance-drawing/3 ()
+  (let ((view (front-window)))
+    (with-instance-drawing view
+      (with-focused-view view
+        (loop for i from 20 to 200 by 2 do
+          (sleep 0.1)
+          (new-instance view)
+          (with-focused-view view
+            (with-pen-state (:pattern *gray-pattern* :mode :patCopy)
+              (draw-rect* i i 100 40)))))
+      (new-instance view))))
+
+;; (example/instance-drawing/3)
 ;; (example/instance-drawing/2)
 ;; (example/instance-drawing)
 
