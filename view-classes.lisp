@@ -273,20 +273,21 @@ A clip region specific to the VIEW, given in the coordinate system of the VIEW.
                                                          :single-edge-box
                                                          :shadow-edge-box
                                                          :tool))
-   (affine-transform                 :initform nil
-                                     :accessor window-affine-transform
-                                     :documentation "The initial window NSAffineTransform object.")
-   (transform-stack                  :initform nil
-                                     :accessor window-transform-stack
-                                     :documentation "
-A stack of NSAffineTransform currently applied to the graphic context
-of the window content view.  Since there's apparently no way to get
-back the current transform of a graphic context, and since we may jump
-from context to context with embedded with-focused-view we need to
-keep track of the transform currently applied to a window, so that we
-may temporarily cancel it.  cf. CALL-WITH-FOCUSED-VIEW.
-FOCUS-VIEW changes the top of the transform-stack of the view window. (NIY)
-")
+   ;; (affine-transform                 :initform nil
+   ;;                                   :accessor window-affine-transform
+   ;;                                   :documentation "The initial window NSAffineTransform object.")
+   ;;    (transform-stack                  :initform nil
+   ;;                                      :accessor window-transform-stack
+   ;;                                      :documentation "
+   ;; A stack of NSAffineTransform currently applied to the graphic context
+   ;; of the window content view.  Since there's apparently no way to get
+   ;; back the current transform of a graphic context, and since we may jump
+   ;; from context to context with embedded with-focused-view we need to
+   ;; keep track of the transform currently applied to a window, so that we
+   ;; may temporarily cancel it.  cf. CALL-WITH-FOCUSED-VIEW.
+   ;; FOCUS-VIEW changes the top of the transform-stack of the view window. (NIY)
+   ;; ")
+
    ;; WINDOW-PTR is a simulated handle (a mere integer identifying the window).
    ;; It's reset to NIL when the real window handle is released.
    (window-ptr                       :reader window-ptr

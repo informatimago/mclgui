@@ -65,10 +65,10 @@
   ())
 
 (defun make-inspector-window (&optional (root-objects (list-all-packages)))
-  (let ((win (make-instance 'inspector-window
-                            :window-title "Inspector"
-                            :view-size #@(400 300)
-                            :displayed-objects root-objects))
+  (let ((win (on-main-thread/sync (make-instance 'inspector-window
+                                                 :window-title "Inspector"
+                                                 :view-size #@(400 300)
+                                                 :displayed-objects root-objects)))
         (p (make-point 10 10)))
     (dolist (object root-objects)
       (adjust-size (make-instance (view-class-for-object object)

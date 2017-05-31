@@ -269,7 +269,6 @@ the editable-text dialog item.
       *i-beam-cursor*
       *arrow-cursor*)))
 
-	
 
 (defmethod install-view-in-window :after ((item key-handler-mixin) dialog)
   (add-key-handler item dialog))

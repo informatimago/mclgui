@@ -32,20 +32,21 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 
-(defpackage "COM.INFORMATIMAGO.SLOWATCH"
-  (:use "CL" "UI")
+(defpackage "MCLGUI.EXAMPLE.SLOWATCH"
+  (:use "COMMON-LISP" "MCLGUI")
   (:export
    "SLOWATCH" "SHOW-TIMEZONE" "CURRENT-HOUR" "TIMEZONE"
    "SLOWIN"
-   "*SLOWIN*" "MAIN"))
-(in-package "COM.INFORMATIMAGO.SLOWATCH")
+   "*SLOWIN*" "RUN"))
+(in-package "MCLGUI.EXAMPLE.SLOWATCH")
+(enable-sharp-at-reader-macro)
 
 (defclass slowatch (simple-view)
   ((show-timezone :initarg :show-timezone :initform t :accessor show-timezone)
    (update-period :initform nil :reader update-period)))
 
 (defmethod timezone ((view slowatch))
-  (uiop:getenv "TZ"))
+  (or (uiop:getenv "TZ") "Local Time"))
 
 (defmethod current-hour ((view slowatch))
   (multiple-value-bind (s m h) (decode-universal-time (get-universal-time))
@@ -101,7 +102,7 @@
                    (ir 4)
                    (er (hand-radius view)))
               (draw-ellipse cx cy ir ir)
-              (draw-line (x ir a) (y ir a) (x er a) (y er a)))
+              (draw-line (x ir a) (1+ (y ir a)) (x er a) (y er a)))
             (when (show-timezone view)
               (let* ((tz (timezone view))
                      (w  (string-width tz)))
@@ -140,7 +141,8 @@
 
 (defvar *slowin* nil)
 
-(defun main ()
+(defun run ()
+  (initialize)
   (setf *slowin* (make-instance
                   'slowin
                   :window-title "SloWatch"
@@ -149,8 +151,8 @@
                                           'slowatch
                                           :view-position #@(0 0)
                                           :view-size #@(200 200)))))
-  (setf (slot-value *slowin* 'ui::back-color) *light-gray-color*
-        (slot-value *slowin* 'ui::fore-color) *dark-gray-color*)
+  (setf (slot-value *slowin* 'mclgui::back-color) *light-gray-color*
+        (slot-value *slowin* 'mclgui::fore-color) *dark-gray-color*)
   *slowin*)
 
 ;;;; THE END ;;;;

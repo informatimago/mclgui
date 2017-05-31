@@ -741,6 +741,7 @@ RETURN:         If called during event processing, return true if
       #-(and)
       ((#.os-evt)
        (when (= 1 (ldb (byte 8 24) (event-message event))) ; suspend or resume event
+         ;; Those are dispatched from applicationWillBecomeActive: applicationDidResignActive:
          (if (setq *foreground* (logbitp 0 (event-message event)))
              (application-resume-event-handler  *application*)
              (application-suspend-event-handler *application*))))
@@ -795,6 +796,8 @@ IDLE:           An argument representing whether the main Lisp process
                 GET-NEXT-EVENT with an event and the value of IDLE.
 "
   ;; This is called periodically on the main thread by run-loop-task.
+  ;; INITIALIZE-RUN-LOOP-EVALUATOR sets up RUN-LOOP-TASK as main loop timer.
+  ;; RUN-LOOP-TASK calls EVENT-DISPATCH.
   (let ((*current-event* (get-next-event idle event-mask)))
     (when *current-event*
       (unwind-protect

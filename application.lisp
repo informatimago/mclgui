@@ -40,34 +40,95 @@
 (in-package "MCLGUI")
 (objcl:enable-objcl-reader-macros)
 
+
+
 (defgeneric application-name (application))
 (defgeneric (setf application-name) (new-name application))
 
-#+ccl
-(progn
-  (defvar *application-name* nil)
-  (defmethod application-name ((application ccl::application))
-    *application-name*)
-  (defmethod (setf application-name) (new-name (application ccl::application))
-    (setf *application-name* new-name)))
+(defvar *application-name* "App")
 
-(defclass application (wrapper #+ccl ccl::application)
-  ((name :initform nil :initarg :name :accessor application-name
+(defmethod application-name ((application t))
+  *application-name*)
+
+(defmethod (setf application-name) (new-name (application t))
+  (format-trace (format nil "(setf application-name) T ~S :new-name ~S" application new-name))
+  (setf *application-name* new-name)
+  (set-menu-title *apple-menu* new-name)
+  (let ((about (first (menu-items *apple-menu*))))
+    (when (prefixp "About " (menu-item-title about))
+      (set-menu-item-title about (format nil "About ~A" new-name))))
+  (format-trace (format nil "set application name to ~A" (application-name application)))
+  new-name)
+
+
+(defclass named-application-mixin ()
+  ((name :initform nil :initarg :name
          :documentation "
 RETURN:         The name of the application (a string). The default
-                value is NIL.
+                value is \"App\".
 
 APPLICATION:    The application.  MCL standard event handling always
                 uses the value of *APPLICATION*.
 ")))
 
-(defclass lisp-development-system (application #+ccl ccl::lisp-development-system)
+(defmethod application-name ((application named-application-mixin))
+  (or (slot-value application 'name)
+      (when (next-method-p)  (call-next-method))))
+
+(defmethod (setf application-name) (new-name (application named-application-mixin))
+  (format-trace (format nil "(setf application-name) NAMED-APPLICATION-MIXIN ~S :newname ~S" application new-name))
+  (when (next-method-p) (call-next-method))
+  (setf (slot-value application 'name) new-name)
+  (format-trace (format nil "set application name to ~A" (application-name application))))
+
+
+
+
+#-ccl
+(defclass application (wrapper named-application-mixin)
   ())
+
+
+#-ccl
+(defclass lisp-development-system (application)
+  ())
+
+
+(defclass cocoa-ide-application (#-ccl lisp-development-system
+                                 ;; #+ccl wrapper
+                                 #+ccl gui::cocoa-ide #+ccl named-application-mixin)
+  ())
+
+
+#+ccl
+(defmethod handle ((self cocoa-ide-application))
+  (ccl::application-ui-object self))
+
+#+ccl
+(objc:defmethod (#/stringToPasteBoard:  :void) ((self ccl::ccl-application) string)
+  (let ((pb (#/generalPasteboard ns:ns-pasteboard)))
+    (#/declareTypes:owner: pb (#/arrayWithObject: ns:ns-array #&NSStringPboardType) nil)
+    (#/setString:forType: pb string #&NSStringPboardType)))
+
+#+(and ccl :debug-application)
+(defmethod ccl::application-ui-operation ((a cocoa-ide-application) operation &rest args)
+  (call-next-method)
+  (format t "~&Hello from application-ui-operation cocoa-ide-application~%   (operation ~S ~{ ~S~})~%"
+          operation args))
+
+(defgeneric  application-command-line-arguments (application)
+  (:method ((application application))
+    #+ccl (slot-value application 'gui::command-line-arguments)
+    #-ccl '()))
+
+#-ccl
+(defgeneric  application-init-file (application)
+  (:method ((application application))
+    nil))
 
 
 (defmethod update-handle ((self application))
   (setf (handle self) [NSApplication sharedApplication]))
-
 
 (defmethod unwrap ((self application))
   (unwrapping self
@@ -206,7 +267,8 @@ APPLICATION:    The application.  MCL standard event handling always
                 uses the value of *APPLICATION*.
 ")
   (:method ((application application))
-    (niy application-suspend-event-handler)))
+    #| Nothing to do, Cocoa manages everything for us.
+    || Subclasses may attach methods. |#))
 
 
 (defgeneric application-resume-event-handler (application)
@@ -220,7 +282,8 @@ APPLICATION:    The application.  MCL standard event handling always
                 uses the value of *APPLICATION*.
 ")
   (:method ((application application))
-    (niy application-resume-event-handler)))
+    #| Nothing to do, Cocoa manages everything for us.
+    || Subclasses may attach methods. |#))
 
 
 (defgeneric application-eval-enqueue (application form)
@@ -239,16 +302,40 @@ FORM:           A symbol, function or lisp form.
 ")
   (:method ((application t) form)
     (let ((evaluator [[MclguiEvaluator alloc] init]))
-      (setf (evaluator-thunk evaluator)
-            (typecase form
-              ((or symbol cl:function) form)
-              (otherwise               (lambda () (eval form)))))
+      (setf (evaluator-thunk evaluator) (typecase form
+                                          ((or symbol cl:function) form)
+                                          (otherwise   (lambda () (eval form))))
+            (evaluator-source evaluator) form)
       (on-main-thread [evaluator evaluate])
       [evaluator autorelease]))
   (:method ((application lisp-development-system) form)
     (declare (ignorable form))
     ;; TODO: see how to integrate with ccl::lisp-development-system
     (call-next-method)))
+
+
+(defgeneric application-will-finish-launching (application)
+  (:method ((application t)) (values)))
+
+(defgeneric application-did-finish-launching (application)
+  (:method ((application t)) (values)))
+
+(defgeneric application-will-become-active (application)
+  (:method ((application t))
+    (application-suspend-event-handler application)
+    (values)))
+
+(defgeneric application-did-become-active (application)
+  (:method ((application t)) (values)))
+
+(defgeneric application-will-resign-active (application)
+  (:method ((application t)) (values)))
+
+(defgeneric application-did-resign-active (application)
+  (:method ((application t))
+    (application-resume-event-handler application)
+    (values)))
+
 
 ;;;---------------------------------------------------------------------
 ;;;
@@ -266,10 +353,8 @@ FORM:           A symbol, function or lisp form.
   (with-event-environment
     (event-dispatch)))
 
-
 ;; (application-eval-enqueue *application* '(invoke-debugger (make-condition 'error)))
 ;; (setf (evaluator-thunk *run-loop-evaluator*) (function run-loop-task))
-
 
 (defun initialize-run-loop-evaluator ()
   (when *run-loop-timer*
@@ -299,17 +384,9 @@ FORM:           A symbol, function or lisp form.
 ;;;
 
 (defun initialize/application ()
-  (setf *application*
-        #+ccl (setf ccl:*application*
-                    (if ccl:*application*
-                        (change-class ccl:*application*
-                                      (if (typep ccl:*application* 'ccl::lisp-development-system)
-                                          'lisp-development-system
-                                          'application))
-                        (make-instance 'application)))
-        #-ccl (make-instance 'application))
-  (unless (handle *application*)
-    (setf (slot-value *application* 'handle) [NSApplication sharedApplication]))
+  ;; Now (eq 'ui::*application* 'ccl::*application*), so *application* should already be set.
+  (unless *application*
+    (setf *application* (make-instance 'application))) ;; or what subclass?
   (initialize-run-loop-evaluator)
   (values))
 

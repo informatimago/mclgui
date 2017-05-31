@@ -50,7 +50,7 @@
            (siz    (view-size     item))
            (rect   (make-rect :topLeft pos :bottomRight (add-points pos siz))))
       (inset-rect rect -3 -3)
-      (with-back-color (or (slot-value window 'back-color) *white-color*)
+      (with-back-color (get-back-color window)
         (erase-rect* (rect-left rect) (rect-top rect) (rect-width rect) (rect-height rect))))))
 
 

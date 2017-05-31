@@ -31,9 +31,8 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 (in-package "MCLGUI")
-(objcl:enable-objcl-reader-macros)
 
 
 
@@ -325,7 +324,7 @@
 (defun nsevent-to-event (nsevent)
   (check-type nsevent ns:ns-event)
   ;; (format-trace 'wrap nsevent)
-  (let ((what (case [nsevent type]
+  (let ((what (case [(cl:the ns:ns-event nsevent) type]
                 ((#.#$NSLeftMouseDown)         mouse-down)
                 ((#.#$NSLeftMouseUp)           mouse-up)
                 ((#.#$NSRightMouseDown)        mouse-down)
@@ -370,7 +369,7 @@
      :where     (nsscreen-to-screen-point
                  (if (or (= what mouse-down) (= what mouse-up))
                      (let ((winh [nsevent window])
-                           (pt (get-nspoint [nsevent locationInWindow])))
+                           (pt   (get-nspoint [nsevent locationInWindow])))
                        (if (nullp winh)
                            pt
                            (nswindow-to-nsscreen-point winh pt)))
@@ -518,29 +517,38 @@ DO:             Evaluates the BODY in a lexical environment where
   #+cocoa-10.6 (not (zerop [NSEvent pressedMouseButtons])))
 
 
+
+;;;------------------------------------------------------------
+;;; Objective-C
+
+(defun class-get-subclasses (class)
+  (if (symbolp class)
+      (class-get-subclasses (find-class class))
+      (let ((num-classes (#_objc_getClassList *null* 0)))
+        (cffi:with-foreign-object (classes :pointer num-classes)
+          (#_objc_getClassList classes num-classes)
+          (loop
+            :for i :below num-classes
+            :for subclass = (cffi:mem-aref classes :pointer i)
+            :when (loop
+                    :for superclass = (#_class_getSuperclass subclass)
+                      :then (#_class_getSuperclass superclass)
+                    :while (and (not (nullp superclass))
+                                (eql superclass class))
+                    :finally (return (if (nullp superclass)
+                                         nil
+                                         superclass)))
+              :collect subclass)))))
+
+;; (class-get-subclasses 'ns:ns-object)
+;; (pushnew :debug-objc *features*)
+;; (setf *features* (remove :debug-objc *features*))
+
+
 ;;;------------------------------------------------------------
 ;;; Types.
 
 #+ccl (ccl:def-foreign-type ns-rect-ptr (:* :<NSR>ect))
-
-;;;------------------------------------------------------------
-;;; Application Delegate
-
-
-#-ccl-1.11
-@[LispApplicationDelegate
-  method:(applicationShouldTerminate:(id)sender)
-  resultType:(:int)
-  body:
-  (declare (ignore sender))
-  (with-event-environment
-    (block nil
-      (catch :cancel
-        (mapc (function funcall) *application-should-terminate-functions*)
-        (return #$NSTerminateNow))
-      #$NSTerminateCancel))]
-
-
 ;;;------------------------------------------------------------
 ;;; NSWindow
 
@@ -551,14 +559,13 @@ DO:             Evaluates the BODY in a lexical environment where
   #+debug-objc (format-trace "-[NSWindow setFrame:]")
   [self setFrame:rect display:YES]]
 
-
-
-@[NSWindow
-  method:(orderBelow:(:id)otherWindow)
-  resultType:(:void)
-  body:
-  #+debug-objc (format-trace "-[NSWindow orderBelow:]")
-  [self orderWindow:#$NSWindowBelow relativeTo:[otherWindow windowNumber]]]
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  @[NSWindow
+    method:(orderBelow:(:id)otherWindow)
+    resultType:(:void)
+    body:
+    #+debug-objc (format-trace "-[NSWindow orderBelow:]")
+    [self orderWindow:#$NSWindowBelow relativeTo:[otherWindow windowNumber]]])
 
 
 ;;;------------------------------------------------------------
@@ -655,13 +662,12 @@ DO:             Evaluates the BODY in a lexical environment where
       (when (eql (window-type window) :document-with-zoom)
         (window-zoom-event-handler
          window
-         (if (< (format-trace '(self frame) (multiple-value-bind (x y w h) (frame [self frame])
-                                              (declare (ignore x y))
-                                              (* w h)))
-                (format-trace 'newframe
-                              (let ((frame (<nsr>ect-to-nsrect newFrame)))
-                                (* (nsrect-width frame)
-                                   (nsrect-height frame)))))
+         (if (< (multiple-value-bind (x y w h) (frame [self frame])
+                  (declare (ignore x y))
+                  (* w h))
+                (let ((frame (<nsr>ect-to-nsrect newFrame)))
+                  (* (nsrect-width frame)
+                     (nsrect-height frame))))
              inZoomOut
              inZoomIn))
         t)))]
@@ -685,6 +691,12 @@ DO:             Evaluates the BODY in a lexical environment where
       (when window
         (window-do-zoom window))))]
 
+@[MclguiWindow
+  method:(acceptsFirstResponder)
+  resultType:(:<bool>)
+  body:
+  (format-trace  "-[MclguiWindow acceptsFirstResponder]" self)
+  YES]
 
 @[MclguiWindow
   method:(becomeMainWindow)
@@ -693,7 +705,7 @@ DO:             Evaluates the BODY in a lexical environment where
   (with-event-environment
     [super becomeMainWindow]
     (let* ((window (nswindow-window self)))
-      ;; (format-trace "-[MclguiWindow becomeMainWindow]" window)
+      (format-trace "-[MclguiWindow becomeMainWindow]" window)
       ;; TODO: move after windoids.
       (when window
         (delete-from-list *window-list* window)
@@ -708,7 +720,6 @@ DO:             Evaluates the BODY in a lexical environment where
           ;; (view-activate-event-handler window)
           (post-event event)))))]
 
-
 @[MclguiWindow
   method:(resignMainWindow)
   resultType:(:void)
@@ -716,7 +727,7 @@ DO:             Evaluates the BODY in a lexical environment where
   (with-event-environment
     [super resignMainWindow]
     (let ((window (nswindow-window self)))
-      ;; (format-trace "-[MclguiWindow resignMainWindow]" window)
+      (format-trace "-[MclguiWindow resignMainWindow]" window)
       (when window
         (let ((event (get-null-event))
               (*multi-click-count* 0))
@@ -808,6 +819,16 @@ DO:             Evaluates the BODY in a lexical environment where
   method:(isFlipped)
   resultType:(:<bool>)
   body:YES]
+
+
+;; If the contentView of the window is opaque, then the NSWindow won't
+;; erase itself with its background color and we'll get a black
+;; background, and no corner drawn!  MclguiViews are contentViews!
+
+@[MclguiView
+  method:(isOpaque)
+  resultType:(:<bool>)
+  body:NO]
 
 (defun *nsrect-to-nsrect (prect)
   #+ccl (make-nsrect
@@ -958,7 +979,10 @@ DO:             Evaluates the BODY in a lexical environment where
 @[NSObject subClass:MclguiEvaluator
            slots:((thunk :initform nil
                          :initarg :think
-                         :accessor evaluator-thunk))]
+                         :accessor evaluator-thunk)
+                  (source :initform nil
+                          :initarg :source ; for debugging
+                          :accessor evaluator-source))]
 
 @[MclguiEvaluator
   method:(evaluate)
@@ -971,30 +995,110 @@ DO:             Evaluates the BODY in a lexical environment where
         (warn "Evaluator got a NIL thunk")))]
 
 
+
 ;;;------------------------------------------------------------
-;;; Objective-C
+;;; Application Delegate
 
-(defun class-get-subclasses (class)
-  (if (symbolp class)
-      (class-get-subclasses (find-class class))
-      (let ((num-classes (#_objc_getClassList *null* 0)))
-        (cffi:with-foreign-object (classes :pointer num-classes)
-          (#_objc_getClassList classes num-classes)
-          (loop
-            :for i :below num-classes
-            :for subclass = (cffi:mem-aref classes :pointer i)
-            :when (loop
-                    :for superclass = (#_class_getSuperclass subclass)
-                      :then (#_class_getSuperclass superclass)
-                    :while (and (not (nullp superclass))
-                                (eql superclass class))
-                    :finally (return (if (nullp superclass)
-                                         nil
-                                         superclass)))
-              :collect subclass)))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (import 'gui::ide-application-delegate))
 
-;; (class-get-subclasses 'ns:ns-object)
+#+ccl-1.11
+@[IDEApplicationDelegate
+  subClass:MclguiApplicationDelegate
+  slots:()]
 
-;; (pushnew :debug-objc *features*)
-;; (setf *features* (remove :debug-objc *features*))
+
+#-ccl-1.11
+@[LispApplicationDelegate
+  subClass:MclguiApplicationDelegate
+  slots:()]
+
+
+;; (ccl::with-cfstring (s "LispApplicationDelegate") (#_NSClassFromString s))
+;; #<objc:objc-class gui::ide-application-delegate (#x30EC70)>
+
+(defun application-should-terminate ()
+  (with-event-environment
+    (block nil
+      (catch :cancel
+        (mapc (function funcall) *application-should-terminate-functions*)
+        (return #$NSTerminateNow))
+      #$NSTerminateCancel)))
+
+
+@[MclguiApplicationDelegate
+  method:(applicationShouldTerminate:(id)sender)
+  resultType:(:int)
+  body:
+  (declare (ignore sender))
+  (application-should-terminate)]
+
+
+@[MclguiApplicationDelegate
+  method:(applicationWillFinishLaunching:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  (application-will-finish-launching *application*)]
+
+@[MclguiApplicationDelegate
+  method:(applicationDidFinishLaunching:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  (initialize)
+  (application-did-finish-launching *application*)]
+
+
+
+@[MclguiApplicationDelegate
+  method:(applicationWillBecomeActive:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  ;; (initialize)
+  (application-will-become-active *application*)]
+
+@[MclguiApplicationDelegate
+  method:(applicationDidBecomeActive:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  (application-did-become-active *application*)]
+
+@[MclguiApplicationDelegate
+  method:(applicationWillResignActive:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  (application-will-resign-active *application*)]
+
+@[MclguiApplicationDelegate
+  method:(applicationDidResignActive:(id)notification)
+  resultType:(:void)
+  body:
+  (declare (ignore notification))
+  (application-did-resign-active *application*)]
+
+
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setf gui::*delegate-class-name* "MclguiApplicationDelegate"))
+
+
+
+
+#-(and) (progn
+          '[nsevent locationInWindow]
+          (objc:send nsevent 'location-in-window)
+          (com.informatimago.objective-c.lower:send nsevent 'location-in-window)
+          (macroexpand-1 '(com.informatimago.objective-c.lower:send nsevent 'location-in-window))
+          '[nsevent locationInWindow]
+          (macroexpand-1 '(com.informatimago.objective-c.lower:send nsevent 'location-in-window))
+          (com.informatimago.objective-c.lower:stret
+           (com.informatimago.objective-c.lower:send nsevent 'location-in-window))
+          t)
+
+
+
 ;;;; THE END ;;;;

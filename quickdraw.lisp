@@ -97,13 +97,12 @@
       (position thing *pen-modes*)
       (error "Unknown pen mode: ~a" thing)))
 
-(defgeneric origin (view)
-  (:method ((view simple-view))
-    (view-scroll-position view)))
 
-(defgeneric set-origin (view h &optional v)
-  (:method ((view simple-view) h &optional v)
-    (set-view-scroll-position view h v nil)))
+(defmethod origin ((view simple-view))
+  (view-scroll-position view))
+
+(defmethod set-origin ((view simple-view) h &optional v)
+  (set-view-scroll-position view h v nil))
 
 
 ;;;---------------------------------------------------------------------

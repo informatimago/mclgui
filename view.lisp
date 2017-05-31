@@ -37,8 +37,8 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 (enable-sharp-at-reader-macro)
-(objcl:enable-objcl-reader-macros)
 
 
 
@@ -242,51 +242,35 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 
 ;; [(font-from-codes 65536 0) set]
 
-
-(defun get-at (ctm)
-  #-ccl (error "~S is not implemented on ~A" 'get-at (lisp-implementation-type))
-  #+ccl (list (list (ccl::pref ctm #>CGAffineTransform.a)
-                    (ccl::pref ctm #>CGAffineTransform.b))
-              (list (ccl::pref ctm #>CGAffineTransform.c)
-                    (ccl::pref ctm #>CGAffineTransform.d))
-              (list (ccl::pref ctm #>CGAffineTransform.tx)
-                    (ccl::pref ctm #>CGAffineTransform.ty))))
-
-(defun get-at-at (at)
-  #-ccl  (error "~S is not implemented on ~A" 'get-at-at (lisp-implementation-type))
-  #+ccl (ccl::rlet ((r :<NSA>ffine<T>ransform<S>truct))
-          (ccl::send/stret r at "transformStruct")
-          (get-at r)))
-
-(defun get-at* (ctm)
-  (mapcar (lambda (xs) (mapcar (lambda (x) (/ (round x 0.1) 10.0)) xs)) (get-at ctm)))
-
-
-(declaim (inline get-ctm))
-(defun get-ctm (window)
-  "RETURN: The Current Transform Matrix."
-  (cg:context-get-ctm  [[(handle window) graphicsContext] graphicsPort]))
-
-
 (declaim (inline graphics-flush))
 (defun graphics-flush ()
-  ;; (format-trace 'graphics-flush)
+  #+debug-view (format-trace 'graphics-flush)
+  ;; (#_CGContextSynchronize [[NSGraphicsContext currentContext] CGContext])
   [[NSGraphicsContext currentContext] flushGraphics])
 
+(defun set-window-origin (window h v)
+  "
+Set the origin of the bounds of the window contentView to the given
+coordinates.
+"
+  (with-handle (winh window)
+    [[winh contentView] setBoundsOrigin:(ns:make-ns-point (cgfloat h) (cgfloat v))]))
 
-(declaim (inline make-affine-transform))
-(defun make-affine-transform ()
-  ;; A bug in ccl prevents this to work: [NSAffineTransform transform], so:
-  [[[NSAffineTransform class] performSelector:(objc:@selector |transform|)] retain])
+(defun reset-window-origin (window)
+    "
+Reset the origin of the bounds of the window contentView to the window
+view-scroll-position.
+"
+  (let ((p (view-origin window)))
+    (set-window-origin window (point-h p) (point-v p))))
 
+(defgeneric origin (view))
+(defgeneric set-origin (view h &optional v))
 
-(defun current-affine-transform (window)
-  "RETURN: The current NSAffineTransform in the window."
-  (let ((trans (make-affine-transform)))
-    [trans setTransformStruct:(get-ctm window)]
-    trans))
-
-
+(defmethod set-origin ((window window) h &optional v)
+  (let ((p (make-point h v)))
+    (set-window-origin window (point-h p) (point-v p))
+    (call-next-method window p)))
 
 (defgeneric focus-font-view (font-view)
   (:method ((font-view null))
@@ -294,7 +278,6 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
   (:method ((font-view simple-view))
     (set-font font-view)
     (setf *current-font-view* font-view)))
-
 
 (defgeneric focus-view (view &optional font-view)
   (:documentation "
@@ -317,71 +300,34 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
   ;; --------------------------
   (:method ((view null) &optional font-view)
     (when *current-view*
-      (let* ((window (view-window *current-view*))
-             (wtrans (window-affine-transform window)))
-        (unless wtrans
-          (warn "(window-affine-transform window) is nil :window ~S" window)
-          (setf *current-view* nil)
-          (return-from focus-view (values)))
-        [wtrans set]
+      (let ((window (view-window *current-view*)))
+        (reset-window-origin window)
         (focus-font-view font-view)
-        #+debug-focused-view (format-trace 'focus-view nil :ctm (get-at* (get-ctm window)))
         (setf *current-view* nil))))
   ;; --------------------------
   (:method ((view simple-view) &optional font-view)
     (if (eql *current-view* view)
         (focus-font-view font-view)
         (let* ((window (view-window view))
-               (wtrans (window-affine-transform window))
-               (vtrans (make-affine-transform))
                (origin (if (typep view 'window)
-                           (view-scroll-position view)
-                           (convert-coordinates #@(0 0) view window))))
+                           (view-origin view)
+                           (convert-coordinates #@(0 0) window view))))
           (assert (or (null *current-view*) (eql window (view-window *current-view*))))
-          (unless wtrans
-            (warn "(window-affine-transform window) is nil :window ~S" window)
-            (setf *current-view* view)
-            (return-from focus-view (values)))
-          #+debug-focused-view (format-trace 'focus-view :wtrans (get-at-at wtrans) :ctm (get-at* (get-ctm window)))
-          [wtrans set]
-          [vtrans translateXBy:(cgfloat 0.0) yBy:(cgfloat (point-v (view-size (view-window view))))]
-          [vtrans scaleXBy:(cgfloat 1.0) yBy:(cgfloat -1.0)]
-          [vtrans translateXBy:(cgfloat (point-h origin)) yBy:(cgfloat (point-v origin))]
-          #+debug-focused-view (format-trace 'focused-view (list (class-name (class-of view)) :w-ctm (get-at* (get-ctm window))))
-          [vtrans concat]
-          #+debug-focused-view (format-trace 'focus-view :vtrans (get-at-at vtrans) :ctm (get-at* (get-ctm window)))
-          #+debug-focused-view (format-trace 'focused-view (list (class-name (class-of view)) :v-ctm (get-at* (get-ctm window))))
-          [vtrans release]
+          (set-window-origin window (point-h origin) (point-v origin))
           (focus-font-view font-view)
-          #+debug-focused-view (format-trace 'focus-view (list (class-name (class-of view))
-                                                               :origin (point-to-list origin)
-                                                               :frame (rect-to-list (view-frame view))
-                                                               :bounds (rect-to-list (view-bounds view)))
-                                             :ctm (get-at* (get-ctm window)))
-          (setf *current-view* view))))
-  ;; ;; --------------------------
-  ;; (:method ((window window) &optional font-view)
-  ;;   (if (eql *current-view* window)
-  ;;       (focus-font-view font-view)
-  ;;       (let* ((wtrans (window-affine-transform window)))
-  ;;         (unless wtrans
-  ;;           (warn "(window-affine-transform window) is nil :window ~S" window)
-  ;;           (setf *current-view* window)
-  ;;           (return-from focus-view (values)))
-  ;;         [wtrans set]
-  ;;         (focus-font-view font-view)
-  ;;         #+debug-focused-view (format-trace 'focus-view (list (class-name (class-of window))
-  ;;                                                              :trans wtrans
-  ;;                                                              :frame (rect-to-list (view-frame window))
-  ;;                                                              :bounds (rect-to-list (view-bounds window)))
-  ;;                                            :ctm (get-at* (get-ctm window)))
-  ;;         (setf *current-view* window))))
-  )
+          #+debug-view (format-trace 'focus-view
+                                     :view-class (class-name (class-of view))
+                                     :origin (point-to-list origin)
+                                     :vframe (rect-to-list (view-frame view))
+                                     :vbounds (rect-to-list (view-bounds view))
+                                     :wbounds (rect-to-list (view-bounds window)))
+          (setf *current-view* view)))))
 
 (defun refocus-view (view)
   (when (eql view *current-view*)
     (setq *current-view* nil)
     (focus-view view *current-font-view*)))
+
 
 (defun draw-yellow-border (view)
   (let ((bounds (view-bounds view)))
@@ -399,50 +345,12 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
 (defgeneric call-with-focused-view (view function &optional font-view)
   ;; Note: be careful to return the FUNCTION results in all cases.
   (:method ((view simple-view) function &optional (font-view *current-font-view*))
-    ;; #|PJB-DEBUG|# #-(and) (format-trace 'call-with-focused-view
-    ;;                                     :view view
-    ;;                                     :backtrace (mapcar (lambda (x)
-    ;;                                                          (if (member (first x) '(ccl::%call-next-method-with-args
-    ;;                                                                                  ccl::%%cnm-with-args-combined-method-dcode
-    ;;                                                                                  ccl::%call-next-method
-    ;;                                                                                  ccl::%%before-and-after-combined-method-dcode
-    ;;                                                                                  ccl::%%standard-combined-method-dcode
-    ;;                                                                                  ccl::%pascal-functions%
-    ;;                                                                                  funcall))
-    ;;                                                              (second x)
-    ;;                                                              (first x)))
-    ;;                                                        (ccl::backtrace-as-list)))
-
-    (labels ((call-it ()
-               ;; reset the transform, a previous focus-view may have changed it.
-               (refocus-view *current-view*)
-               #-(and)(format-trace "progn (call-with-focused-view enter"
-                             :ctm (get-at* (get-ctm (view-window view)))
-                             :view view)
-               ;; #|PJB-DEBUG|# #-(and) (draw-yellow-border view)
-               ;; (format-trace "call-with-focused-view"
-               ;;               :ctm (get-at* (get-ctm (view-window view)))
-               ;;               :function function
-               ;;               :view view)
-               (unwind-protect
-                    (progn
-                      (funcall function view)
-                      ;; (call-with-pen-state (lambda () (funcall function view)) (view-pen view))
-                      )
-                 (graphics-flush)
-                 #-(and)(format-trace "call-with-focused-view exit)"
-                               :ctm (get-at* (get-ctm (view-window view)))
-                               :view view)))
-             (call-it/trans ()
-               (let ((window (view-window view)))
-                 (push (current-affine-transform window) (window-transform-stack window))
-                 (unwind-protect
-                      (call-it)
-                   ;; We restore the previous transform.
-                   (let ((transform (pop (window-transform-stack window))))
-                     (when transform
-                       [transform set]))))))
-      (declare (inline call-it call-it/trans))
+    (flet ((call-it ()
+             ;; reset the transform, a previous focus-view may have changed it.
+             (refocus-view *current-view*)
+             (funcall function view)
+             #-(and) (call-with-pen-state (lambda () (funcall function view)) (view-pen view))))
+      (declare (inline call-it))
       (let ((same-font (eql *current-font-view* font-view)))
         (if (eql *current-view* view)
             (unwind-protect
@@ -451,33 +359,24 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
                        (*current-font-codes* (if same-font
                                                  (copy-list *current-font-codes*)
                                                  (set-font font-view)))) ; change font
-                   ;; (format-trace 'call-with-focused-view '(eql *current-view* view))
                    (call-it))
               ;; reset the transform;  the function may have called focus-view.
               (refocus-view *current-view*))
             (with-handle (winh (view-window view))
               (with-view-handle (viewh view)
-                ;; PJB-DEBUG (format-trace 'call-with-focused-view '/before :needs-display [viewh needsDisplay] :views-need-display [winh viewsNeedDisplay])
                 (let ((unlock nil))
                   (unwind-protect
-                       (if (setf unlock [viewh lockFocusIfCanDraw])
-                           (let ((*current-view*      view)
-                                 (*current-font-view* font-view)
-                                 (*current-font-codes* (copy-list *current-font-codes*)))
-                             (unless same-font (apply (function set-current-font-codes) (set-font *current-font-view*)))
-                             [[NSGraphicsContext currentContext] setShouldAntialias:NO]
-                             ;; (format-trace 'call-with-focused-view :unlock unlock '(and (not (eql *current-view* view)) lockFocusIfCanDraw))
-                             (call-it/trans))
-                           ;; (format-trace 'call-with-focused-view :unlock '(and (not (eql *current-view* view)) (NOT lockFocusIfCanDraw)))
-                           )
+                       (when (setf unlock [viewh lockFocusIfCanDraw])
+                         [[NSGraphicsContext currentContext] setShouldAntialias:NO]
+                         (let ((*current-view*      view)
+                               (*current-font-view* font-view)
+                               (*current-font-codes* (copy-list *current-font-codes*)))
+                           (unless same-font (apply (function set-current-font-codes) (set-font *current-font-view*)))
+                           (call-it)))
                     (when unlock
                       (refocus-view *current-view*)
                       (graphics-flush)
-                      [viewh unlockFocus]
-                      ;; PJB-DEBUG (format-trace 'call-with-focused-view '/after- :needs-display [viewh needsDisplay] :views-need-display [winh viewsNeedDisplay])
-                      ))))))))))
-
-
+                      [viewh unlockFocus]))))))))))
 
 (defmacro with-focused-view (view &body body &environment env)
   "
@@ -499,8 +398,6 @@ VIEW:           A view installed in a window, or NIL.  If NIL, the
                                (declare (ignorable ,sym))
                                ,@body))))
 
-
-
 (defmacro with-font-focused-view (view &body body &environment env)
   "
 DO:             The macro with-font-focused-view focuses on the font
@@ -519,7 +416,6 @@ VIEW:           A view installed in a window, or NIL.  If NIL, the
                                  (declare (ignorable ,sym))
                                  ,@body)
                                ,vview))))
-
 
 
 (defgeneric install-view-in-window (view window)
@@ -911,10 +807,9 @@ RETURN:  The VIEW rectangle in the view coordinates.
       (make-rect topleft (add-points topleft (view-size view))))))
 
 
-
 (defun erase (window bounds)
   (with-focused-view window
-    (with-back-color (or (slot-value window 'back-color) *white-color*)
+    (with-back-color (get-back-color window)
       (erase-rect* (rect-left bounds) (rect-top bounds) (rect-width bounds) (rect-height bounds)))))
 
 
@@ -961,7 +856,7 @@ ERASE-P:        A value indicating whether or not to add the
                                                   (region-bounds region)
                                                   (view-bounds view)))
                         :converted (rect-to-list bounds))
-          #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
+          ;; #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
           (when erase-p
             (union-region (window-erase-region window) region
                           (window-erase-region window)))
@@ -1009,7 +904,7 @@ ERASE-P:        A value indicating whether or not to add the
     (values))
 
   (:method ((window window) region &optional erase-p)
-    #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
+    ;; #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
     (let ((bounds (if region
                       (region-bounds region)
                       (view-bounds window))))
@@ -1075,7 +970,7 @@ REGION:         A region, in the coordinate system of the VIEW.
 
 ")
   (:method ((view simple-view) region)
-    (let* ((rgn            (intersect-region region (view-clip-region view)))
+    (let* (;; (rgn            (intersect-region region (view-clip-region view)))
            (window         (view-window view))
            (erase-region   (window-erase-region   window))
            (invalid-region (window-invalid-region window))
@@ -1280,8 +1175,8 @@ RETURN:         (make-point h v)
            ;; (container  (view-container view))
            (old-sc-pos (view-scroll-position view))
            (delta      (subtract-points old-sc-pos pt)))
-      (with-focused-view view
-        (unless (eql delta #@(0 0))
+      (unless (eql delta #@(0 0))
+        (with-focused-view view
           (if scroll-visibly
               (scroll-rect view (view-bounds view) delta)
               (invalidate-view view t))))
@@ -1838,7 +1733,7 @@ RETURN:         The cursor shape to display when the mouse is at
                       :from-rect (rect-to-list (convert-rectangle (view-bounds view)
                                                                   view
                                                                   (view-window view)))
-                      :ctm (get-at* (get-ctm (view-window view)))
+                      ;; :ctm (get-at* (get-ctm (view-window view)))
                       :viewh viewh
                       :bitmap bitmap
                       :image image)
@@ -1904,6 +1799,19 @@ RETURN:         The cursor shape to display when the mouse is at
       (sleep 5)
       (new-instance view))))
 
+(defun example/instance-drawing/3 ()
+  (let ((view (front-window)))
+    (with-instance-drawing view
+      (with-focused-view view
+        (loop for i from 20 to 200 by 2 do
+          (sleep 0.1)
+          (new-instance view)
+          (with-focused-view view
+            (with-pen-state (:pattern *gray-pattern* :mode :patCopy)
+              (draw-rect* i i 100 40)))))
+      (new-instance view))))
+
+;; (example/instance-drawing/3)
 ;; (example/instance-drawing/2)
 ;; (example/instance-drawing)
 

@@ -1,5 +1,6 @@
 (in-package :ui)
-(objcl:set-objective-cl-syntax)
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
+(enable-sharp-at-reader-macro)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (error "Do not load ~S." (or *compile-file-pathname* *load-pathname*)))

@@ -55,7 +55,7 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
         (aget *event-environment-bindings* '*debug-io*)        *debug-io*)
   (values))
 
-(defparameter *allow-print-backtrace* nil)
+(defparameter *allow-print-backtrace* t)
 (defun print-backtrace (&optional (output *error-output*))
   (when *allow-print-backtrace*
    #+ccl (format output "~&~80,,,'-<~>~&~{~A~%~}~80,,,'-<~>~&"
@@ -87,7 +87,9 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
                                                       :external-format :utf-8
                                                       :if-exists :append
                                                       :if-does-not-exist :create)
-                                   (let ((errs (make-broadcast-stream errf *error-output*)))
+                                   (let ((errs (make-broadcast-stream errf
+                                                                      *error-output*
+                                                                      *trace-output*)))
                                      (format errs "~%~A~2%" (date))
                                      (print-backtrace errs)
                                      (format errs "~%ERROR while ~S:~%~A~2%"
@@ -108,7 +110,6 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
                                (return-from ,vhandler nil))))
          ,@body))))
 
-;; (push :debug-on-error *features*)
 
 (defmacro with-event-environment (&body body)
   `(let ((*idle* nil))
@@ -256,36 +257,36 @@ RETURN:         DST.
   dst)
 
 
-(defstruct queue (mutex (make-mutex)) head tail)
-(defvar *event-queue* (make-queue :mutex (make-mutex "event-queue")))
+(defstruct event-queue (mutex (make-mutex)) head tail)
+(defvar *event-queue* (make-event-queue :mutex (make-mutex "event-queue")))
 (defun event-queue-length ()
-  (length (queue-head *event-queue*)))
+  (length (event-queue-head *event-queue*)))
 
 (defun post-event (event)
   (check-type event event)
   (let ((entry (list event)))
-    (with-mutex (queue-mutex *event-queue*)
-      (if (queue-tail *event-queue*)
-          (setf (cdr (queue-tail *event-queue*)) entry
-                (queue-tail *event-queue*) entry)
-          (setf (queue-head *event-queue*) entry
-                (queue-tail *event-queue*) entry))))
+    (with-mutex (event-queue-mutex *event-queue*)
+      (if (event-queue-tail *event-queue*)
+          (setf (cdr (event-queue-tail *event-queue*)) entry
+                (event-queue-tail *event-queue*) entry)
+          (setf (event-queue-head *event-queue*) entry
+                (event-queue-tail *event-queue*) entry))))
   (values))
 
 
 (defun %dequeue-event ()
   "Remove the first event from the *EVENT-QUEUE*, and return it.
-NOTE: should be called insinde (with-mutex (queue-mutex *event-queue*) …)"
-  (let ((entry (queue-head *event-queue*)))
+NOTE: should be called insinde (with-mutex (event-queue-mutex *event-queue*) …)"
+  (let ((entry (event-queue-head *event-queue*)))
     (when entry
-      (if (eql entry (queue-tail *event-queue*))
-          (setf (queue-head *event-queue*) nil
-                (queue-tail *event-queue*) nil)
-          (setf (queue-head *event-queue*) (cdr (queue-head *event-queue*))))
+      (if (eql entry (event-queue-tail *event-queue*))
+          (setf (event-queue-head *event-queue*) nil
+                (event-queue-tail *event-queue*) nil)
+          (setf (event-queue-head *event-queue*) (cdr (event-queue-head *event-queue*))))
       (car entry))))
 
 (defun dequeue-event ()
-  (with-mutex (queue-mutex *event-queue*)
+  (with-mutex (event-queue-mutex *event-queue*)
     (%dequeue-event)))
 
 
@@ -316,16 +317,16 @@ NOTE: should be called insinde (with-mutex (queue-mutex *event-queue*) …)"
 (defun %find-event (event-mask)
   "Return the first event in the event queue that matches the
 EVENT-MASK, of the highest priority.
-NOTE: should be called insinde (with-mutex (queue-mutex *event-queue*) …)."
+NOTE: should be called insinde (with-mutex (event-queue-mutex *event-queue*) …)."
   (first (sort (remove-if-not (lambda (event) (logbitp (event-what event) event-mask))
-                              (queue-head *event-queue*))
+                              (event-queue-head *event-queue*))
                (function <) :key (function event-priority))))
 
 (defun %extract-event (event)
   "Remove the event from the *EVENT-QUEUE*.
 Return event when removed, NIL if not found in the queue.
-NOTE: should be called inside (with-mutex (queue-mutex *event-queue*) …)"
-  (let ((events (queue-head *event-queue*)))
+NOTE: should be called inside (with-mutex (event-queue-mutex *event-queue*) …)"
+  (let ((events (event-queue-head *event-queue*)))
     (if (eql event (car events))
         (%dequeue-event)
         (loop
@@ -333,8 +334,8 @@ NOTE: should be called inside (with-mutex (queue-mutex *event-queue*) …)"
                      (eql event (cadr events)))
           :do (pop events)
           :finally (return (when (cdr events)
-                             (when (eql (cdr events) (queue-tail *event-queue*))
-                               (setf (queue-tail *event-queue*) events))
+                             (when (eql (cdr events) (event-queue-tail *event-queue*))
+                               (setf (event-queue-tail *event-queue*) events))
                              (pop (cdr events))))))))
 
 
@@ -382,7 +383,7 @@ SLEEP-TICKS:    This is the Sleep argument to #_WaitNextEvent.  It
                 foreground.
 "
   (declare (ignore idle sleep-ticks))
-  (with-mutex (queue-mutex *event-queue*)
+  (with-mutex (event-queue-mutex *event-queue*)
     (let ((event (%find-event mask)))
       (if event
           (%extract-event event)
@@ -392,7 +393,7 @@ SLEEP-TICKS:    This is the Sleep argument to #_WaitNextEvent.  It
 (defun event-avail (event-mask)
   "Same as GET-NEXT-EVENT, but doesn't dequeue the event.
 NOTE: This returns a copy of the event in the queue."
-  (with-mutex (queue-mutex *event-queue*)
+  (with-mutex (event-queue-mutex *event-queue*)
     (let ((event (%find-event event-mask)))
       (when event
         (copy-event event)))))
@@ -425,14 +426,14 @@ buttons are available, whether any of them is down)."
   "Tests whether the mouse-button is still down.  Returns true if the
 button is currently down and there are no more mouse events pending in
 the event queue."
-  (with-mutex (queue-mutex *event-queue*)
+  (with-mutex (event-queue-mutex *event-queue*)
     (and (button) (not (%find-event mouse-up-mask)))))
 
 (defun wait-mouse-up ()
   "Same as STILL-DOWN, but if the button is not still down from the
 original press, WAIT-MOUSE-UP removes the preceding mouse-up event
 before returning NIL."
-  (with-mutex (queue-mutex *event-queue*)
+  (with-mutex (event-queue-mutex *event-queue*)
     (and (button)
          (let ((event (%find-event mouse-up-mask)))
            (if event
@@ -487,7 +488,7 @@ mouse clicks to be considered a double-click."
   (let ((e1 (make-event :what mouse-down :when (tick-count) :where #@(100 100)))
         (e2 (make-event :what key-down :when (+ 10 (tick-count)) :message (char-code #\a)))
         (e3 (make-event :what mouse-up :when (+ 20 (tick-count))  :where #@(200 150))))
-    (let ((*event-queue* (make-queue)))
+    (let ((*event-queue* (make-event-queue)))
       (post-event e1)
       (post-event e2)
       (post-event e3)
@@ -501,13 +502,13 @@ mouse clicks to be considered a double-click."
   (let ((e1 (make-event :what mouse-down :when (tick-count) :where #@(100 100)))
         (e2 (make-event :what key-down :when (+ 10 (tick-count)) :message (char-code #\a)))
         (e3 (make-event :what mouse-up :when (+ 20 (tick-count))  :where #@(200 150))))
-    (let ((*event-queue* (make-queue)))
+    (let ((*event-queue* (make-event-queue)))
       (post-event (make-event))
       (post-event e1)
       (post-event e2)
       (post-event e3)
       (post-event (make-event))
-      (with-mutex (queue-mutex *event-queue*)
+      (with-mutex (event-queue-mutex *event-queue*)
         (let ((e (%find-event mouse-down-mask))) (assert (eql e e1) (e e1)))
         (let ((e (%find-event key-down-mask)))   (assert (eql e e2) (e e2)))
         (let ((e (%find-event mouse-up-mask)))   (assert (eql e e3) (e e3)))
@@ -520,11 +521,11 @@ mouse clicks to be considered a double-click."
   (let ((e1 (make-event :what mouse-down :when (tick-count) :where #@(100 100)))
         (e2 (make-event :what key-down :when (+ 10 (tick-count)) :message (char-code #\a)))
         (e3 (make-event :what mouse-up :when (+ 20 (tick-count))  :where #@(200 150))))
-    (let ((*event-queue* (make-queue)))
+    (let ((*event-queue* (make-event-queue)))
       (post-event e1)
       (post-event e2)
       (post-event e3)
-      (with-mutex (queue-mutex *event-queue*)
+      (with-mutex (event-queue-mutex *event-queue*)
         (let* ((x (%find-event mouse-down-mask))
                (e (%extract-event x)))
           (assert (eql e e1) (e e1)))
@@ -534,11 +535,11 @@ mouse clicks to be considered a double-click."
       (let ((e (dequeue-event))) (assert (eql e2 e) (e e2)))
       (let ((e (dequeue-event))) (assert (eql e3 e) (e e3)))
       (let ((e (dequeue-event))) (assert (null e) (e))))
-    (let ((*event-queue* (make-queue)))
+    (let ((*event-queue* (make-event-queue)))
       (post-event e1)
       (post-event e2)
       (post-event e3)
-      (with-mutex (queue-mutex *event-queue*)
+      (with-mutex (event-queue-mutex *event-queue*)
         (let* ((x (%find-event key-down-mask))
                (e (%extract-event x)))
           (assert (eql e e2) (e e2)))
@@ -548,11 +549,11 @@ mouse clicks to be considered a double-click."
       (let ((e (dequeue-event))) (assert (eql e1 e) (e e1)))
       (let ((e (dequeue-event))) (assert (eql e3 e) (e e3)))
       (let ((e (dequeue-event))) (assert (null e) (e))))
-    (let ((*event-queue* (make-queue)))
+    (let ((*event-queue* (make-event-queue)))
       (post-event e1)
       (post-event e2)
       (post-event e3)
-      (with-mutex (queue-mutex *event-queue*)
+      (with-mutex (event-queue-mutex *event-queue*)
         (let* ((x (%find-event mouse-up-mask))
                (e (%extract-event x)))
           (assert (eql e e3) (e e3)))
@@ -562,11 +563,11 @@ mouse clicks to be considered a double-click."
       (let ((e (dequeue-event))) (assert (eql e1 e) (e e1)))
       (let ((e (dequeue-event))) (assert (eql e2 e) (e e2)))
       (let ((e (dequeue-event))) (assert (null e) (e))))
-    (let ((*event-queue* (make-queue)))
+    (let ((*event-queue* (make-event-queue)))
       (post-event e1)
       (post-event e2)
       (post-event e3)
-      (with-mutex (queue-mutex *event-queue*)
+      (with-mutex (event-queue-mutex *event-queue*)
         (let ((e (%extract-event (make-event))))
           (assert (null e) (e))))
       (let ((e (dequeue-event))) (assert (eql e1 e) (e e1)))

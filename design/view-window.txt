@@ -1,0 +1,29 @@
+.. comment: -*- mode:rst;coding:utf-8 -*-
+
+::
+
+    (with-focused-view view
+       body)
+
+
+    (focus-view view)
+    body
+    (focus-view nil)
+
+
+    (with-focused-view view1
+       b1
+       (with-focused-view view2
+          body)
+       b2)
+
+
+    (focus-view view1)
+    b1
+    (focus-view view1)
+    body
+    (refocus-view view1)
+    b2
+    (focus-view nil)
+
+-

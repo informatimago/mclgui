@@ -35,6 +35,9 @@
 ;;(objcl:enable-objcl-reader-macros)
 (declaim (declaration stepper))
 
+(define-modify-macro appendf (&rest args)
+  append "Append onto list")
+
 (define-modify-macro nconcf (&rest args)
   nconc "Nconc onto list")
 
@@ -45,6 +48,32 @@ DO:             Destructively add the ELEMENT to the LIST-PLACE in the
 "
   `(appendf ,list-place (list ,element)))
 
+(defmacro add-new-to-list (list-place element &environment environment)
+  "
+DO:             Destructively add the ELEMENT to the LIST-PLACE in the
+                last position if it is not already in the list.
+"
+  (multiple-value-bind (vars vals store-vars writer-form reader-form)
+      (get-setf-expansion list-place environment)
+    (when (cdr store-vars)
+      (error "Can't expand this."))
+    (let ((vstore   (car store-vars))
+          (velement (gensym))
+          (vcell    (gensym)))
+      `(let* (,@(mapcar (function list) vars vals)
+              (,vstore ,reader-form)
+              (,velement ,element))
+         (if ,vstore
+             (loop
+               :for ,vcell :on ,vstore
+               :do (cond
+                     ((eql ,velement (car ,vcell))
+                      (loop-finish))
+                     ((null (cdr ,vcell))
+                      (setf (cdr ,vcell) (list ,velement))
+                      (loop-finish))))
+             (setf ,vstore (list ,velement)))
+         ,writer-form))))
 
 (defmacro delete-from-list (list-place element)
   "
@@ -98,106 +127,19 @@ POSITION:       0 means insert in front of the list.
             (return ,result))))))
 
 
-(defvar *step-mode* :run)
-
-
-(defun call-print-parseable-object (object stream type identity thunk)
-  "
-SEE:            PRINT-PARSEABLE-OBJECT
-"
-  (declare (stepper disable))
-  (let ((*step-mode* :run))
-    (if *print-readably*
-        (error 'print-not-readable :object object)
-        (progn
-          (format stream "~S"
-                  (append (when type
-                            (list (class-name (class-of object))))
-                          (funcall thunk object)
-                          (when identity
-                            (list (object-identity object)))))
-          object))))
-
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun extract-slots (ovar slots)
-    "
-SEE:            PRINT-PARSEABLE-OBJECT
-RETURN:         A form building a plist of slot values.
-"
-    (cons 'list
-          (loop
-            :for slot :in slots
-            :collect  (if (symbolp slot)
-                          (intern (symbol-name slot) "KEYWORD")
-                          `(quote ,(first slot)))
-            :collect  (if (symbolp slot)
-                        `(ignore-errors (slot-value ,ovar ',slot))
-                        `(ignore-errors ,(second slot)))))))
-
-(defgeneric slots-for-print (object)
-  (:documentation "Returns a plist of slots.")
-  (:method-combination append))
-
 (defmacro define-printer (class-name-and-options &rest slots)
   (if (symbolp class-name-and-options)
       `(define-printer (,class-name-and-options) ,@slots)
       (destructuring-bind (class-name &key (type t) (identity t)) class-name-and-options
         `(progn
            (defmethod slots-for-print append ((self ,class-name))
-             ,(extract-slots 'self slots))
+             ,(gen-extract-slots 'self slots))
            (defmethod print-object ((self ,class-name) stream)
-             (call-print-parseable-object self stream ,type ,identity
-                                          (lambda (self)
-                                            (declare (ignorable self) (stepper disable))
-                                            (slots-for-print self))))))))
-
-
-(defmacro print-parseable-object ((object stream &key (type t) identity) &rest slots)
-  "
-
-DO:             Prints on the STREAM the object as a list.  If all the
-                objects printed inside it are printed readably or with
-                PRINT-PARSEABLE-OBJECT, then that list should be
-                readable, at least with *READ-SUPPRESS* set to T.
-
-OBJECT:         Either a variable bound to the object to be printed,
-                or a binding list (VARNAME OBJECT-EXPRESSION), in
-                which case the VARNAME is bound to the
-                OBJECT-EXPRESSION during the evaluation of the SLOTS.
-
-STREAM:         The output stream where the object is printed to.
-
-TYPE:           If true, the class-name of the OBJECT is printed as
-                first element of the list.
-
-IDENTITY:       If true, the object identity is printed as a string in
-                the last position of the list.
-
-SLOTS:          A list of either a symbol naming the slot, or a list
-                (name expression), name being included quoted in the
-                list, and the expression being evalauted to obtain the
-                value.
-
-RETURN:         The object that bas been printed (so that you can use
-                it in tail position in PRINT-OBJECT conformingly).
-
-"
-  `(locally (declare (stepper disable))
-     ,(if (symbolp object)
-         `(call-print-parseable-object ,object ,stream ,type ,identity
-                                       (lambda (,object)
-                                         (declare (ignorable ,object) (stepper disable))
-                                         ,(extract-slots object slots)))
-         (destructuring-bind (ovar oval) object
-           `(let ((,ovar ,oval))
-              (call-print-parseable-object ,ovar ,stream ,type ,identity
-                                           (lambda (,ovar)
-                                             (declare (ignorable ,ovar) (stepper disable))
-                                             ,(extract-slots object slots))))))))
-
-
-
+             (com.informatimago.common-lisp.cesarum.utility::call-print-parseable-object
+              self stream ,type ,identity
+              (lambda (self)
+                (declare (ignorable self) (stepper disable))
+                (slots-for-print self))))))))
 
 
 (define-condition simple-program-error (simple-error program-error)

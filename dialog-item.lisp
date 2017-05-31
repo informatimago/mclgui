@@ -122,7 +122,7 @@ dialog items. It is built on SIMPLE-VIEW.
 "))
 
 
-(define-printer (view :identity t)
+(define-printer (dialog-item :identity t)
   (:view-position        (point-to-list (view-position self)))
   (:position/window      (point-to-list (convert-coordinates (view-position self)
                                                              (view-container self)

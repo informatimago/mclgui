@@ -1,6 +1,6 @@
 ;-*-Mode: LISP; Package: CCL -*-
 
-;;	Change History (most recent first):
+;;      Change History (most recent first):
 ;;  6 10/5/97  akh  see below
 ;;  5 6/9/97   akh  moved some stuff
 ;;  14 1/22/97 akh  change remove-ordered-subview  to put mini-buffer last to avoid double redraw in some cases
@@ -161,9 +161,9 @@
 ; 10/12/93 alice window-cursor (fred-window) is same as window = arrow, view-cursor (poof-button) unnecessary
 ; 10/03/93 alice nuke redundant def of pathname-to-window and redundant view-cursor (bar-dragger)
 ; 09/30/93 alice set-mini-buffer defined for window vs fred-window so remove-shadowing-comtab
-;		doesnt puke if no mini-buffer
+;               doesnt puke if no mini-buffer
 ; 08/16/93 alice view-font-codes for fred-window delegates. set-window-title & window-title
-;		use system-script not (font2script view-font-codes).
+;               use system-script not (font2script view-font-codes).
 ;----------------
 ; 07/15/93 alice define nop set-initial-view-font for fred-window
 ; 07/14/93 alice fred-class -> fred-item-class
@@ -183,12 +183,12 @@
 ; 07/14/93 alice fred-class -> fred-item-class, etc.
 ; 07/10/93 alice mini-buffer gets v-scroller at 55 vs 62, h-scroller-outline defaults t so don't supply t
 ; 07/05/93 alice set-view-font and set-view-font-codes methods for fred-window delegate
-;		 to window-key-handler
+;                to window-key-handler
 ; 07/01/93 alice replace-view-in-split-view is now a gf so container need not be a split-view
-;		 split-pane tweaked a bit for same reason, also remove-ordered-subview.
-;		 dragger-direction scrolling-fdi is nil if no dragger.
-;		 split-pane of scrolling-fdi does not assume existence of a mini-buffer.
-;		 ordered-subviews and split-view direction of vanilla view are nil
+;                split-pane tweaked a bit for same reason, also remove-ordered-subview.
+;                dragger-direction scrolling-fdi is nil if no dragger.
+;                split-pane of scrolling-fdi does not assume existence of a mini-buffer.
+;                ordered-subviews and split-view direction of vanilla view are nil
 ; 06/14/93 alice set-window-title and window-title deal with scripts
 ; -------------- 3.0d9
 ; 05/03/93 alice drag-split for fred-window fix case of superior being split and inferior precedes mini-buffer
@@ -200,7 +200,7 @@
 ;               no-such-file error won't error again.
 ; -------------- 2.1d5
 ; 04/23/93 alice drag-split - don't assume key handler is superior view, split-pane no longer
-;		changes the key handler, so replace-view-in-split-view remembers and restores it
+;               changes the key handler, so replace-view-in-split-view remembers and restores it
 ; 04/21/93 alice bill's idea to allow horizontal split without first poofing the mini-buffer
 ; 04/19/93 alice view-click-.. poof-button and bar-dragger don't resample mouse
 ; 04/08/93 alice window-save method for fred-window so save menu item gets enabled
@@ -2593,6 +2593,6 @@
 
 
 #|
-	Change History (most recent last):
-	2	12/27/94	akh	merge with d13
+        Change History (most recent last):
+        2       12/27/94        akh     merge with d13
 |# ;(do not edit past this line!!)

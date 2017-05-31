@@ -231,15 +231,24 @@ NOTE:           UNWRAPPING returns the handle or compute a new NS
 (defparameter *wrapper-instances* (make-weak-list '()))
 
 (on-save clear-handles
-  (mapcar (lambda (wrapper)
-            #+debug-wrapper (format-trace "clear-handles" "clearing a " (class-name (class-of wrapper)))
-            (setf (handle wrapper) nil))
-          (weak-list-list *wrapper-instances*)))
-
-#|on-restore|#
-(on-application-did-finish-launching reset-handles
   (dolist (wrapper (weak-list-list *wrapper-instances*))
-    #+debug-wrapper (format-trace "did-finish-launching" "unwrapping a " (class-name (class-of wrapper)))
+    #+debug-wrapper (format-trace "clear-handles" "clearing a "
+                                  (class-name (class-of wrapper)))
+    (setf (handle wrapper) nil)))
+
+
+;; We call initialize/wrapper in the right order in ui::initialize,
+;; instead of using on-application-did-finish-launching, since the order
+;; of call is undetermined.
+
+(defun initialize/wrapper ()
+  "This function must be called after ccl initialization and startup,
+AND after cocoa initialization (ie. at applicationDidFinishLaunching:)
+since we need the Cocoa objects to wrap them, including some of the
+Cocoa objects created at application launching time, such as menus."
+  (dolist (wrapper (weak-list-list *wrapper-instances*))
+    #+debug-wrapper (format-trace "did-finish-launching" "unwrapping a "
+                                  (class-name (class-of wrapper)))
     (unwrap wrapper)))
 
 

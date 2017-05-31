@@ -26,7 +26,7 @@ validate-view      -> validate-corners
 validate-corners   => erases the rectangle defined by the corners
                    => removes it form the window erase region
                    -> validate-region
-                   
+
 validate-region    -> ValidRgn
 
 
@@ -37,7 +37,7 @@ Implementation Mechanisms
 Actions can be initiated from two sides:
 
 - either from the OpenStep side (ie. upon user events processed by
-  OpenStep), 
+  OpenStep),
 
 - or from the MclGui side.
 
@@ -134,7 +134,7 @@ Window Activating
 
 - `-[MclguiWindow resignMainWindow]` calls `view-deactivate-event-handler`
 
-- `window-select`  
+- `window-select`
 
 - `window-select-event-handler`
 
@@ -163,7 +163,7 @@ Message Mapping
 
     (defgeneric window-mouse-up-event-handler (window))       <-- -[MclguiView mouseUp:]      (used in patchwork)
     (defgeneric window-null-event-handler (window))           <-- -[MclguiView mouseDragged:] (used in patchwork as mouse moved)
-                                                          
+
     (defgeneric window-key-up-event-handler (window))            (not used in patchwork)
     (defgeneric window-drag-event-handler (window where))        (not used in patchwork)
 
@@ -195,7 +195,7 @@ References
 `http://www.kreativekorp.com/charset/unicode.php?pua=appl&block=F700`_
 
 
-.. comment  
+.. comment
                     -----------------------------
                             -------------
                                   -

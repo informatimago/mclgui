@@ -35,8 +35,12 @@
 (declaim (declaration stepper))
 
 
-(defvar *mclgui-trace*   (make-synonym-stream '*trace-output*))
+;; (defvar *mclgui-trace*   (make-synonym-stream '*trace-output*))
+(defvar *mclgui-trace*   (make-broadcast-stream
+                          (make-synonym-stream '*trace-output*)
+                          (make-synonym-stream '*error-output*)))
 (defvar *mclgui-package* (load-time-value (find-package "MCLGUI")))
+(defvar mclgui::*initialized* nil)
 
 (defmacro unfrequently (frequency &body body)
   (let ((vcount (gensym))
@@ -50,43 +54,29 @@
          ,@body))))
 
 
-(defmacro niy (operator &rest parameters)
-  (let ((vonce (gensym)))
-   `(let ((*print-case* :downcase)
-          (*package*    *mclgui-package*)
-          (,vonce (load-time-value (list t))))
-      (when (prog1 (car ,vonce) (setf (car ,vonce) nil))
-        (format *mclgui-trace* "~&(~40A (~S~:{ (~S ~S)~}))~%"
-                "not implemented yet:"
-                ',operator (mapcar (lambda (var) (list var (type-of var)))
-                                   (list ,@parameters)))
-        (force-output *mclgui-trace*)))))
-
-
-(defmacro uiwarn (control-string &rest args)
-  `(let ((*print-case* :downcase)
-         (*package*    *mclgui-package*))
-     (format *mclgui-trace* "~&(~?)~%" ',control-string (list ,@args))
-     (force-output *mclgui-trace*)))
 
 (defvar *format-trace-mutex* nil)
+#-debug-trace
+(defmacro format-trace (method &rest arguments)
+  'nil)
+#+debug-trace
 (defun format-trace (method &rest arguments)
   (declare (stepper disable))
   (unless *format-trace-mutex*
     (setf *format-trace-mutex* (make-mutex "FORMAT-TRACE Mutex")))
   (flet ((out (message)
            (with-mutex *format-trace-mutex*
-             (fresh-line *mclgui-trace*)
-             (write-string message *mclgui-trace*)
-             (terpri *mclgui-trace*)
-             (force-output *mclgui-trace*)
-             (let ((listeners (gui::active-listener-windows)))
-               (when listeners
-                 (let ((hi::*current-buffer* (hi:hemlock-view-buffer
-                                              (gui::hemlock-view
-                                               (slot-value (first listeners)
-                                                           'gui::echo-area-view)))))
-                   (hemlock::end-of-buffer-command nil)))))))
+             (fresh-line         *mclgui-trace*)
+             (write-line message *mclgui-trace*)
+             (force-output       *mclgui-trace*)
+             (when mclgui::*initialized*
+               (let ((listeners (gui::active-listener-windows)))
+                 (when listeners
+                   (let ((hi::*current-buffer* (hi:hemlock-view-buffer
+                                                (gui::hemlock-view
+                                                 (slot-value (first listeners)
+                                                             'gui::echo-area-view)))))
+                     (hemlock::end-of-buffer-command nil))))))))
     (declare (inline out))
     (let ((*print-case* :downcase)
           (*package*    *mclgui-package*))
@@ -94,25 +84,27 @@
     (first arguments)))
 
 
+(defmacro niy (operator &rest parameters)
+  (let ((vonce (gensym)))
+    `(let ((*print-case* :downcase)
+           (*package*    *mclgui-package*)
+           (,vonce (load-time-value (list t))))
+       (when (prog1 (car ,vonce) (setf (car ,vonce) nil))
+         (format-trace "not implemented yet:"
+                       (cons ',operator
+                             (mapcar (lambda (var) (list var (type-of var)))
+                                     (list ,@parameters))))))))
+
+
+(defmacro uiwarn (control-string &rest args)
+  `(format-trace 'uiwarn (format nil ',control-string ,@args)))
+
+
 (defmacro time/stdout (&body body)
   `(let ((trace-output *trace-output*))
      (let ((*trace-output* *standard-output*))
        (time (let ((*trace-output* trace-output))
                ,@body)))))
-
-
-
-(defun object-identity (object)
-  "
-RETURN:         A string containing the object identity as printed by
-                PRINT-UNREADABLE-OBJECT.
-"
-  (declare (stepper disable))
-  (let ((*print-readably* nil))
-    (let ((ident
-           (with-output-to-string (stream)
-             (print-unreadable-object (object stream :type nil :identity t)))))
-      (subseq ident 3 (1- (length ident))))))
 
 
 (defun function-address (function)

@@ -45,18 +45,23 @@
                "alexandria"
                "split-sequence"
                "com.informatimago.objcl"
-               "com.informatimago.clext"   ; closer-weak: wrapper.lisp uses weak lists
+               "com.informatimago.clext" ; closer-weak: wrapper.lisp uses weak lists
                ;; While developping:
                "com.informatimago.common-lisp.cesarum")
-  :components ((:file "cocoa"
-                :depends-on ())
+  :components (
+
+               ;; (:file "cocoa"
+               ;;  :depends-on ("packages"))
 
                #-ccl-1.10
                (:file "cg"
                 :depends-on ())
 
                (:file "packages"
-                :depends-on ("cocoa"))
+                :depends-on ())
+
+               (:file "readtable"
+                :depends-on ("packages" "point"))
 
                (:file "mutex"
                 :depends-on ("packages"))
@@ -71,14 +76,15 @@
                 :depends-on ("packages"))
 
                (:file "process"
-                :depends-on ("packages" "mailbox"
-                                        "debug"))
+                :depends-on ("packages"
+                             "mailbox"
+                             "debug"))
 
                (:file "variables"
                 :depends-on ("packages" "point"))
 
                (:file "system"
-                :depends-on ("packages" "debug"))
+                :depends-on ("packages" "readtable" "debug" "mac-event"))
 
                (:file "circular"
                 :depends-on ("packages"))
@@ -96,7 +102,7 @@
 
                (:file "objc-classes"
                 :depends-on ("packages"
-                             "macros" "wrapper" "variables" "point" "rect"
+                             "readtable" "macros" "wrapper" "variables" "point" "rect"
                              "system" "mac-event" "debug"))
 
                (:file "graphics"
@@ -120,7 +126,7 @@
 
                (:file "font"
                 :depends-on ("packages"
-                             "macros" "variables" "system"
+                             "readtable" "macros" "variables" "system"
                              "point" "objc-classes" "color"
                              "wrapper"))
 
@@ -149,12 +155,13 @@
                              "wrapper"))
 
                (:file "view"
-                :depends-on ("packages" "process"
-                                        "macros" "variables" "color"
-                                        "point" "region" "font" "pen"
-                                        "wrapper" "view-classes" "objc-classes"
-                                        "region-view"
-                                        #-ccl-1.10 "cg"))
+                :depends-on ("packages"
+                             "process"
+                             "macros" "variables" "color"
+                             "point" "region" "font" "pen"
+                             "wrapper" "view-classes" "objc-classes"
+                             "region-view"
+                             #-ccl-1.10 "cg"))
 
                (:file "view-stream"
                 :depends-on ("packages"
@@ -162,14 +169,15 @@
                              "view-classes" "view" "graphics"))
 
                (:file "window"
-                :depends-on ("packages" "process"
-                                        "macros" "variables" "color"
-                                        "point" "region" "font"
-                                        "objc-classes" "objc-region-path"
-                                        "view-classes"
-                                        "wrapper" "view" "notification"
-                                        "menu"
-                                        #-ccl-1.10 "cg"))
+                :depends-on ("packages"
+                             "process"
+                             "macros" "variables" "color"
+                             "point" "region" "font"
+                             "objc-classes" "objc-region-path"
+                             "view-classes"
+                             "wrapper" "view" "notification"
+                             "menu"
+                             #-ccl-1.10 "cg"))
 
                (:file "fred-window"
                 :depends-on ("packages"
@@ -364,15 +372,16 @@
                              "event" "key-handler-mixin"))
 
                (:file "window-event"
-                :depends-on ("packages" "process"
-                                        "macros" "variables" "point" "system" "view-classes" "window"
-                                        "view-event" "event" "application"))
+                :depends-on ("packages"
+                             "process"
+                             "macros" "variables" "point" "system" "view-classes" "window"
+                             "view-event" "event" "application"))
 
 
                (:file "cursor"
                 :depends-on ("packages"
                              "macros" "variables" "point"
-                             "wrapper" "pattern"))
+                             "wrapper" "pattern" "readtable"))
 
                (:file "scrap"
                 :depends-on ("packages"
@@ -388,7 +397,7 @@
                 :depends-on ("packages"
                              "process"
                              "macros" "variables" "wrapper"
-                             "objc-classes"))
+                             "objc-classes" "event"))
 
                ;; Appendix D: Quickdraw Graphics:
 
@@ -426,7 +435,7 @@
                 :depends-on ("packages"
                              "macros" "variables" "point"
                              "objc-classes" "objc-region-path"
-                             "view-classes"
+                             "view-classes" "view"
                              "pattern" "rect" "region" "pen"))
 
                ;; Managers:
@@ -458,7 +467,7 @@
 
                (:file "mclgui"
                 :depends-on ("packages"
-                             "macros" "variables" "process"
+                             "macros" "variables" "process" "wrapper"
                              "objc-classes"
                              "point" "font" "pen" "pattern" "cursor" "view-stream"
                              "menu" "view" "window" "dialog" "fred-window"

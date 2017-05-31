@@ -36,8 +36,8 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 (in-package "MCLGUI")
-(objcl:enable-objcl-reader-macros)
 
 
 
@@ -834,7 +834,8 @@ MS:             Mode/Size code.
   (let ((string (nsubstring-start-end string start end)))
     (round (nssize-width
             (get-nssize [(objcl:objc-string string)
-                         sizeWithAttributes:[(font-descriptor-from-codes ff ms) fontAttributes]])))))
+                         sizeWithAttributes: [(font-descriptor-from-codes ff ms)
+                                              fontAttributes]])))))
 
 
 (defun font-code-draw-string (string ff ms &optional

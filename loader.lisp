@@ -6,7 +6,7 @@
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
 ;;;;
-;;;;    XXX
+;;;;    Loads and initialize MCLGUI.
 ;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
@@ -49,20 +49,41 @@
 
 
 (setf (logical-pathname-translations "PATCHWORK")
-      (make-logical-pathname-translations ""  #.(directory-relative-to-source #P"../patchwork/"
-                                                                              #P"~/works/patchwork/src/patchwork/")))
+      (make-logical-pathname-translations
+       ""
+       #.(directory-relative-to-source
+          #P"../patchwork/"
+          #P"~/works/patchwork/src/patchwork/")))
+
 (setf (logical-pathname-translations "MCLGUI")
-      (make-logical-pathname-translations ""  #.(directory-relative-to-source #P"./"
-                                                                              #P"~/works/patchwork/src/mclgui/")))
+      (make-logical-pathname-translations
+       ""
+       #.(directory-relative-to-source
+          #P""
+          #P"~/works/patchwork/src/mclgui/")))
 
 
 (cd   (translate-logical-pathname #P"MCLGUI:"))
 (push (translate-logical-pathname #P"MCLGUI:") asdf:*central-registry*)
+;; (pop asdf:*central-registry*)
+
+(defun remove-object-files ()
+ (mapc 'delete-file
+       (remove-if (lambda (path) (and (null (pathname-name path)) (null (pathname-type path))))
+                  (directory (merge-pathnames ".cache/common-lisp/ccl-1.11-f96-macosx-x64/**/*.*"
+                                              (user-homedir-pathname))))))
+(remove-object-files)
+
 (ql:quickload :mclgui)
 
+(format t "Initializing UI on the main thread…")
+(ui:on-main-thread (ui:initialize))
 
-(load "scratch/dump")
-(load "scratch/init-streams")
-(load "scratch/sdi")
-(in-package "MCLGUI")
-(test-text-box)
+(defun load-sdi ()
+  (load "scratch/dump")
+  ;; (load "scratch/init-streams")
+  (load "layout")
+  (load "scratch/sdi")
+  (in-package "MCLGUI")
+  (print '(ui::on-main-thread (ui::test-text-box)))
+  (values))

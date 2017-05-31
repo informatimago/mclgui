@@ -37,8 +37,8 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 (in-package "MCLGUI")
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 (enable-sharp-at-reader-macro)
-(objcl:enable-objcl-reader-macros)
 
 
 (defvar *window-list* '()
@@ -62,6 +62,50 @@ different from the default behavior for many types of events.
 
 WINDOW:         A window.
 "))
+
+
+;;;---------------------------------------------------------------------
+
+(defclass unknown-window (window)
+  ())
+
+(defclass hemlock-frame (window)
+  ())
+
+(defclass hemlock-listener-frame (hemlock-frame)
+  ())
+
+(defmethod view-draw-contents ((window hemlock-frame))
+  (values))
+
+(defmethod wrap ((nswindow ns:ns-window))
+  ;; (format-trace 'wrap nswindow)
+  (or (find nswindow *window-list* :key (function handle))
+      (make-instance 'unknown-window :handle nswindow)))
+
+(defmethod wrap ((nswindow gui::hemlock-listener-frame))
+  ;; (format-trace 'wrap nswindow)
+  (or (find nswindow *window-list* :key (function handle))
+      (make-instance 'hemlock-listener-frame :handle nswindow)))
+
+(defmethod wrap ((nswindow gui::hemlock-frame))
+  ;; (format-trace 'wrap nswindow)
+  (or (find nswindow *window-list* :key (function handle))
+      (make-instance 'hemlock-frame :handle nswindow)))
+
+(defgeneric wrap-only-my-windows (nswindow)
+  (:method   ((nswindow ns:ns-window))
+    (find nswindow *window-list* :key (function handle)))
+  (:method   ((nswindow gui::hemlock-listener-frame))
+    ;; (format-trace 'wrap nswindow)
+    (or (find nswindow *window-list* :key (function handle))
+        (make-instance 'hemlock-listener-frame :handle nswindow)))
+  (:method   ((nswindow gui::hemlock-frame))
+    ;; (format-trace 'wrap nswindow)
+    (or (find nswindow *window-list* :key (function handle))
+        (make-instance 'hemlock-frame :handle nswindow))))
+
+;;;---------------------------------------------------------------------
 
 
 (defmethod window-frame-from-nswindow-frame ((frame nsrect))
@@ -108,8 +152,6 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
     (get-nsrect [winh frameRectForContentRect:(nswindow-frame-from-window-frame (view-frame window))])))
 
 
-
-
 (defmethod update-handle ((window window))
   (setf (%view-position window) (center-window (view-size window) (view-position window)))
   (setf (view-valid window) (list nil))
@@ -118,66 +160,67 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
              (not (slot-value window 'theme-background)))
     ;; only needed for non-theme color background
     (setf (window-invalid-region window) (new-rgn)))
-  (add-to-list *window-list* window)
+  (add-new-to-list *window-list* window)
   ;;#+debug-views
   (format-trace '(update-handle window)
                 :pos (point-to-list (view-position window))
                 :siz (point-to-list (view-size window))
                 :frame (rect-to-list (view-frame window))
                 :content-rect (nswindow-frame-from-window-frame (view-frame window)))
-  (let ((winh [[MclguiWindow alloc]
-               initWithContentRect:(nswindow-frame-from-window-frame (view-frame window))
-               styleMask:(ecase (window-type window)
-                           ((:document)
-                            (logior #$NSTitledWindowMask
-                                    #$NSMiniaturizableWindowMask
-                                    (if (window-close-box-p window)
-                                        #$NSClosableWindowMask
-                                        0)))
-                           ((:document-with-zoom
-                             :document-with-grow)
-                            (logior #$NSTitledWindowMask
-                                    #$NSMiniaturizableWindowMask
-                                    (if (window-close-box-p window)
-                                        #$NSClosableWindowMask
-                                        0)
-                                    #$NSResizableWindowMask))
-                           ((:double-edge-box
-                             :single-edge-box
-                             :shadow-edge-box)
-                            #$NSBorderlessWindowMask)
-                           ((:tool)
-                            (logior #$NSTitledWindowMask
-                                    (if (window-close-box-p window)
-                                        #$NSClosableWindowMask
-                                        0))))
-               backing:#$NSBackingStoreBuffered
-               defer:NO]))
-    (setf (slot-value winh 'window) window)
-    (setf (handle window) winh) ; must be done before setDelegate.
-    #+debug-views
-    (format-trace '(update-handle window)
-                  :cview-frame  (nswindow-frame-from-window-frame window))
-    (let ((cviewh [[MclguiView alloc]
-                   initWithFrame:(unwrap (nswindow-frame-from-window-frame window))]))
-      (setf (slot-value cviewh 'view) window)
-      [cviewh setAutoresizingMask:(logior #$NSViewWidthSizable #$NSViewHeightSizable)]
-      [winh setContentView:cviewh] window)
-    [winh setReleasedWhenClosed:YES]
-    [winh setHasShadow:yes]
-    [winh invalidateShadow]
-    [winh setAcceptsMouseMovedEvents:YES]
-    ;; [winh setDelegate:(make-instance 'mclgui-window-delegate :window window)]
-    [winh setDelegate:winh]
-    [winh setTitle:(objcl:objc-string (window-title window))]
-    (setf (window-affine-transform window) (current-affine-transform window))
-    #+debug-views
-    (format-trace '(update-handle window)
-                  :wintitle (window-title window)
-                  :pos (point-to-list (view-position window))
-                  :size (point-to-list (view-size window))
-                  :nsframe (nswindow-frame-from-window-frame window))
-    winh))
+  (on-main-thread/sync
+    (let ((winh [[MclguiWindow alloc]
+                 initWithContentRect:(nswindow-frame-from-window-frame (view-frame window))
+                 styleMask:(ecase (window-type window)
+                             ((:document)
+                              (logior #$NSTitledWindowMask
+                                      #$NSMiniaturizableWindowMask
+                                      (if (window-close-box-p window)
+                                          #$NSClosableWindowMask
+                                          0)))
+                             ((:document-with-zoom
+                               :document-with-grow)
+                              (logior #$NSTitledWindowMask
+                                      #$NSMiniaturizableWindowMask
+                                      (if (window-close-box-p window)
+                                          #$NSClosableWindowMask
+                                          0)
+                                      #$NSResizableWindowMask))
+                             ((:double-edge-box
+                               :single-edge-box
+                               :shadow-edge-box)
+                              #$NSBorderlessWindowMask)
+                             ((:tool)
+                              (logior #$NSTitledWindowMask
+                                      (if (window-close-box-p window)
+                                          #$NSClosableWindowMask
+                                          0))))
+                 backing:#$NSBackingStoreBuffered
+                 defer:NO]))
+      (setf (slot-value winh 'window) window)
+      (setf (handle window) winh)   ; must be done before setDelegate.
+      #+debug-views
+      (format-trace '(update-handle window)
+                    :cview-frame  (nswindow-frame-from-window-frame window))
+      (let ((cviewh [[MclguiView alloc]
+                     initWithFrame:(unwrap (nswindow-frame-from-window-frame window))]))
+        (setf (slot-value cviewh 'view) window)
+        [cviewh setAutoresizingMask:(logior #$NSViewWidthSizable #$NSViewHeightSizable)]
+        [winh setContentView:cviewh] window)
+      [winh setReleasedWhenClosed:YES]
+      [winh setHasShadow:yes]
+      [winh invalidateShadow]
+      [winh setAcceptsMouseMovedEvents:YES]
+      ;; [winh setDelegate:(make-instance 'mclgui-window-delegate :window window)]
+      [winh setDelegate:winh]
+      [winh setTitle:(objcl:objc-string (window-title window))]
+      ;; (setf (window-affine-transform window) (current-affine-transform window))
+      #+debug-views
+      (format-trace '(update-handle window)
+                    :wintitle (window-title window)
+                    :pos (point-to-list (view-position window))
+                    :size (point-to-list (view-size window))
+                    :nsframe (nswindow-frame-from-window-frame window))
+      winh)))
 
 
 
@@ -191,9 +234,9 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
 
 (defmethod initialize-instance :after ((window window) &key &allow-other-keys)
   (with-handle (winh window)
-    (let* ((bound (get-nsrect [[winh contentView] bounds]))
-           (posiz (window-frame-from-nswindow-frame window))
-           (ori   (subtract-points #@(0 0) (rect-topleft (nsrect-to-rect bound)))))
+    (let* ((bounds (get-nsrect [[winh contentView] bounds]))
+           (ori    (subtract-points #@(0 0) (rect-topleft (nsrect-to-rect bounds))))
+           (posiz  (window-frame-from-nswindow-frame window)))
       (setf (slot-value window 'window-title)         (objcl:lisp-string [winh title])
             (slot-value window 'view-position)        (rect-topleft posiz)
             (slot-value window 'view-size)            (rect-size posiz)
@@ -202,7 +245,7 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
   (when (window-visiblep window)
     (setf (slot-value window 'visiblep) nil)
     (window-show window)
-    [(handle window) display]))
+    (on-main-thread [(handle window) display])))
 
 
 (defmethod view-allocate-clip-region ((window window))
@@ -240,12 +283,13 @@ RETURN:     REGION.
   #+debug-views (format-trace "%set-clip" region)
   ;; #+debug-views (let ((*allow-print-backtrace* t)) (print-backtrace))
   (setf (view-clip-region-slot win) region)
+  #-(and)
   (let ((path (bezier-path-from-region region))
         (saved-view *current-view*))
     (unwind-protect
          (progn
            (focus-view win)
-           ;; [path setClip]
+           [path setClip]
            #-(and) (progn #| DEBUG-PJB |#
                      [path setLineWidth:(cgfloat 4.0)]
                      [(unwrap *gray-color*) set]
@@ -256,11 +300,11 @@ RETURN:     REGION.
 (defun set-clip (region)
   (let ((win (and *current-view* (view-window *current-view*))))
     (when win
-     (%set-clip win
-                (if region
-                    (copy-region region (or (view-clip-region-slot win) (new-region)))
-                    (set-rect-region    (or (view-clip-region-slot win) (new-region))
-                                        -32767 -32767 32767 32767))))))
+      (%set-clip win
+                 (if region
+                     (copy-region region (or (view-clip-region-slot win) (new-region)))
+                     (set-rect-region    (or (view-clip-region-slot win) (new-region))
+                                         -32767 -32767 32767 32767))))))
 
 
 
@@ -323,6 +367,14 @@ INCLUDE-WINDOIDS
                 included.  Floating windows are also included if the
                 value of the CLASS argument is WINDOID.
 "
+
+
+  ;; We don't care about the array, just that the window instances be updated:
+  ;; (wrap [[NSApplication sharedApplication] orderedWindows])
+  ;; Instead, let's avoid creating window instance for NSWindows and NSPanel we don't manage.
+  (do-nsarray (nswindow [[NSApplication sharedApplication] orderedWindows])
+    (when (find nswindow *window-list* :key (function handle))
+      (wrap-only-my-windows nswindow)))
   (delete-if (lambda (window)
                (not (and (if include-windoids
                              (or (typep window class)
@@ -658,10 +710,11 @@ NEW-TITLE:      A string to be used as the new title.
 
 (defgeneric window-show (window)
   (:method ((window window))
-    #+debug-views (format-trace 'window-show window)
+    #+debug-views (format-trace 'window-show window *mclgui-trace*)
     (unless (window-visiblep window)
       (setf (slot-value window 'visiblep) t)
       (window-bring-to-front window))
+    #+debug-views (reporting-errors (print-backtrace *mclgui-trace*))
     window))
 
 
@@ -1282,7 +1335,8 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 ;; TODO: use get-fore-color when drawing in the window…
 (defmethod set-fore-color ((window window) color)
   (setf (slot-value window 'fore-color) color)
-  (%set-fore-color (or color *foreground-color*)))
+  (when *color-available*
+    (%set-fore-color (or color *foreground-color*))))
 
 
 (defmethod set-back-color ((window window) color &optional (redisplay-p t))
@@ -1306,49 +1360,17 @@ RETURN:         A BOOLEAN value indicating whether view can perform
     (when (window-visiblep window)
       ;; time/stdout
       #+debug-views (format-trace '(view-draw-contents window))
-      #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
+      ;; #+debug-views #|DEBUG-PJB|# (print-backtrace *standard-output*)
       (with-focused-view window
         (with-fore-and-back-color (get-fore-color window) (get-back-color window)
           (call-next-method))))))
 
-
 ;;;---------------------------------------------------------------------
-
-(defclass unknown-window (window)
-  ())
-
-(defclass hemlock-frame (window)
-  ())
-
-(defclass hemlock-listener-frame (hemlock-frame)
-  ())
-
-(defmethod view-draw-contents ((window hemlock-frame))
-  (values))
-
-(defmethod wrap ((nswindow ns:ns-window))
-  ;; (format-trace 'wrap nswindow)
-  (make-instance 'unknown-window :handle nswindow))
-
-(defmethod wrap ((nswindow gui::hemlock-listener-frame))
-  ;; (format-trace 'wrap nswindow)
-  (make-instance 'hemlock-listener-frame :handle nswindow))
-
-(defmethod wrap ((nswindow gui::hemlock-frame))
-  ;; (format-trace 'wrap nswindow)
-  (make-instance 'hemlock-frame :handle nswindow))
-
 
 (defun initialize/window ()
   (setf *window-list* '()) ; wrapping windows modify *window-list*, so let's start from a blank state.
-  (setf *window-list* (nsarray-to-list [[NSApplication sharedApplication] windows]))
+  (setf *window-list* (delete nil (map-nsarray 'list (function wrap-only-my-windows)
+                                               [[NSApplication sharedApplication] orderedWindows])))
   (values))
-
-;; (initialize/window)
-;; (map nil 'print *window-list*)
-;; (mapcar 'nswindow-window (cddr *window-list*))
-;; (type-of (first *window-list*))
-
-
 
 ;;;; THE END ;;;;

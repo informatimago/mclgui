@@ -36,8 +36,9 @@
   (:use "COMMON-LISP" "MCLGUI")
   (:export "COMPUTED-VIEW"
            "COMPUTED-VIEW-DRAW-IT"
-           "EXAMPLE"))
+           "RUN"))
 (in-package "MCLGUI.EXAMPLE.COMPUTED-VIEW")
+(enable-sharp-at-reader-macro)
 
 (defclass computed-view (view)
   ((draw-it   :initarg :drawn-as
@@ -51,7 +52,9 @@
     (let ((draw-it (computed-view-draw-it view)))
       (when draw-it (funcall draw-it view)))))
 
-(defun example ()
+
+(defun run ()
+  (initialize)
   (let ((win (make-instance 'window
                             :window-title "Example: Computed View"
                             :view-size #@(400 300))))
@@ -74,7 +77,5 @@
                                (with-pen-state (:pattern *dark-gray-pattern*)
                                  (fill-ellipse 20 20 160 60))))
     win))
-
-;; (example)
 
 ;;;; THE END ;;;;

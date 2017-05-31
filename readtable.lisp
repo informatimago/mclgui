@@ -1,46 +1,47 @@
 ;;;; -*- mode:lisp;coding:utf-8 -*-
 ;;;;**************************************************************************
-;;;;FILE:               graphics.lisp
+;;;;FILE:               readtable.lisp
 ;;;;LANGUAGE:           Common-Lisp
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     NONE
 ;;;;DESCRIPTION
 ;;;;
-;;;;    Implements a few low-level graphic primitives.
+;;;;    Define a macro to set up objcl+ccl readtable.
 ;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
-;;;;    2014-10-25 <PJB> Created.
+;;;;    2016-02-08 <PJB> Created.
 ;;;;BUGS
 ;;;;LEGAL
-;;;;    GPL3
+;;;;    AGPL3
 ;;;;
-;;;;    Copyright Pascal J. Bourguignon 2014 - 2014
+;;;;    Copyright Pascal J. Bourguignon 2016 - 2016
 ;;;;
 ;;;;    This program is free software: you can redistribute it and/or modify
-;;;;    it under the terms of the GNU General Public License as published by
+;;;;    it under the terms of the GNU Affero General Public License as published by
 ;;;;    the Free Software Foundation, either version 3 of the License, or
 ;;;;    (at your option) any later version.
 ;;;;
 ;;;;    This program is distributed in the hope that it will be useful,
 ;;;;    but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;;    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;;;    GNU General Public License for more details.
+;;;;    GNU Affero General Public License for more details.
 ;;;;
-;;;;    You should have received a copy of the GNU General Public License
+;;;;    You should have received a copy of the GNU Affero General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-(in-package "MCLGUI")
-(mclgui.readtable:enable-objcl+ccl-reader-macros)
-(enable-sharp-at-reader-macro)
+(in-package "MCLGUI.READTABLE")
 
-(defmacro with-saved-graphic-state ((&key restore-form) &body body)
-  `(progn
-     [NSGraphicsContext saveGraphicsState]
-     (unwind-protect (progn ,@body)
-       [NSGraphicsContext restoreGraphicsState]
-       ,restore-form)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *mclgui-readtable*
+    (let ((*readtable* (copy-readtable com.informatimago.objcl.readtable:*cocoa-readtable*)))
+      (objcl:enable-objcl-reader-macros)
+      (set-dispatch-macro-character #\# #\@ (function mclgui::sharp-at-dispatch-reader-macro))
+      *readtable*)))
 
+(defmacro enable-objcl+ccl-reader-macros ()
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+     (setf *readtable* (copy-readtable *mclgui-readtable*))))
 
 ;;;; THE END ;;;;

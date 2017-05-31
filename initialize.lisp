@@ -1,6 +1,6 @@
 ;;;-*-Mode: LISP; Package: CCL -*-
 
-;;	Change History (most recent first):
+;;      Change History (most recent first):
 ;;  8 1/22/97  akh  find-edit-menu faster in the usual case
 ;;  6 5/20/96  akh  experimental & unused update-windows-menu
 ;;  2 10/26/95 Alice Hartley no change
@@ -91,7 +91,7 @@
 ; 01/19/93 alice use trace-dialog, get info, Compile => Execute
 ; 12/18/92 alice nuke some dead code
 ; 11/24/92 alice "Compile file" gets the right fasl dir, compile and load move to file menu
-;		 "Eval" => "Lisp", "Eval" => "Compile"
+;                "Eval" => "Lisp", "Eval" => "Compile"
 ; 10/15/92 alice close now calls window-close-event-handler for options (may screw up or?)
 ; 10/08/92 alice load... => load file...
 ;; 07/30/92 alice change the update function for edit-menu
@@ -789,7 +789,7 @@
 
 
 #|
-	Change History (most recent last):
-	2	12/29/94	akh	merge with d13
-	3	1/2/95	akh	no change
+        Change History (most recent last):
+        2       12/29/94        akh     merge with d13
+        3       1/2/95  akh     no change
 |# ;(do not edit past this line!!)

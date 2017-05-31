@@ -36,10 +36,12 @@
 (declaim (declaration stepper))
 
 
-(defvar *initial-process* nil)
+#-ccl (defvar *main-thread* nil)
+#+ccl (define-symbol-macro *main-thread* ccl::*cocoa-event-process*)
 
-(defun generate-on-main-thread-form (body wait)
-  "
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun generate-on-main-thread-form (body wait)
+    "
 BODY:   Should be a list containing a single Objective-C message send
         with zero or one argument, or a body.
 
@@ -50,64 +52,70 @@ WAIT:   Whether we must wait for the message to return from the main
 
 RETURN: A form performing BODY on the main thread.
 "
-  (declare (stepper disable))
-  (let ((varg (gensym)))
-    (flet ((objcmsg (message)
-             (cond
-               ((keywordp message)
-                (oclo:lisp-to-objc-message (list message)))
-               ((and (listp message)
-                     (eql 'quote (first message))
-                     (symbolp (second message)))
-                (oclo:lisp-to-objc-message (list (second message))))
-               (t
-                (check-type message (or keyword
-                                        (cons symbol null) ; ???
-                                        (cons symbol (cons symbol null)))))))
-           (objarg (argument)
-             (if (null argument)
-                 '*null*
-                 `(let ((,varg ,argument))
-                    (if (numberp ,varg)
-                        (ccl:%int-to-ptr ,varg)
-                        ,varg))))
-           (general-case ()
-             (if wait
-                 (let ((vmb (gensym)))
-                   `(let ((,vmb (make-mailbox)))
-                      (application-eval-enqueue *application*
-                                                (lambda ()
-                                                  (mailbox-post ,vmb (ignore-errors ,@body))))
-                      (mailbox-collect ,vmb)))
-                 `(application-eval-enqueue *application* (lambda () ,@body)))))
-      (if (= 1 (length body))
-          (let ((form (first body)))
-            (cond
-              ((and (listp form)
-                    (<= 3 (length form) 4)
-                    (eql 'objc:send (first form)))
-               (destructuring-bind (send recipient message &optional argument) form
-                 (declare (ignore send))
-                 ;; TODO: eval once arguments!
-                 `(progn
-                    ;; (format-trace "performSelectorOnMainThread" ',recipient ,message ,argument ,wait)
-                    [,recipient performSelectorOnMainThread: (oclo:selector ,(objcmsg message))
-                                withObject: ,(objarg argument)
-                                waitUntilDone: ,wait])))
-              ((and (listp form)
-                    (<= 2 (length form) 3)
-                    (eql 'objc:objc-message-send-super (first form)))
-               (destructuring-bind (send message &optional argument) form
-                 (declare (ignore send))
-                 ;; TODO: eval once arguments!
-                 `(progn
-                    ;; (format-trace "performSelectorOnMainThread" 'super ,message ,argument ,wait)
-                    [super performSelectorOnMainThread: (oclo:selector ,(objcmsg message))
-                           withObject: ,(objarg argument)
-                           waitUntilDone: ,wait])))
-              (t
-               (general-case))))
-          (general-case)))))
+    (declare (stepper disable))
+    (let ((varg (gensym)))
+      (labels ((objcmsg (message)
+                 (check-type message (or keyword
+                                         (cons symbol (cons symbol null))))
+                 (cond
+                   ((keywordp message)
+                    (oclo:lisp-to-objc-message (list message)))
+                   ((and (listp message)
+                         (eql 'cl:quote (first message))
+                         (symbolp (second message)))
+                    (oclo:lisp-to-objc-message (list (second message))))
+                   (t
+                    (error "Invalid message ~S" message))))
+               (objarg (argument)
+                 (if (null argument)
+                     '*null*
+                     `(let ((,varg ,argument))
+                        (if (numberp ,varg)
+                            (ccl:%int-to-ptr ,varg)
+                            ,varg))))
+               (unless-main-thread (form)
+                 `(if (eql *main-thread* (bt:current-thread))
+                      (progn ,@body)
+                      ,form))
+               (general-case ()
+                 (if wait
+                     (let ((vmb (gensym)))
+                       `(let ((,vmb (make-mailbox)))
+                          (application-eval-enqueue *application*
+                                                    (lambda ()
+                                                      (declaim (stepper disable))
+                                                      (mailbox-post ,vmb (ignore-errors ,@body))))
+                          (mailbox-collect ,vmb)))
+                     `(application-eval-enqueue *application* (lambda ()
+                                                                (declaim (stepper disable))
+                                                                ,@body)))))
+        (unless-main-thread
+         (if (= 1 (length body))
+             (let ((form (first body)))
+               (cond
+                 ((and (listp form)
+                       (<= 3 (length form) 4)
+                       (eql 'objc:send (first form)))
+                  (destructuring-bind (send recipient message &optional argument) form
+                    (declare (ignore send))
+                    ;; TODO: eval once arguments!
+                    `(progn ;; (format-trace "performSelectorOnMainThread" ',recipient ,message ,argument ,wait)
+                       [,recipient performSelectorOnMainThread: (oclo:selector ,(objcmsg message))
+                                   withObject: ,(objarg argument)
+                                   waitUntilDone: ,wait])))
+                 ((and (listp form)
+                       (<= 2 (length form) 3)
+                       (eql 'objc:objc-message-send-super (first form)))
+                  (destructuring-bind (send message &optional argument) form
+                    (declare (ignore send))
+                    ;; TODO: eval once arguments!
+                    `(progn ;; (format-trace "performSelectorOnMainThread" 'super ,message ,argument ,wait)
+                       [super performSelectorOnMainThread: (oclo:selector ,(objcmsg message))
+                              withObject: ,(objarg argument)
+                              waitUntilDone: ,wait])))
+                 (t
+                  (general-case))))
+             (general-case)))))))
 
 
 (defmacro on-main-thread (&body body)
@@ -138,6 +146,7 @@ RETURN: A form performing BODY on the main thread.
 ;; (test/mailbox)
 
 (defun initialize/process ()
-  (setf *initial-process* (bt:current-thread)))
+  #-ccl (setf *main-thread* (on-main-thread/sync (bt:current-thread)))
+  (values))
 
 ;;;; THE END ;;;;

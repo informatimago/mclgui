@@ -129,11 +129,11 @@ RGB colors into Macintosh color-table entries, see Inside Macintosh.
               [nscolor alphaComponent]))
 
 (defmethod unwrap ((self color))
-  (unwrapping self
-    [NSColor colorWithCalibratedRed: (cgfloat (%color-red self))
-             green: (cgfloat (%color-green self))
-             blue:  (cgfloat (%color-blue self))
-             alpha: (cgfloat (%color-alpha self))]))
+  ;; unwrapping self
+  [NSColor colorWithCalibratedRed: (cgfloat (%color-red self))
+           green: (cgfloat (%color-green self))
+           blue:  (cgfloat (%color-blue self))
+           alpha: (cgfloat (%color-alpha self))])
 
 
 
@@ -167,9 +167,7 @@ REDISPLAY-P:    If the value of this is true (the default), this
 
 
 (defgeneric get-fore-color (window)
-  (:documentation "
-
-"))
+  (:documentation ""))
 
 (defgeneric get-back-color (window)
   (:documentation ""))
@@ -198,13 +196,13 @@ REDISPLAY-P:    If the value of this is true (the default), this
     (if (or (null color)
             (not *color-available*)
             (null window))
-        (funcall thunk)
+        (let ((*foreground-color* (or color *foreground-color*)))
+          (funcall thunk))
         (let ((*foreground-color* color)
               (old-fore-color (slot-value window 'fore-color)))
           (with-saved-graphic-state
-              (:restore-form (setf (slot-value window 'fore-color) old-fore-color))
-            (setf (slot-value window 'fore-color) color)
-            (%set-fore-color color)
+              (:restore-form (set-fore-color window old-fore-color))
+            (set-fore-color window color)
             (funcall thunk))))))
 
 
@@ -213,19 +211,21 @@ REDISPLAY-P:    If the value of this is true (the default), this
     (if (or (null color)
             (not *color-available*)
             (null window))
-        (funcall thunk)
+        (let ((*background-color* (or color *background-color*)))
+          (funcall thunk))
         (let ((*background-color* color)
               (old-back-color (slot-value window 'back-color)))
-          (%set-back-color window color)
           (unwind-protect
                (progn
-                 (setf (slot-value (view-window *current-view*) 'back-color) *background-color*)
+                 (set-back-color window color nil)
                  (funcall thunk))
-            (setf (slot-value (view-window *current-view*) 'back-color) old-back-color))))))
+            (set-back-color window old-back-color nil))))))
 
 
 (defun call-with-fore-and-back-color (fore back thunk)
-  (let ((window (and *current-view* (view-window *current-view*))))
+  (let ((window (and *current-view* (view-window *current-view*)))
+        (*foreground-color* (or fore *foreground-color*))
+        (*background-color* (or back *background-color*)))
     (cond
       ((or (and (null fore) (null back))
            (not *color-available*)
@@ -233,19 +233,14 @@ REDISPLAY-P:    If the value of this is true (the default), this
        (funcall thunk))
       ((null fore) (call-with-back-color back thunk))
       ((null back) (call-with-fore-color fore thunk))
-      (t (let ((*foreground-color* fore)
-               (*background-color* back)
-               (old-fore-color (slot-value window 'fore-color))
+      (t (let ((old-fore-color (slot-value window 'fore-color))
                (old-back-color (slot-value window 'back-color)))
            (with-saved-graphic-state
                (:restore-form (progn
-                                (%set-back-color window (or old-back-color *background-color*))
-                                (setf (slot-value window 'fore-color) old-fore-color
-                                      (slot-value window 'back-color) old-back-color)))
-             (%set-fore-color fore)
-             (%set-back-color window back)
-             (setf (slot-value (view-window *current-view*) 'fore-color) *foreground-color*
-                   (slot-value (view-window *current-view*) 'back-color) *background-color*)
+                                (set-fore-color window old-fore-color)
+                                (set-back-color window old-back-color nil)))
+             (set-fore-color window fore)
+             (set-back-color window back nil)
              (funcall thunk)))))))
 
 
@@ -259,12 +254,12 @@ REDISPLAY-P:    If the value of this is true (the default), this
   `(call-with-fore-and-back-color ,fore ,back (lambda () ,@body)))
 
 (defmacro with-background-color (&body body)
-  `(let ((color (unwrap (or (and *current-view*
-                                 (view-window *current-view*)
-                                 (slot-value (view-window *current-view*) 'back-color))
-                            *background-color*))))
+  `(let ((color (or (and *current-view*
+                         (view-window *current-view*)
+                         (slot-value (view-window *current-view*) 'back-color))
+                    *background-color*)))
      (with-saved-graphic-state ()
-       [color setFill]
+       (%set-fore-color color)
        ,@body)))
 
 ;;;---------------------------------------------------------------------

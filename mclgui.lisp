@@ -33,7 +33,137 @@
 ;;;;**************************************************************************
 (in-package "MCLGUI")
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Initialize the streams.
+;;;
 
+(defun hemlock-listener-window-process (window)
+  (find (ui::handle window)
+        (remove-if-not (lambda (process)
+                         (typep process 'gui::cocoa-listener-process))
+                       (bt:all-threads))
+        :key (function gui::cocoa-listener-process-window)))
+
+(defun hemlock-windows ()  (windows :class 'hemlock-listener-frame))
+
+#-(and)
+(let ((windows (hemlock-windows)))
+  (format t "~&hemlock-windows ~S~%"  windows)
+  (if windows
+      (let ((process (hemlock-listener-window-process (first (hemlock-windows)))))
+        (setf *patchwork-io* (make-two-way-stream (gui::cocoa-listener-process-input-stream process)
+                                                  (gui::cocoa-listener-process-output-stream process))))
+      ))
+
+
+(defun ccl::display-cocoa-listener-output-buffer (stream)
+  (with-slots (ccl::hemlock-view gui::buffer) stream
+    (unwind-protect
+         (gui::with-dob-output-data (gui::data ccl::buffer)
+           (when (and gui::data (> (fill-pointer gui::data) 0))
+             (gui::append-output ccl::hemlock-view gui::data)
+             (setf (fill-pointer gui::data) 0)))
+      (gui::dob-return-output-data ccl::buffer))))
+
+;; (com.informatimago.common-lisp.cesarum.stream:stream-input-stream  *terminal-io*)
+;; (com.informatimago.common-lisp.cesarum.stream:stream-output-stream *terminal-io*)
+
+
+(defvar *listener-io-queue*)
+(defun make-listener-io ()
+  #-cocoa
+  *terminal-io*
+
+  #|
+
+  We should return a stream that reads and writes from the hemlock
+  listener window.  However, such a listener window is not always
+  available (and when the window is present, the stream in it may not be
+  ready (dob-output-data may be nil).  In this case, we enqueue instead
+  the data that must be output, and we will write it when the listener
+  window stream becomes available.
+
+  This is implemented by using two redirecting-streams, and a
+  filter-stream is used to enqueue data written to it.
+
+  |#
+
+  #+cocoa
+  (flet ((input-stream  ()
+           (hemlock-ext:top-listener-input-stream))
+         (output-stream ()
+           (let ((hemlock-stream (hemlock-ext:top-listener-output-stream)))
+             (when (and hemlock-stream
+                        #+ccl (gui::dob-output-data (slot-value hemlock-stream 'gui::buffer)))
+               hemlock-stream))))
+
+      (make-two-way-stream
+       (make-instance 'redirecting-character-input-stream
+                      :input-stream-function
+                      (let ((default-stream (make-string-input-stream "")))
+                        (lambda () (or (input-stream) default-stream))))
+       (make-instance 'redirecting-character-output-stream
+                      :output-stream-function
+                      (let* ((queue (setf *listener-io-queue* (make-queue "Output")))
+                             (default-stream
+                               (make-output-filter-stream
+                                queue
+                                (lambda (operation queue &rest arguments)
+                                  (ecase operation
+                                    ;; character
+                                    ;; (read-char            (read-char         stream nil :eof))
+                                    ;; (read-char-no-hang    (read-char-no-hang stream nil :eof))
+                                    ;; (peek-char            (peek-char         nil stream nil :eof))
+                                    ;; (read-line            (read-line         stream nil :eof))
+                                    ;; (listen               (listen            stream))
+                                    ;; (unread-char          (unread-char       (first arguments) stream))
+                                    (write-char     (enqueue queue (string (first arguments))))
+                                    (write-string   (enqueue queue (subseq (first arguments) (second arguments) (third arguments))))
+                                    ;; binary:
+                                    ;; (read-byte            (read-byte         stream nil :eof))
+                                    ;; (write-byte           (write-byte        (first arguments) stream))
+                                    ;; both:
+                                    ;; (read-sequence        (read-sequence     (first arguments) stream :start (second arguments) :end (third arguments)))
+                                    (write-sequence (enqueue queue (coerce (subseq (first arguments) (second arguments) (third arguments))
+                                                                           'string)))
+                                    (close          #|ignore|#)))
+                                :element-type 'character)))
+                        (lambda ()
+                          (let ((output-stream (output-stream)))
+                            (if output-stream
+                                (progn
+                                  (loop
+                                    :until (queue-emptyp queue)
+                                    :do (let ((text (dequeue queue)))
+                                          (format *trace-output*  "~S~%" (list 'output text)) (force-output *trace-output*)
+                                          (write-string text output-stream))
+                                    :finally (force-output output-stream))
+                                  output-stream)
+                                default-stream))))))))
+
+
+(defvar *old-terminal-io* (make-synonym-stream '*terminal-io*))
+(defvar *application-io*  *old-terminal-io*)
+#+swank (defvar swank::*current-terminal-io* *old-terminal-io*)
+
+
+(defun initialize-streams ()
+  (setf *old-terminal-io* *terminal-io*)
+  (setf *application-io* (make-listener-io))
+  #+swank (setf swank::*current-terminal-io* *application-io*)
+  (let ((stream (make-synonym-stream '*terminal-io*)))
+    (setf *terminal-io*       *application-io*
+          *standard-input*    stream
+          *standard-output*   stream
+          *error-output*      stream
+          ;; *trace-output*      stream ;; TODO: redirect to stderr (NSLog) or a trace file in production.
+          *query-io*          stream
+          *debug-io*          stream)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Initialize the screen.
+;;;
 
 (defun initialize/screen ()
   (multiple-value-bind (sx sy sw sh) (main-screen-frame)
@@ -46,35 +176,85 @@
 (defvar *initialized* nil)
 
 (defun initialize ()
-  "Initialize the MCL GUI.
-Must be called on the main thread."
+  "Initialize the MCL GUI."
   (unless *initialized*
-    (initialize-event-environment-bindings)
-    (initialize/process)
-    (initialize/paragraph-style)
-    (initialize/screen)
-    (initialize/region)
-    (initialize/color)
-    (initialize/pattern)
-    (initialize/pen)
-    (initialize/cursor)
-    (initialize/scrap)
-    (initialize/font)
-    (initialize/menu)
-    (initialize/view)
-    (initialize/window)
-    (te-init)
-    (initialize/table-dialog-item)
-    (initialize/file)
-    (initialize/event)
-    (initialize/eval)
-    (initialize/pop-up-menu-dialog-item)
-    #+has-appleevent (when (fboundp 'initialize/apple-event)
-                       (initialize/apple-event))
-    (initialize/application)
+    (progn
+      (ui::reporting-errors (mclgui.wrapper::initialize/wrapper))
+      (ui::reporting-errors (initialize-streams))
+      (ui::reporting-errors (initialize-event-environment-bindings))
+      (ui::reporting-errors (initialize/process))
+      (ui::reporting-errors (initialize/application))
+      (ui::reporting-errors (initialize/paragraph-style))
+      (ui::reporting-errors (initialize/screen))
+      (ui::reporting-errors (initialize/region))
+      (ui::reporting-errors (initialize/color))
+      (ui::reporting-errors (initialize/pattern))
+      (ui::reporting-errors (initialize/pen))
+      (ui::reporting-errors (initialize/cursor))
+      (ui::reporting-errors (initialize/scrap))
+      (ui::reporting-errors (initialize/font))
+      (ui::reporting-errors (initialize/menu))
+      (ui::reporting-errors (initialize/view))
+      (ui::reporting-errors (initialize/window))
+      (ui::reporting-errors (te-init))
+      (ui::reporting-errors (initialize/table-dialog-item))
+      (ui::reporting-errors (initialize/file))
+      (ui::reporting-errors (initialize/event))
+      (ui::reporting-errors (initialize/eval))
+      (ui::reporting-errors (initialize/pop-up-menu-dialog-item))
+      #+has-appleevent (ui::reporting-errors
+                         (when (fboundp 'initialize/apple-event)
+                           (initialize/apple-event))))
     (setf *initialized* t))
   (values))
 
 
+;;; --- ccl repl
+
+(defun safe-repl (&rest arguments &key &allow-other-keys)
+  (loop
+    (handler-bind ((error (function invoke-debugger)))
+      (apply (function ccl::read-loop) arguments))))
+
+(on-restore ccl-repl
+  (setf ccl::*read-loop-function* 'safe-repl
+        ccl::*inhibit-greeting*         t
+        ccl::*did-show-marketing-blurb* t))
+
+;;; --- trace output saved to file.
+
+(defvar *patchwork-trace-output* *trace-output*)
+
+(defun redirect-trace-output-to-file (pathname)
+  (setf *patchwork-trace-output* (open pathname
+                                       :direction :output
+                                       :if-does-not-exist :create
+                                       :if-exists :append
+                                       #+ccl :sharing #+ccl :lock))
+  (setf *trace-output* *patchwork-trace-output*)
+  (setf (ui::aget ui::*event-environment-bindings* '*trace-output*)
+        *patchwork-trace-output*)
+  (format *trace-output* "~%~A~2%" (date)))
+
+(on-restore patchwork-trace
+  (ui::reporting-errors
+    (redirect-trace-output-to-file (merge-pathnames #P"Desktop/Patchwork-trace.txt"
+                                                    (user-homedir-pathname)))
+    (format-trace "Welcome to the Machine!")))
+
+;;; --------------------------------------------------------------------
+;;; Initialization of patchwork
+
+;; (on-startup patchwork-initialization
+;;   (ui::reporting-errors
+;;     ;; in ccl-1.11, ccl::*application* is still nil here.
+;;     (let ((ccl::*application* (or ccl::*application* t)))
+;;       (eval-enqueue '(initialize-patchwork)))))
+;;
+;; (setf (symbol-function 'patchwork-initialization)
+;;       (lambda nil (block patchwork-initialization
+;;                     (let ((ccl::*application*
+;;                             (or ccl::*application* t)))
+;;                       (eval-enqueue '(initialize-patchwork))))))
 
 ;;;; THE END ;;;;
