@@ -714,7 +714,6 @@ NEW-TITLE:      A string to be used as the new title.
     (unless (window-visiblep window)
       (setf (slot-value window 'visiblep) t)
       (window-bring-to-front window))
-    #+debug-views (reporting-errors (print-backtrace *mclgui-trace*))
     window))
 
 
