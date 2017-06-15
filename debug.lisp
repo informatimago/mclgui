@@ -58,6 +58,7 @@
 (defvar *format-trace-mutex* nil)
 #-debug-trace
 (defmacro format-trace (method &rest arguments)
+  (declare (ignore method arguments))
   'nil)
 #+debug-trace
 (defun format-trace (method &rest arguments)
