@@ -51,13 +51,13 @@
   *application-name*)
 
 (defmethod (setf application-name) (new-name (application t))
-  (format-trace (format nil "(setf application-name) T ~S :new-name ~S" application new-name))
+  #+:debug-application (format-trace (format nil "(setf application-name) T ~S :new-name ~S" application new-name))
   (setf *application-name* new-name)
   (set-menu-title *apple-menu* new-name)
   (let ((about (first (menu-items *apple-menu*))))
     (when (prefixp "About " (menu-item-title about))
       (set-menu-item-title about (format nil "About ~A" new-name))))
-  (format-trace (format nil "set application name to ~A" (application-name application)))
+  #+:debug-application (format-trace (format nil "set application name to ~A" (application-name application)))
   new-name)
 
 
@@ -76,10 +76,10 @@ APPLICATION:    The application.  MCL standard event handling always
       (when (next-method-p)  (call-next-method))))
 
 (defmethod (setf application-name) (new-name (application named-application-mixin))
-  (format-trace (format nil "(setf application-name) NAMED-APPLICATION-MIXIN ~S :newname ~S" application new-name))
+  #+:debug-application (format-trace (format nil "(setf application-name) NAMED-APPLICATION-MIXIN ~S :newname ~S" application new-name))
   (when (next-method-p) (call-next-method))
   (setf (slot-value application 'name) new-name)
-  (format-trace (format nil "set application name to ~A" (application-name application))))
+  #+:debug-application (format-trace (format nil "set application name to ~A" (application-name application))))
 
 
 
@@ -315,24 +315,34 @@ FORM:           A symbol, function or lisp form.
 
 
 (defgeneric application-will-finish-launching (application)
-  (:method ((application t)) (values)))
+  (:method ((application t))
+    #+:debug-application (format t "~&application-will-finish-launching~%") (finish-output)
+    (values)))
 
 (defgeneric application-did-finish-launching (application)
-  (:method ((application t)) (values)))
+  (:method ((application t))
+    #+:debug-application (format t "~&application-did-finish-launching~%") (finish-output)
+    (values)))
 
 (defgeneric application-will-become-active (application)
   (:method ((application t))
+    #+:debug-application (format t "~&application-will-become-active~%") (finish-output)
     (application-suspend-event-handler application)
     (values)))
 
 (defgeneric application-did-become-active (application)
-  (:method ((application t)) (values)))
+  (:method ((application t))
+    #+:debug-application (format t "~&application-did-become-active~%") (finish-output)
+    (values)))
 
 (defgeneric application-will-resign-active (application)
-  (:method ((application t)) (values)))
+  (:method ((application t))
+    #+:debug-application (format t "~&application-will-resign-active~%") (finish-output)
+    (values)))
 
 (defgeneric application-did-resign-active (application)
   (:method ((application t))
+    #+:debug-application (format t "~&application-did-resign-active~%") (finish-output)
     (application-resume-event-handler application)
     (values)))
 
