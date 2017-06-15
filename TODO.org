@@ -68,19 +68,21 @@ Le résultat ne peux pas se copier et c’est une fonction nécessaire (égaleme
 ** TODO [#A] 00021 Control modifier
 When pressing control, event-modifiers stays 0 (key is correctly the control character/code,
 but for eg. Control-4 this doesn't work.
-** TODO [#A] 00025 key down events are not processed correctly               :bug:
-** TODO [#A] 00026 editing text boxes doesn't work                           :bug:
+** TODO [#A] 00025 key down events are not processed correctly          :bug:
+** TODO [#A] 00026 editing text boxes doesn't work                      :bug:
 clicking on editable text in box (eg value in a const box) doesn't select it, and typing doesn't modify it.
-** TODO [#A] 00028 new boxes they get a bad vacant position                  :bug:
+** TODO [#A] 00028 new boxes they get a bad vacant position             :bug:
 view-find-vacant-position
-** TODO [#A] 00029 cursors referenced by resource ID                        :port:
+** TODO [#A] 00029 cursors referenced by resource ID                   :port:
 eg. (set-cursor *cross-line-cursor*)
-** TODO [#A] 00030 spinwheel while drawing links                             :bug:
+** TODO [#A] 00030 spinwheel while drawing links                        :bug:
 - while click-and-dragging, the spinwheel cursor activates.
 find-grep :patxor
 (trace find-view-containing-point)
 make-PW-standard-box
-** TODO [#A] 00034 Unable to find class: LispApplication                     :bug:
+** TODO [#A] 00034 Unable to find class: LispApplication                :bug:
 
 21/10/14 08:00:08,136 System Preferences[9841]: Unable to find class: LispApplication, exiting
 21/10/14 08:00:08,137 com.apple.launchd.peruser.1000[140]: (com.apple.systempreferences.39808[9841]) Exited with code: 1
+** TODO [#A] process.lisp generate-on-main-thread-form       :implementation:
+Use  (ccl::call-in-event-process thunk) (ccl::queue-for-event-process thunk)

@@ -39,6 +39,7 @@
 #-ccl (defvar *main-thread* nil)
 #+ccl (define-symbol-macro *main-thread* ccl::*cocoa-event-process*)
 
+;; TODO: Use  (ccl::call-in-event-process thunk)   (ccl::queue-for-event-process thunk)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun generate-on-main-thread-form (body wait)
     "
