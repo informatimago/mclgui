@@ -865,7 +865,7 @@ MS:             Mode/Size code.
   (if (and color (not (eql color *black-color*)))
       (fred-palette-closest-entry color)
       0)
-  (niy color->ff-index color)
+  (declare (ignorable color)) (niy color->ff-index color)
   0)
 
 
