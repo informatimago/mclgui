@@ -84,5 +84,9 @@ make-PW-standard-box
 
 21/10/14 08:00:08,136 System Preferences[9841]: Unable to find class: LispApplication, exiting
 21/10/14 08:00:08,137 com.apple.launchd.peruser.1000[140]: (com.apple.systempreferences.39808[9841]) Exited with code: 1
-** TODO [#A] process.lisp generate-on-main-thread-form       :implementation:
+** TODO [#B] process.lisp generate-on-main-thread-form       :implementation:
 Use  (ccl::call-in-event-process thunk) (ccl::queue-for-event-process thunk)
+** TODO [#B] view.lisp call-with-focused-view                :implementation:
+See if we shouldn't just refocus-view or focus-view?
+** TODO [#A] graphics.lisp draw-string                       :implementation:
+see if we shouldn't remove d the descender when computing the y position.

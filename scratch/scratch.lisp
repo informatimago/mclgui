@@ -77,7 +77,7 @@
   (let ((inter (if (and visrgn cliprgn)
                    (intersect-region visrgn cliprgn)
                    (or visrgn cliprgn))))
-    (values (empty-region-p inter) inter))))
+    (values (empty-region-p inter) inter)))
 
 
 ;;------------------------------------------------------------
@@ -437,3 +437,107 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
     ;; (draw-rect* 81 10 60 20)
     (draw-line 80 0 140 30)
     (draw-line 80 30 140 0)))
+
+
+
+(in-package :ui)
+
+(defun maestro-string (string-designator)
+  (map 'string (lambda (ch) (code-char (+ #xf000 (char-code ch)))) (string string-designator)))
+
+(defparameter *w* (make-instance 'window
+                                 :window-title "Font"
+                                 :view-font  '("Maestro" 18 :srcor)))
+
+(with-font-focused-view *w*
+  (erase-rect* 0 0 1000 1000)
+  (draw-line 10 30 300 100)
+  (draw-line 10 30 100 300)
+
+  (loop
+    :for font in '(
+                   ("Monaco" 18 :plain :srcor)
+                   ("Helvetica" 18 :plain :srcor)
+                   ("Maestro" 18 :plain :srcor)
+                   )
+    :for y :from 30 :by 30
+    :do (set-view-font *w* font)
+        (print (view-font-codes *w*))
+        (draw-string 10 y (format nil "~A ~A" (first font)  "=="))))
+
+
+(eql view *current-view*)
+(view-font-codes *w*)
+(multiple-value-call (function font-descriptor-from-codes) (view-font-codes *w*))
+
+
+
+
+
+(let ((output-stream
+        (make-output-filter-stream
+         nil
+         (lambda (operation queue &rest arguments)
+           (declare (ignore queue))
+           (ecase operation
+             ;; character
+             (write-char     (ccl:process-interrupt (gui::top-listener-process)
+                                                    (function write-char)
+                                                    (first arguments)))
+             (write-string   (ccl:process-interrupt (gui::top-listener-process)
+                                                    (function write-string)
+                                                    (subseq (first arguments)
+                                                            (second arguments)
+                                                            (third arguments))))
+             ;; both:
+             ;; (read-sequence        (read-sequence     (first arguments) stream :start (second arguments) :end (third arguments)))
+             (write-sequence (ccl:process-interrupt (gui::top-listener-process)
+                                                    (function write-string)
+                                                    (coerce (subseq (first arguments)
+                                                                    (second arguments)
+                                                                    (third arguments))
+                                                            'string)))
+             (close          #|ignore|#)))
+         :element-type 'character)))
+  (lambda ()
+    output-stream))
+
+(let* ((queue (setf *listener-io-queue* (make-queue "Output")))
+       (default-stream
+         (make-output-filter-stream
+          queue
+          (lambda (operation queue &rest arguments)
+            (ecase operation
+              ;; character
+              (write-char     (enqueue queue (string (first arguments))))
+              (write-string   (enqueue queue (subseq (first arguments) (second arguments) (third arguments))))
+              ;; both:
+              ;; (read-sequence        (read-sequence     (first arguments) stream :start (second arguments) :end (third arguments)))
+              (write-sequence (enqueue queue (coerce (subseq (first arguments) (second arguments) (third arguments))
+                                                     'string)))
+              (close          #|ignore|#)))
+          :element-type 'character)))
+  (lambda ()
+    (let ((output-stream (output-stream)))
+      (if output-stream
+          (progn
+            (loop
+              :until (queue-emptyp queue)
+              :do (let ((text (dequeue queue)))
+                    (write-string text output-stream))
+              :finally (force-output output-stream))
+            output-stream)
+          default-stream))))
+
+;; (dolist (stream-var '(*terminal-io*
+;;                       *standard-input*
+;;                       *standard-output*
+;;                       *error-output*
+;;                       *trace-output*
+;;                       *query-io*
+;;                       *debug-io*
+;;                       ui::*application-io*))
+;;   (format t "~40A = ~S~%" stream-var (symbol-value stream-var)))
+;;
+;; (ui::print-backtrace)
+;; (format t "~2%~S~%" (bt:current-thread))
