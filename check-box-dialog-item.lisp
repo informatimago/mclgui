@@ -73,6 +73,62 @@ checkboxes.
   (when (check-box-checked-p item)
     (check-box-check item)))
 
+(defconstant +check-box-side+     11 "Side of the check-box square.")
+(defconstant +check-box-interval+  3 "Space between the square and the text.")
+
+(defmethod view-draw-contents ((item check-box-dialog-item))
+  (with-focused-dialog-item (item)
+    (let* ((frame   (view-frame item))
+           (x       (rect-left   frame))
+           (y       (rect-top    frame))
+           (w       (rect-width  frame))
+           (h       (rect-height frame))
+           (grayp   (not (dialog-item-enabled-p item)))
+           (state   (control-hilite-state item))
+           (checked (check-box-checked-p item)))
+
+      ;; box on the left of the label
+      ;; state /= 0 => bold box
+      ;; checked => cross in the box
+      (multiple-value-bind (fa fd fw fl) (font-info)
+        (declare (ignore fw fl))
+        (let* ((th (round (+ fa fd)))
+               (ta (round fa))
+               (cx x)
+               (cy (if (<= h 11)
+                       y
+                       (+ y (truncate (- h 11) 2))))
+               (cw (if (<= h 11)
+                       h
+                       11))
+               (ch (if (<= h 11)
+                       h
+                       11))
+               (tx (+ cx cw 3))
+               (ty (+ y (truncate (- h th) 2) ta)))
+          (with-slots (color-list) item
+            (with-fore-color (or (getf color-list :frame nil) *black-color*)
+              (with-back-color (or (getf color-list :body  nil) *white-color*)
+                ;; check-box square:
+                (with-pen-state (:size    (if (zerop state)
+                                              #@(1 1)
+                                              #@(2 2))
+                                 :pattern (if grayp
+                                              *gray-pattern*
+                                              *black-pattern*))
+                  (draw-rect* cx cy cw ch))
+                (with-pen-state (:size    #@(1 1)
+                                 :pattern (if grayp
+                                              *gray-pattern*
+                                              *black-pattern*))
+                  (when checked
+                    ;; check-box cross:
+                    (draw-line cx cy (+ cx cw -1) (+ cy ch -1))
+                    (draw-line cx (+ cy ch -1) (+ cx cw -1) cy))
+                  (let ((text (dialog-item-text item)))
+                    #+debug-view (format-trace '(view-draw-contents check-box-dialog-item) (dialog-item-text item))
+                    ;; always left-aligned
+                    (draw-text tx (- ty ta) (- w (- tx x)) th text)))))))))))
 
 
 (defgeneric check-box-check (item)
