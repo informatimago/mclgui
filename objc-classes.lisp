@@ -989,10 +989,10 @@ DO:             Evaluates the BODY in a lexical environment where
   resultType:(:void)
   body:
   (with-event-environment
-    (format-trace "~S --> ~S~%" self (evaluator-thunk self))
+    ;; (format-trace "~S --> ~S~%" self (evaluator-thunk self))
     (if (evaluator-thunk self)
         (funcall (evaluator-thunk self))
-        (warn "Evaluator got a NIL thunk")))]
+        (warn "Evaluator got a NIL thunk.")))]
 
 
 
