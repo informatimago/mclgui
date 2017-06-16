@@ -1565,6 +1565,7 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
           (rplacd (rplaca codes ff) ms))
         (view-put view 'view-font-codes (cons ff ms)))
     (when (eql view *current-view*)
+      ;; We may call set-font only when the view is the *current-view*.
       ;; TODO: See if we shouldn't just refocus-view or focus-view?
       (setf *current-font-view*  view)
       (setf *current-font-codes* (set-font view)))
@@ -1612,8 +1613,12 @@ VIEW:           A simple view.
 
 (defgeneric set-initial-view-font (view font-spec)
   (:method ((view simple-view) font-spec)
-    (set-view-font view font-spec)))
-
+    ;; When setting the initial view-font, the window backend is not
+    ;; available yet, so we cannot call set-font.  To avoid doing so,
+    ;; we bind *current-view* to nil here, and test it in
+    ;; set-view-font-codes methods.
+    (let ((*current-view* nil))
+      (set-view-font view font-spec))))
 
 
 (defgeneric view-cursor (view point)

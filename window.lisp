@@ -41,6 +41,7 @@
 (enable-sharp-at-reader-macro)
 
 
+
 (defvar *window-list* '()
   "A list of window instances.")
 
@@ -104,6 +105,7 @@ WINDOW:         A window.
     ;; (format-trace 'wrap nswindow)
     (or (find nswindow *window-list* :key (function handle))
         (make-instance 'hemlock-frame :handle nswindow))))
+
 
 ;;;---------------------------------------------------------------------
 
@@ -367,8 +369,6 @@ INCLUDE-WINDOIDS
                 included.  Floating windows are also included if the
                 value of the CLASS argument is WINDOID.
 "
-
-
   ;; We don't care about the array, just that the window instances be updated:
   ;; (wrap [[NSApplication sharedApplication] orderedWindows])
   ;; Instead, let's avoid creating window instance for NSWindows and NSPanel we don't manage.
@@ -383,7 +383,6 @@ INCLUDE-WINDOIDS
                          (or include-invisibles
                              (window-visiblep window)))))
              (copy-list *window-list*)))
-
 
 
 (defun front-window (&key (class 'window) include-invisibles include-windoids)
@@ -1322,11 +1321,12 @@ RETURN:         A BOOLEAN value indicating whether view can perform
 ;;;---------------------------------------------------------------------
 ;;; Fonts
 
-(defmethod set-view-font-codes ((w window) ff ms &optional ff-mask ms-mask)
+(defmethod set-view-font-codes :after ((w window) ff ms &optional ff-mask ms-mask)
   (declare (ignorable ff ms ff-mask ms-mask))
   (format-trace '(set-view-font-codes window) :ff ff :ms ms :ff-mask ff-mask :ms-mask ms-mask)
-  (call-next-method)
-  (values-list (set-font w)))
+  (when (eql w *current-view*)
+    ;; We may call set-font only when the view is the *current-view*.
+    (set-font w)))
 
 ;;;---------------------------------------------------------------------
 ;;; Colors

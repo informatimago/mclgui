@@ -228,4 +228,45 @@ recent outstanding catch-cancel.
          (setf ,vitems ,vcurrent))
        (pop ,vcurrent))))
 
+
+
+;;; Debugging definition macros:
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun generate-traced-body (name body)
+    `(unwind-protect
+          (progn
+            (#_NSLog (objcl:objc-string ,(format nil "(~A" name)))
+            ,@body)
+       (#_NSLog (objcl:objc-string ")")))))
+
+(defmacro defun* (name (&rest lambda-list) &body declandbody)
+  (multiple-value-bind (docstring declarations body) (parse-body :lambda declandbody)
+    `(defun ,name ,lambda-list ,@docstring ,@declarations
+       ,(generate-traced-body name body))))
+
+(defmacro defmethod* (name &rest stuff)
+  (let ((qualifier   (if (symbolp (car stuff))
+                         (list (pop stuff))
+                         nil))
+        (lambda-list (pop stuff)))
+    (multiple-value-bind (docstring declarations body) (parse-body :lambda stuff)
+      `(defmethod ,name ,@qualifier ,lambda-list ,@docstring ,@declarations
+         ,(generate-traced-body name body)))))
+
+(defmacro defgeneric* (name (&rest lambda-list) &rest clauses)
+  `(defgeneric ,name ,lambda-list
+     ,@(mapcar (lambda (clause)
+                 (if (eq :method (first clause))
+                     (progn (pop clause)
+                            (let ((qualifier   (if (symbolp (car clause))
+                                                   (list (pop clause))
+                                                   nil))
+                                  (lambda-list (pop clause)))
+                              (multiple-value-bind (docstring declarations body) (parse-body :lambda clause)
+                                `(:method ,@qualifier ,lambda-list ,@docstring ,@declarations
+                                   ,(generate-traced-body name body)))))
+                     clause))
+               clauses)))
+
 ;;;; THE END ;;;;
