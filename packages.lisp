@@ -508,6 +508,17 @@
    "EVAL-ENQUEUE" "GET-NEXT-QUEUED-FORM"
    "WITH-TIMER"
 
+   ;; Extensions:
+
+   "*CROSS-CURSOR*"
+   "*PLUS-CURSOR*"
+   "*TOP-PS-CURSOR*"
+   "*BOTTOM-PS-CURSOR*"
+   "*LEFT-PS-CURSOR*"
+   "*RIGHT-PS-CURSOR*"
+   "*VERTICAL-PS-CURSOR*"
+   "*HORIZONTAL-PS-CURSOR*"
+
    ;; ----------------------------------------
    ;; Chapter 11: Apple Events
    ;; ----------------------------------------
@@ -618,6 +629,9 @@
    "WPTR"         ; this one won't be implemented, change the sources!
    )
 
+  (:export ;; RESOURCES
+   "GET-RESOURCE"
+   "REGISTER-RESOURCE")
 
   (:export ;; EVENTS
    "NULL-EVENT" "MOUSE-DOWN" "MOUSE-UP" "KEY-DOWN" "KEY-UP" "AUTO-KEY"

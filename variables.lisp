@@ -424,6 +424,17 @@ The *i-beam-cursor* variable specifies the I-beam shape used when
 the cursor is over an area of editable text.
 ")
 
+(defvar *cross-cursor* nil
+  "
+The *cross-cursor* variable specifies the cross-hair shape used when
+the cursor is over an area of editable graphics.
+")
+
+(defvar *plus-cursor* nil
+  "
+The *plus-cursor* variable specifies the plus shape used when
+the cursor is over a table of cells.
+")
 
 (defvar *watch-cursor*  nil
   "

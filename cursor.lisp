@@ -128,8 +128,9 @@ RETURN:         A newly allocated bit16 containing the data of the
 ;;       :data
 ;;       :mask)))
 
-
-
+(defun get-cursor (id)
+  (handler-case (get-resource "CURS" id)
+    (error () nil)))
 
 (defgeneric set-cursor (cursor)
   (:documentation
@@ -147,10 +148,12 @@ NOTE:           If set-cursor is called from anywhere except within a
                 taken.  To prevent the system from hanging at cursor
                 update time, no error is signaled.
 ")
-  (:method ((cursor t))
-    (error "~S: Setting a cursor by resource ID is not implemented." 'set-cursor))
+  (:method ((id integer))
+    (let ((cursor (get-cursor id)))
+      (when cursor
+        (set-cursor cursor))))
   (:method ((cursor cursor))
-    ;; (format-trace "set-cursor" cursor)
+    (format-trace "set-cursor" cursor)
     (setf *current-cursor* cursor)
     (unless (handle cursor)
       (update-handle cursor))
@@ -299,7 +302,76 @@ CURSOR:         A cursor structure, or a cursor hook function used to
                                        #*0000111011100000)
                                      (#/IBeamCursor ns:ns-cursor))
 
-        *watch-cursor*  (make-cursor "Watch" 11 7
+        *cross-cursor*  (make-cursor "cross" 7 7
+                                     #(#*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*1111111111111110
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000100000000
+                                       #*0000000000000000)
+                                     #(#*0000001110000000
+                                       #*0000001110000000
+                                       #*0000001110000000
+                                       #*0000001110000000
+                                       #*0000001110000000
+                                       #*0000001110000000
+                                       #*1111111111111110
+                                       #*1111111011111110
+                                       #*1111111111111110
+                                       #*0000001110000000
+                                       #*0000001110000000
+                                       #*0000001110000000
+                                       #*0000001110000000
+                                       #*0000001110000000
+                                       #*0000001110000000
+                                       #*0000000000000000)
+                                     [NSCursor crosshairCursor])
+
+        *plus-cursor*  (make-cursor "plus" 6 7
+                                    #(#*0000000000000000
+                                      #*0000111110000000
+                                      #*0000100011000000
+                                      #*0000100011000000
+                                      #*0000100011000000
+                                      #*1111100011111000
+                                      #*1000011100001100
+                                      #*1000010100001100
+                                      #*1000011100001100
+                                      #*1111100011111100
+                                      #*1111100011111100
+                                      #*0000100011000000
+                                      #*0000100011000000
+                                      #*0000111111000000
+                                      #*0000011111000000
+                                      #*0000000000000000)
+                                    #(#*0000000000000000
+                                      #*0000111110000000
+                                      #*0000111111000000
+                                      #*0000111111000000
+                                      #*0000111111000000
+                                      #*1111111111111000
+                                      #*1111111111111100
+                                      #*1111111111111100
+                                      #*1111111111111100
+                                      #*1111111111111100
+                                      #*1111111111111100
+                                      #*0000111111000000
+                                      #*0000111111000000
+                                      #*0000111111000000
+                                      #*0000011111000000
+                                      #*0000000000000000))
+
+        *watch-cursor*  (make-cursor "watch" 11 7
                                      #(#*0001111110000000
                                        #*0001111110000000
                                        #*0001111110000000
@@ -365,7 +437,8 @@ CURSOR:         A cursor structure, or a cursor hook function used to
                                             #*0000001111100000
                                             #*0000000111000000
                                             #*0000000010000000
-                                            #*0000000000000000))
+                                            #*0000000000000000)
+                                          [NSCursor resizeUpDownCursor])
 
         *horizontal-ps-cursor* (make-cursor "horizontal-pane-separator" 8 7
                                             #(#*0000000000000000
@@ -399,7 +472,8 @@ CURSOR:         A cursor structure, or a cursor hook function used to
                                               #*0000011111000000
                                               #*0000011111000000
                                               #*0000011111000000
-                                              #*0000000000000000))
+                                              #*0000000000000000)
+                                            [NSCursor resizeLeftRightCursor])
 
         *top-ps-cursor* (make-cursor "top-pane-separator" 7 2
                                      #(#*0000000000000000
@@ -433,7 +507,8 @@ CURSOR:         A cursor structure, or a cursor hook function used to
                                        #*0000000000000000
                                        #*0000000000000000
                                        #*0000000000000000
-                                       #*0000000000000000))
+                                       #*0000000000000000)
+                                     [NSCursor resizeDownCursor])
 
         *bottom-ps-cursor* (make-cursor "bottom-pane-separator" 7 7
                                         #(#*0000000000000000
@@ -467,7 +542,8 @@ CURSOR:         A cursor structure, or a cursor hook function used to
                                           #*0000000000000000
                                           #*0000000000000000
                                           #*0000000000000000
-                                          #*0000000000000000))
+                                          #*0000000000000000)
+                                        [NSCursor resizeUpCursor])
 
         *left-ps-cursor*  (make-cursor "left-pane-separator" 2 7
                                        #(#*0000000000000000
@@ -501,7 +577,8 @@ CURSOR:         A cursor structure, or a cursor hook function used to
                                          #*1111100000000000
                                          #*1111100000000000
                                          #*1111100000000000
-                                         #*0000000000000000))
+                                         #*0000000000000000)
+                                       [NSCursor resizeRightCursor])
 
         *right-ps-cursor* (make-cursor "right-pane-separator" 7 7
                                        #(#*0000000000000000
@@ -535,11 +612,15 @@ CURSOR:         A cursor structure, or a cursor hook function used to
                                          #*0000011111000000
                                          #*0000011111000000
                                          #*0000011111000000
-                                         #*0000000000000000))
+                                         #*0000000000000000)
+                                       [NSCursor resizeLeftCursor])
 
         *cursorhook*     *arrow-cursor*
         *current-cursor* *arrow-cursor*)
-    (update-cursor))
-
+  (register-resource "CURS" 1 *i-beam-cursor*)
+  (register-resource "CURS" 2 *cross-cursor*)
+  (register-resource "CURS" 3 *plus-cursor*)
+  (register-resource "CURS" 4 *watch-cursor*)
+  (update-cursor))
 
 ;;;; THE END ;;;;

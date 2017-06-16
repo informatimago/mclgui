@@ -378,10 +378,14 @@
                              "view-event" "event" "application"))
 
 
+               (:file "resource"
+                :depends-on ("packages"))
+
                (:file "cursor"
                 :depends-on ("packages"
                              "macros" "variables" "point"
-                             "wrapper" "pattern" "readtable"))
+                             "wrapper" "pattern" "readtable"
+                             "resource"))
 
                (:file "scrap"
                 :depends-on ("packages"
