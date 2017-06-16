@@ -46,21 +46,29 @@
   (draw-string x y (string cn)))
 
 
+(defun maestro-string (string)
+  (map 'string (lambda (ch) (code-char (+ #xf000 (char-code ch)))) string))
+
 (defun draw-string (x y str)
   #+debug-graphics (format-trace "draw-string" x y str *current-view* (when *current-view* (view-window *current-view*)))
   (destructuring-bind (ff ms) *current-font-codes*
     (multiple-value-bind (descriptor mode) (font-descriptor-from-codes ff ms)
       (declare (ignore mode)) ; TODO: manage mode (:srcOr …)
-      ;; (print descriptor)
-      ;; [context setCompositingOperation:(mode-to-compositing-operation (pen-mode pen))]
-      ;; (format-trace "draw-string" x y str [descriptor fontAttributes])
-      (multiple-value-bind (a d w l) (font-codes-info ff ms)
-        (declare (ignore w l))
-        ;; (format-trace "draw-string" a d w l)
-        ;; the origin of the bounding box.  topleft in flipped coordinates.
-        [(objcl:objc-string str)
-         drawAtPoint: (ns:make-ns-point x (- y a d))
-         withAttributes:  [descriptor fontAttributes]])))
+      (let* ((attributes  [descriptor fontAttributes])
+             (name        [attributes objectForKey:(objcl:objc-string NSFontNameAttribute)])
+             (shift       (if [name isEqualToString:(objcl:objc-string "Maestro")]
+                              (function maestro-string)
+                              (function identity))))
+        ;; (print descriptor)
+        ;; [context setCompositingOperation:(mode-to-compositing-operation (pen-mode pen))]
+        ;; (format-trace "draw-string" x y str [descriptor fontAttributes])
+        (multiple-value-bind (a d w l) (font-codes-info ff ms)
+          (declare (ignore w l))
+          ;; (format-trace "draw-string" a d w l)
+          ;; the origin of the bounding box.  topleft in flipped coordinates.
+          [(objcl:objc-string (funcall shift str))
+           drawAtPoint: (ns:make-ns-point x (- y a d))
+           withAttributes: attributes]))))
   str)
 
 

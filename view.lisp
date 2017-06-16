@@ -232,7 +232,7 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 "
   (multiple-value-bind (ff ms) (when font-view
                                  (view-font-codes font-view))
-    (let ((ff (or ff 65536)) ; application-font
+    (let ((ff (or ff 65536))            ; application-font
           (ms (or ms 0)))
       (multiple-value-bind (font mode) (font-from-codes ff ms)
         (declare (ignorable mode))
@@ -371,7 +371,9 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
                          (let ((*current-view*      view)
                                (*current-font-view* font-view)
                                (*current-font-codes* (copy-list *current-font-codes*)))
-                           (unless same-font (apply (function set-current-font-codes) (set-font *current-font-view*)))
+                           (unless same-font
+                             (apply (function set-current-font-codes)
+                                    (set-font *current-font-view*)))
                            (call-it)))
                     (when unlock
                       (refocus-view *current-view*)
@@ -1562,6 +1564,10 @@ VISRGN, CLIPRGN Region records from the view’s wptr.
                        ms)))
           (rplacd (rplaca codes ff) ms))
         (view-put view 'view-font-codes (cons ff ms)))
+    (when (eql view *current-view*)
+      ;; TODO: See if we shouldn't just refocus-view or focus-view?
+      (setf *current-font-view*  view)
+      (setf *current-font-codes* (set-font view)))
     (values ff ms)))
 
 
