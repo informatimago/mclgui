@@ -99,6 +99,74 @@ govern the behavior of radio buttons.
     (when (or first (radio-button-pushed-p item))
       (radio-button-push item))))
 
+(defconstant +radio-button-diameter+ 11 "Diameter of the radio button circle.")
+(defconstant +radio-button-interval+  3 "Space between the circle and the text.")
+(defconstant +radio-button-inset+     2 "Inset for the dot inside the circle.")
+
+(defmethod view-draw-contents ((item radio-button-dialog-item))
+  (with-focused-dialog-item (item)
+    (let* ((frame  (view-frame item))
+           (x      (rect-left   frame))
+           (y      (rect-top    frame))
+           (w      (rect-width  frame))
+           (h      (rect-height frame))
+           (grayp  (not (dialog-item-enabled-p item)))
+           (state  (control-hilite-state item))
+           (pushed (radio-button-pushed-p item)))
+
+      ;; circle on the left of the label
+      ;; state /= 0 => bold circle
+      ;; pushed => dot in the circle
+      (multiple-value-bind (fa fd fw fl) (font-info)
+        (declare (ignore fw fl))
+        (let* ((th (round (+ fa fd)))
+               (ta (round fa))
+               (cx x)
+               (cy (if (<= h +radio-button-diameter+)
+                       y
+                       (+ y (truncate (- h +radio-button-diameter+) 2))))
+               (cw (if (<= h +radio-button-diameter+)
+                       h
+                       +radio-button-diameter+))
+               (ch (if (<= h +radio-button-diameter+)
+                       h
+                       +radio-button-diameter+))
+               (tx (+ cx cw +radio-button-interval+))
+               (ty (+ y (truncate (- h th) 2) ta)))
+          (with-slots (color-list) item
+            (with-fore-color (or (getf color-list :frame nil) *black-color*)
+              (with-back-color (or (getf color-list :body  nil) *white-color*)
+                ;; radio-button circle:
+                (with-pen-state (:size    (if (zerop state)
+                                              #@(1 1)
+                                              #@(2 2))
+                                 :pattern (if grayp
+                                              *gray-pattern*
+                                              *black-pattern*))
+                  (draw-ellipse cx cy cw ch))
+                (with-pen-state (:size    #@(1 1)
+                                 :pattern (if grayp
+                                              *gray-pattern*
+                                              *black-pattern*))
+                  (when pushed
+                    ;; radio-button dot:
+                    (fill-ellipse (+ cx +radio-button-inset+)
+                                  (+ cy +radio-button-inset+)
+                                  (- cw (* 2 +radio-button-inset+))
+                                  (- ch (* 2 +radio-button-inset+))))
+                  (let ((text (dialog-item-text item)))
+                    #+debug-view (format-trace '(view-draw-contents radio-button-dialog-item) (dialog-item-text item))
+                    ;; always left-aligned
+                    (draw-text tx (- ty ta) (- w (- tx x)) th text)))))))))))
+
+
+;; (defmethod view-click-event-handler ((item radio-button-dialog-item) where)
+;; ;; TODO: implement
+;; (when (dialog-item-enabled-p item)
+;;   (setf (control-hilite-state item) 1)
+;;   track push/unpush
+;;   (setf (control-hilite-state item) 0))
+;;   )
 
 (defmethod dialog-item-action ((item radio-button-dialog-item))
   (radio-button-push item)
@@ -138,20 +206,16 @@ ITEM:           A radio-button dialog item.
 ")
   (:method ((item radio-button-dialog-item))
     (let ((cluster      (radio-button-cluster item))
-          (container    (view-container item))
-          ;; (handle (dialog-item-handle item))
-          )
+          (container    (view-container item)))
       (when container
         (do-dialog-items (other-item container 'radio-button-dialog-item)
           (when (and (not (eql other-item item))
                      (eql (radio-button-cluster other-item) cluster))
             (radio-button-unpush other-item)))
-        (niy radio-button-push item)
-        ;; (when (and handle (installed-item-p item))
-        ;;   (with-focused-dialog-item (item container)
-        ;;     (#_SetControlValue (dialog-item-handle item) 1)))
-        )
-      (setf (radio-button-pushed-p item) t))))
+        (setf (radio-button-pushed-p item) t)
+        (when (installed-item-p item)
+          (with-focused-dialog-item (item container)
+            (view-draw-contents item)))))))
 
 
 (defgeneric radio-button-unpush (item)
@@ -162,12 +226,11 @@ and returns NIL.
 ITEM:           A radio-button dialog item.
 ")
   (:method ((item radio-button-dialog-item))
-    (niy radio-button-unpush item)
-    ;; (let ((handle (dialog-item-handle item)))
-    ;;   (when (and handle (installed-item-p item))
-    ;;     (with-focused-dialog-item (item)
-    ;;       (#_SetControlValue (dialog-item-handle item) 0))))
-    (setf (radio-button-pushed-p item) nil)))
+    (let ((container    (view-container item)))
+      (setf (radio-button-pushed-p item) nil)
+      (when (installed-item-p item)
+        (with-focused-dialog-item (item container)
+          (view-draw-contents item))))))
 
 
 ;;;; THE END ;;;;
