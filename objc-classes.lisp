@@ -779,32 +779,37 @@ DO:             Evaluates the BODY in a lexical environment where
 
 (defun needs-to-draw-rect (window rect)
   (with-event-environment
-    #+(and debug-objc debug-view) (format-trace 'needs-to-draw-rect :posi (point-to-list (rect-topleft rect)) :size (point-to-list (rect-size rect)) :win window)
+    ;; #+(and debug-objc debug-view)
+    (format-trace 'needs-to-draw-rect :posi (point-to-list (rect-topleft rect)) :size (point-to-list (rect-size rect)) :win window)
     (with-handle (winh window)
       [[winh contentView] setNeedsDisplayInRect:(unwrap (rect-to-nsrect rect))]
       ;; [winh setViewsNeedDisplay:yes]
-      #+debug-views (format-trace 'needs-to-draw-rect [winh viewsNeedDisplay]))))
+      ;; #+debug-views
+      (format-trace 'needs-to-draw-rect [winh viewsNeedDisplay]))))
 
 (defun does-not-need-to-display (window)
   (with-event-environment
-    #+(and debug-objc debug-view) (format-trace 'does-not-need-to-display :win window)
+    ;; #+(and debug-objc debug-view)
+    (format-trace 'does-not-need-to-display :win window)
     (with-handle (winh window)
       [[winh contentView] setNeedsDisplay:no]
       [winh setViewsNeedDisplay:no]
-      #+debug-view (format-trace 'does-not-need-to-display [winh viewsNeedDisplay]))))
+      ;; #+debug-view
+      (format-trace 'does-not-need-to-display [winh viewsNeedDisplay]))))
 
 (defun needs-to-display (window)
   (with-event-environment
-    #+(and debug-objc debug-view) (format-trace 'needs-to-display :win window)
     (with-handle (winh window)
       [[winh contentView] setNeedsDisplay:yes]
-      ;; [winh setViewsNeedDisplay:yes]
-      #+debug-views (format-trace 'needs-to-display [winh viewsNeedDisplay]))))
+      [winh setViewsNeedDisplay:yes])))
 
 (defun needs-to-display-p (window)
   (with-event-environment
     (with-handle (winh window)
-      [winh viewsNeedDisplay])))
+      (let ((contents-needs [[winh contentView] needsDisplay])
+            (window-needs   [winh viewsNeedDisplay]))
+        (values (or contents-needs window-needs)
+                window-needs)))))
 
 ;;;------------------------------------------------------------
 ;;; MclguiView
@@ -838,37 +843,49 @@ DO:             Evaluates the BODY in a lexical environment where
          :height (ccl:pref prect :<nsr>ect.size.height))
   #-ccl prect)
 
+
+(defun mclguiview-draw-rect (self rect)
+  (let* ((window (nsview-view self))
+         (nsrect (*nsrect-to-nsrect rect))
+         (visrgn (rect-region (nsrect-to-rect nsrect))))
+    (when window
+      ;; (break "drawRect:")
+      ;; #+debug-objc
+      ;; (with-handle (winh window)
+      ;;                (format-trace "progn (-[MclguiView drawRect:]"
+      ;;                              [winh viewsNeedDisplay] [[winh contentView] needsDisplay]
+      ;;                              nsrect self))
+      ;; #+debug-objc
+      ;; (progn
+      ;;   (format-trace ":vis-region"     (rect-to-list (region-bounds visrgn)))
+      ;;   (format-trace ":invalid-region" (rect-to-list (region-bounds (window-invalid-region window))))
+      ;;   (format-trace ":erase-region"   (rect-to-list (region-bounds (window-erase-region   window)))))
+      (let ((erase-region  (window-erase-region window)))
+        (unless (empty-region-p erase-region)
+          (erase-region window erase-region)
+          (set-rect-region (window-erase-region window) 0 0 0 0)))
+      (let ((invalid-region  (window-invalid-region window)))
+        (declare (ignorable invalid-region))
+        (ui::with-error-file
+          (format *trace-output* "invalid-region = ~S" invalid-region))
+        (view-focus-and-draw-contents window visrgn visrgn)
+        ;; (unless (empty-region-p invalid-region)
+        ;;   (view-focus-and-draw-contents window visrgn invalid-region #|(view-clip-region window)|#))
+        )
+      ;; #+debug-objc
+      ;; (with-handle (winh window)
+      ;;   (format-trace "-[MclguiView drawRect:])"
+      ;;                 [winh viewsNeedDisplay]
+      ;;                 [[winh contentView] needsDisplay]))
+      )))
+
+
 @[MclguiView
   method:(drawRect:(:<NSR>ect)rect)
   resultType:(:void)
   body:
   (with-event-environment
-    (let* ((window (nsview-view self))
-           (nsrect (*nsrect-to-nsrect rect))
-           (visrgn (rect-region (nsrect-to-rect nsrect))))
-      (when window
-        #+debug-objc (with-handle (winh window)
-                       (format-trace "progn (-[MclguiView drawRect:]"
-                                     [winh viewsNeedDisplay] [[winh contentView] needsDisplay]
-                                     nsrect self))
-        #+debug-objc (progn
-                       (format-trace ":vis-region"     (rect-to-list (region-bounds visrgn)))
-                       (format-trace ":invalid-region" (rect-to-list (region-bounds (window-invalid-region window))))
-                       (format-trace ":erase-region"   (rect-to-list (region-bounds (window-erase-region   window)))))
-        (let ((erase-region  (window-erase-region window)))
-          (unless (empty-region-p erase-region)
-            (erase-region window erase-region)
-            (set-rect-region (window-erase-region window) 0 0 0 0)))
-        (let ((invalid-region  (window-invalid-region window)))
-          (declare (ignorable invalid-region))
-          (view-focus-and-draw-contents window visrgn visrgn)
-          #-(and)
-          (unless (empty-region-p invalid-region)
-            (view-focus-and-draw-contents window visrgn invalid-region #|(view-clip-region window)|#)))
-        #+debug-objc (with-handle (winh window)
-                       (format-trace "-[MclguiView drawRect:])"
-                                     [winh viewsNeedDisplay]
-                                     [[winh contentView] needsDisplay])))))]
+    (mclguiview-draw-rect self rect))]
 
 @[MclguiView
   method:(mouseDown:(:id)event)
