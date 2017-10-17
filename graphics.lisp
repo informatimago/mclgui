@@ -155,17 +155,31 @@
 
 (defun draw-rect* (x y w h)
   #+debug-graphics (format-trace "draw-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
+  (unless *current-view*
+    (print-backtrace)
+    (format *error-output* "~&draw-rect* with null *current-view*!")
+    (finish-output *error-output*))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
         (let* ((pen  (view-pen window))
                (size (pen-size pen)))
+          ;; (print (list '(and (= #@(1 1) size)
+          ;;                (eql *black-pattern* (pen-state-pattern pen)))
+          ;;              (and (= #@(1 1) size)
+          ;;                   (eql *black-pattern* (pen-state-pattern pen)))
+          ;;              size (pen-state-pattern pen))
+          ;;        *trace-output*)
+          ;; (terpri *trace-output*)
+          ;; (print (bt:current-thread) *trace-output*)
+          ;; (terpri *trace-output*)
           (if (and (= #@(1 1) size)
                    (eql *black-pattern* (pen-state-pattern pen)))
               (#_NSFrameRect (ns:make-ns-rect x y w h))
               (let ((path [NSBezierPath bezierPath])
                     (sx (point-h size))
                     (sy (point-v size)))
+                ;; (#_NSFrameRect (ns:make-ns-rect x y w h))
                 [path setLineCapStyle:#$NSSquareLineCapStyle]
                 ;; external border
                 [path moveToPoint:(ns:make-ns-point x y)]
