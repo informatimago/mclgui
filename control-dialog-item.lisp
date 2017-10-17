@@ -59,6 +59,7 @@
 
 
 (defmethod  install-view-in-window :after ((button control-dialog-item) w)
+  (declare (ignorable button w))
   (when (and (not (typep button 'scroll-bar-dialog-item)))
     (let ((text (dialog-item-text button)))
       (when text
@@ -70,7 +71,7 @@
 
 
 (defmethod set-view-font-codes :after ((button control-dialog-item) ff ms &optional m1 m2)
-  ;; (declare (ignore ff ms m1 m2))
+  (declare (ignorable button ff ms m1 m2))
   (niy set-view-font-codes :after button ff ms m1 m2)
   #-(and)
   (when (and (not (typep button 'scroll-bar-dialog-item))
@@ -105,6 +106,7 @@
 
 
 (defmethod install-view-in-window :before ((dialog-item control-dialog-item) dialog)
+  (declare (ignorable dialog-item dialog))
   (set-default-size-and-position dialog-item (view-container dialog-item))
   (niy install-view-in-window dialog-item dialog)
   #-(and)
@@ -253,6 +255,7 @@
 
 
 (defun font-codes-string-width-for-control (string ff ms &optional (start 0) (end (length string)))
+  (declare (ignorable  string ff ms start end))
   (niy font-codes-string-width-for-control string ff ms start end)
   #-(and) (with-port  %temp-port%
             (with-font-codes ff ms
@@ -288,7 +291,7 @@
 (defgeneric hilite-control (control-item state))
 
 (defmethod hilite-control ((item control-dialog-item) state)
-  (format-trace 'hilite-control :state state :item item :deferred *deferred-drawing*)
+  #+debug-dialog-item (format-trace 'hilite-control :state state :item item :deferred *deferred-drawing*)
   (setf (control-hilite-state item) state)
   (unless *deferred-drawing*
     (with-focused-dialog-item (item)
@@ -297,7 +300,7 @@
 
 (defmethod view-click-event-handler ((item control-dialog-item) where)
   (declare (ignore where))
-  (format-trace '(view-click-event-handler control-dialog-item) "start")
+  #+debug-dialog-item (format-trace '(view-click-event-handler control-dialog-item) "start")
   (loop
     :with frame = (view-frame item)
     :with state = 1
@@ -306,17 +309,17 @@
     :initially (hilite-control item state)
     :do (if (zerop state)
             (when (point-in-rect-p frame mouse)
-              (format-trace "entering" :frame (rect-to-list frame) :mouse (point-to-list mouse))
+              #+debug-dialog-item (format-trace "entering" :frame (rect-to-list frame) :mouse (point-to-list mouse))
               (hilite-control item (setf state 1)))
             (unless (point-in-rect-p frame mouse)
-              (format-trace "exiting"  :frame (rect-to-list frame) :mouse (point-to-list mouse))
+              #+debug-dialog-item (format-trace "exiting"  :frame (rect-to-list frame) :mouse (point-to-list mouse))
               (hilite-control item (setf state 0))))
     :finally (unless (zerop state)
-               (format-trace "acting")
+               #+debug-dialog-item (format-trace "acting")
                (unwind-protect
                     (dialog-item-action item)
                  (hilite-control item 0))))
-  (format-trace '(view-click-event-handler control-dialog-item) "stop"))
+  #+debug-dialog-item (format-trace '(view-click-event-handler control-dialog-item) "stop"))
 
 
 ;;;; THE END ;;;;
