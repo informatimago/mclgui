@@ -54,8 +54,7 @@
       (draw-rect* (point-h where) (point-v where)
                   (+ 10 (point-h where)) (+ 20 (point-v where))))))
 
-(defmethod view-draw-contents ((view instance-drawing-view))
-  (call-next-method)
+(defmethod view-draw-contents :after ((view instance-drawing-view))
   (let ((ui::*allow-print-backtrace* t))
     (ui::with-error-file
       (format *trace-output* "~&~S~%" `(view-draw-contents ,view))
