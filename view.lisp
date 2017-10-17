@@ -1814,7 +1814,7 @@ RETURN:         The cursor shape to display when the mouse is at
   (let ((view (front-window)))
     (with-instance-drawing view
       (with-focused-view view
-        (loop for i from 20 to 200 by 2 do
+        (loop :for i :from 20 :to 200 :by 2 :do
           (sleep 0.1)
           (new-instance view)
           (with-focused-view view
@@ -1825,7 +1825,6 @@ RETURN:         The cursor shape to display when the mouse is at
 ;; (example/instance-drawing/3)
 ;; (example/instance-drawing/2)
 ;; (example/instance-drawing)
-
 
 
 (defun initialize/view ()
