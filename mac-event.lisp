@@ -71,32 +71,44 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
   (format nil "~{~5*~4,'0D-~2:*~2,'0D-~2:*~2,'0D ~2:*~2,'0D:~2:*~2,'0D:~2:*~2,'0D~8*~}"
           (multiple-value-list (decode-universal-time date))))
 
+(defmacro with-error-file (&body body)
+  (let ((verror (gensym)))
+    `(locally
+         (declare (stepper disable))
+       (with-open-file (,verror (error-file-pathname)
+                                :direction :output
+                                :external-format :utf-8
+                                :if-exists :append
+                                :if-does-not-exist :create)
+         (let ((*error-output* ,verror)
+               (*trace-output* ,verror)
+               (*print-length* nil)
+               (*print-level*  nil)
+               (*print-circle* t)
+               (*print-pretty* nil)
+               (*print-case*   :downcase))
+           (format ,verror "~%~A~2%" (date))
+           (print-backtrace ,verror)
+           (unwind-protect (locally ,@body)
+             (finish-output ,verror)))))))
+
+
 (defmacro reporting-errors (&body body)
   (let ((vhandler (gensym)))
     `(block ,vhandler
        (handler-bind ((error (lambda (err)
                                (declare (ignorable err))
                                (declare (stepper disable))
+                               (with-error-file
+                                   (format *error-output* "~%ERROR while ~S:~%~A~2%"
+                                           ',(if (= 1 (length body)) body `(progn ,@body))
+                                           err))
+                               #+report-error-in-dialog
                                (let ((*print-length* nil)
                                      (*print-level*  nil)
                                      (*print-circle* t)
                                      (*print-pretty* nil)
                                      (*print-case*   :downcase))
-                                 (with-open-file (errf (error-file-pathname)
-                                                      :direction :output
-                                                      :external-format :utf-8
-                                                      :if-exists :append
-                                                      :if-does-not-exist :create)
-                                   (let ((errs (make-broadcast-stream errf
-                                                                      *error-output*
-                                                                      *trace-output*)))
-                                     (format errs "~%~A~2%" (date))
-                                     (print-backtrace errs)
-                                     (format errs "~%ERROR while ~S:~%~A~2%"
-                                             ',(if (= 1 (length body)) body `(progn ,@body))
-                                             err)
-                                     (finish-output errs)))
-                                 #+report-error-in-dialog
                                  (window-show
                                   (message-dialog (with-output-to-string (*standard-output*)
                                                     (format t "~%ERROR ~A~%while ~S~2%"
