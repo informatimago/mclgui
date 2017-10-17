@@ -1,6 +1,6 @@
 ;;;; -*- mode:lisp;coding:utf-8 -*-
 ;;;;**************************************************************************
-;;;;FILE:               coordinated-window.lisp
+;;;;FILE:               coordinates-window.lisp
 ;;;;LANGUAGE:           Common-Lisp
 ;;;;SYSTEM:             Common-Lisp
 ;;;;USER-INTERFACE:     MCLGUI
@@ -34,7 +34,17 @@
 ;;;;**************************************************************************
 (defpackage "MCLGUI.EXAMPLE.COORDINATES-WINDOW"
   (:use "COMMON-LISP" "MCLGUI")
-  (:export "COORDINATES-WINDOW"
+  (:export "DRAW-COORDINATES"
+           "ERASE-COORDINATES"
+           "UPDATE-COORDINATES-SIZE"
+           "UPDATE-COORDINATES"
+           "COORDINATES-VIEW"
+           "COORDINATES-ASCENT"
+           "COORDINATES-TEXT"
+           "COORDINATES-VIEW-COORDINATES"
+           "COORDINATES-FILTER"
+           "COORDINATES-WINDOW"
+           "COORDINATES-VIEW"
            "RUN"))
 (in-package "MCLGUI.EXAMPLE.COORDINATES-WINDOW")
 (enable-sharp-at-reader-macro)
@@ -107,23 +117,23 @@
   (multiple-value-call (function inset-corners) #@(-2 -2) (call-next-method)))
 
 
-(defclass coordinated-window (window)
+(defclass coordinates-window (window)
   ((coordinates-view :initarg :coordinates-position
                      :accessor coordinates-view))
   (:default-initargs :window-title "Coordinated Window"
                      :view-size #@(400 300)))
 
-(defmethod initialize-instance :after ((window coordinated-window) &key &allow-other-keys)
+(defmethod initialize-instance :after ((window coordinates-window) &key &allow-other-keys)
   (setf (coordinates-view window) (make-instance 'coordinates-view
                                                  :view-container window))
   (update-coordinates-size (coordinates-view window)))
 
-(defmethod set-view-font-codes :after ((window coordinated-window) ff ms &optional ff-mask ms-mask)
+(defmethod set-view-font-codes :after ((window coordinates-window) ff ms &optional ff-mask ms-mask)
   (declare (ignorable ff ms ff-mask ms-mask))
   (when (slot-boundp window 'coordinates-view)
     (update-coordinates-size (coordinates-view window))))
 
-(defmethod window-null-event-handler ((window coordinated-window))
+(defmethod window-null-event-handler ((window coordinates-window))
   (call-next-method)
   (when (slot-boundp window 'coordinates-view)
     (let ((where (get-mouse))
@@ -132,20 +142,20 @@
         (update-coordinates cview where)
         (view-draw-contents cview)))))
 
-(defmethod view-double-click-event-handler ((window coordinated-window) where)
+(defmethod view-double-click-event-handler ((window coordinates-window) where)
   (when (slot-boundp window 'coordinates-view)
     (set-view-position  (coordinates-view window) where)
     (update-coordinates (coordinates-view window) where))
   (call-next-method)
   window)
 
-(defmethod view-click-event-handler ((window coordinated-window) where)
+(defmethod view-click-event-handler ((window coordinates-window) where)
   (when (slot-boundp window 'coordinates-view)
     (update-coordinates (coordinates-view window) where))
   (call-next-method)
   window)
 
-(defmethod view-draw-contents ((window coordinated-window))
+(defmethod view-draw-contents ((window coordinates-window))
   (when (slot-boundp window 'coordinates-view)
     (update-coordinates (coordinates-view window) (get-mouse)))
   (call-next-method))
@@ -153,7 +163,7 @@
 
 (defun run ()
   (initialize)
-  (let ((win (make-instance 'coordinated-window)))
+  (let ((win (make-instance 'coordinates-window)))
     win))
 
 
