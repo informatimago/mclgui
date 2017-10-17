@@ -1,6 +1,7 @@
--*- mode:org-mode -*-
+-*- mode:rst-mode -*-
 
-* MCLGUI
+MCLGUI
+============================================================
 
 This is an implementation of the MCL GUI (CLOS layer on MacOS
 Toolbox), targetting CCL on MacOSX.
@@ -11,7 +12,10 @@ This library is under the GPL3 license.
 
 
 
-** features used by mclgui
+Features used by MCLGUI
+------------------------------------------------------------
+
+Features: ::
 
     :test                    activate running tests upon loading.
 
@@ -21,7 +25,7 @@ This library is under the GPL3 license.
     :debug-on-error          invokes the debugger when reporting a detected error.
 
 
-The following features produce a lot of trace output.
+The following features produce a lot of trace output. ::
 
     :debug-application       activates debugging application class..
     :debug-event             activates debugging events.
@@ -35,4 +39,25 @@ The following features produce a lot of trace output.
     (pushnew :debug-objc     *features*)
     (pushnew :debug-graphics *features*)
     (pushnew :debug-on-error *features*)
+
+
+Systems
+------------------------------------------------------------
+
+Systems: ::
+
+    :mclgui
+    :mclgui-test
+    :mclgui-examples
+
+Commands: ::
+
+    ;; Loads and run the batch tests:
+    (ql:quickload :mclgui-test)
+    (asdf:oos 'asdf:test-op :mclgui-test)
+
+    ;; Loads and open the example windows:
+    (ql:quickload :mclgui-examples)
+    (asdf:oos 'asdf:test-op :mclgui-examples)
+
 
