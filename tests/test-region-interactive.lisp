@@ -31,7 +31,16 @@
 ;;;;    You should have received a copy of the GNU Affero General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
-(in-package :ui)
+(defpackage "MCLGUI.TEST.INTERACTIVE.REGION"
+  (:use "COMMON-LISP"
+        "MCLGUI"
+        "MCLGUI.EXAMPLE.COORDINATES-WINDOW")
+  (:export "REGION-VIEW"
+           "REGION-TEST-WINDOW"
+           "RUN"))
+(in-package "MCLGUI.TEST.INTERACTIVE.REGION")
+(enable-sharp-at-reader-macro)
+
 
 (defparameter *hole*
   (offset-region
@@ -421,7 +430,7 @@
   (view-draw-contents self))
 
 
-(defclass region-test-window (coordinated-window)
+(defclass region-test-window (coordinates-window)
   ((tests :initform *test/regions* :initarg :test-regions :accessor test-regions)
    (current :initform 0 :accessor test-region-index)
    (region :initarg :region :accessor region-view)
@@ -469,13 +478,19 @@
                        :dialog-item-text "0"))
   (update-test self))
 
+
+(defmethod view-double-click-event-handler ((self region-test-window) where)
+  ;; ignore double-clicks.
+  self)
+
+
 (defmethod view-draw-contents ((self region-test-window))
   (call-next-method)
   (unwind-protect
        (call-next-method)
     (with-focused-view self
       (dovector (view (view-subviews self))
-        (reporting-errors (view-draw-contents view))))))
+        (ui::reporting-errors (view-draw-contents view))))))
 
 (defmethod set-view-size :after ((self region-test-window) h &optional v)
   (declare (ignore h v))
@@ -492,23 +507,33 @@
   (setf (region-view-region (region-view self)) (current-region self)))
 
 
-#-(and) (progn
+(defun run ()
+  (initialize)
+  (let ((win (make-instance 'region-test-window)))
+    (setf (coordinates-filter (find-subview-of-type win 'coordinates-view))
+          (lambda (x y) (values (* 10 (round x 10)) (* 10 (round y 10)))))
+    win))
 
-          (cd #P"~/works/patchwork/src/mclgui/")
-          (pushnew (pwd) asdf:*central-registry* :test (function equal))
-          (ql:quickload :mclgui)
-          (in-package :ui)
-          (initialize)
-          (ql:quickload :mclgui-test)
-          (when (front-window) (window-close (front-window)))
-          (defparameter *w* (make-instance 'region-test-window))
-          (setf (coordinates-filter (find-subview-of-type *w* 'coordinates-view))
-                (lambda (x y) (values (* 10 (round x 10)) (* 10 (round y 10)))))
-          (debug-region (current-region *w*))
-          (setf *speed* 1.0)
 
-          );;progn
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Tracing and Debugging
+;;;
 
+(defvar *w* nil)
+(defvar *speed* 0.0)
+;; (setf *speed* :infinite)
+;; (setf *speed* 0.0)
+;; (setf *speed* 1.0)
+
+(defun trace-path-pause (how path)
+  (case *speed*
+    (:infinite
+     (format *query-io*  "~&pause ~S ~S" how path)
+     (finish-output *query-io*)
+     (read-line *query-io*))
+    (otherwise
+     (sleep *speed*))))
 
 (defun bezier-path-from-tpath (tpath)
   (flet ((tpoint-to-point (tpoint)
@@ -522,20 +547,6 @@
         [path lineToPoint:(tpoint-to-point (tline-to-point line))])
       [path closePath]
       path)))
-
-(defvar *w* nil)
-(defvar *speed* 0.0)
-;; (setf *speed* :infinite)
-;; (setf *speed* 0.0)
-;; (setf *speed* 1.0)
-(defun trace-path-pause (how path)
-  (case *speed*
-    (:infinite
-     (format *query-io*  "~&pause ~S ~S" how path)
-     (finish-output *query-io*)
-     (read-line *query-io*))
-    (otherwise
-     (sleep *speed*))))
 
 (defun trace-path (how path)
   (with-focused-view (or *current-view* *w*)
@@ -563,5 +574,24 @@
           :do (draw-line (tpoint-x from) (tpoint-y from) (tpoint-x to) (tpoint-y to))))))
       (trace-path-pause how path))
 
+
+
+
+#-(and) (progn
+
+          (cd #P"~/works/patchwork/src/mclgui/")
+          (pushnew (pwd) asdf:*central-registry* :test (function equal))
+          (ql:quickload :mclgui)
+          (in-package :ui)
+          (initialize)
+          (ql:quickload :mclgui-test)
+          (when (front-window) (window-close (front-window)))
+          (defparameter *w* (make-instance 'region-test-window))
+          (setf (coordinates-filter (find-subview-of-type *w* 'coordinates-view))
+                (lambda (x y) (values (* 10 (round x 10)) (* 10 (round y 10)))))
+          (debug-region (current-region *w*))
+          (setf *speed* 1.0)
+
+          )
 
 ;;;; THE END ;;;;
