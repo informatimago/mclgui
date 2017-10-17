@@ -652,15 +652,18 @@
 
   (:export ;; view extensions
    "VIEW-FRAME" "VIEW-BOUNDS"
+   "FIND-SUBVIEW-OF-TYPE"
    ;; Instance drawing, to replace srcXor
    "WITH-INSTANCE-DRAWING" "NEW-INSTANCE")
 
   (:export ;; region extensions
    "RECT-REGION"
-   "SET-DISC-REGION" "DISC-REGION")
+   "SET-DISC-REGION" "DISC-REGION"
+   "BEZIER-PATH-FROM-REGION")
 
-  (:export
-   "DRAW-STRING-IN-RECT")
+  (:export ;; quickdraw extensions
+   "DRAW-STRING-IN-RECT"
+   "DRAW-IMAGE" "LOAD-IMAGE")
 
   (:export
    ;; FRED editor
