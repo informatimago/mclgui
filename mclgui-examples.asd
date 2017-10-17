@@ -42,7 +42,10 @@
                "com.informatimago.common-lisp.cesarum")
   :components ((:file "examples/computed-view")
                (:file "examples/coordinated-window")
-               (:file "examples/slowatch"))
+               (:file "examples/slowatch")
+               (:file "examples/picture-view")
+               (:file "examples/instance-drawing"
+                      :depends-on ("examples/picture-view")))
 
   ;; :perform (asdf:prepare-op
   ;;           :after (operation system) (declare (ignore operation system))
@@ -52,7 +55,8 @@
             (operation system) (declare (ignore operation system))
             (dolist (p '("MCLGUI.EXAMPLE.COMPUTED-VIEW"
                          "MCLGUI.EXAMPLE.COORDINATES-WINDOW"
-                         "MCLGUI.EXAMPLE.SLOWATCH"))
+                         "MCLGUI.EXAMPLE.SLOWATCH"
+                         "MCLGUI.EXAMPLE.INSTANCE-DRAWING"))
               (let ((pack (find-package p)))
                 (if pack
                     (let ((*package* pack))

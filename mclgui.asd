@@ -57,8 +57,14 @@
                (:file "cg"
                 :depends-on ())
 
-               (:file "packages"
+               (:file "gestalt"
                 :depends-on ())
+
+               (:file "ccl-patches"
+                :depends-on ())
+
+               (:file "packages"
+                :depends-on ("ccl-patches" "gestalt"))
 
                (:file "readtable"
                 :depends-on ("packages" "point"))

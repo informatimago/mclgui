@@ -76,13 +76,25 @@
                                                 "tests/test-menu")))
   :perform (asdf:prepare-op
             :after (operation system) (declare (ignore operation system))
-            (ui:initialize))
+            (funcall (find-symbol "INITIALIZE" "UI")))
 
   :perform (asdf:test-op
             (operation system) (declare (ignore operation system))
-            (ui:initialize)
+            (funcall (find-symbol "INITIALIZE" "UI"))
+            ;; batch tests:
             (dolist (p '("MCLGUI"))
               (let ((*package* (find-package p)))
-                #+asdf3 (uiop:symbol-call p "TEST/ALL")))))
+                #+asdf3 (uiop:symbol-call p "TEST/ALL")))
+            ;; interactive tests:
+            (dolist (p '("MCLGUI.TEST.INTERACTIVE.REGION"))
+              (let ((pack (find-package p)))
+                (if pack
+                    (let ((*package* pack))
+                      #+asdf3 (uiop:symbol-call pack "RUN")
+                      #-asdf3 (let ((fname (find-symbol "RUN" pack)))
+                                (if fname
+                                    (funcall fname)
+                                    (warn "Cannot find symbol RUN in package ~A" p))))
+                    (warn "Cannot find package ~A" p))))))
 
 ;;;; THE END ;;;;
