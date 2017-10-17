@@ -79,8 +79,11 @@
 
   We should return a stream that reads and writes from the hemlock
   listener window.  However, such a listener window is not always
-  available (and when the window is present, the stream in it may not be
-  ready (dob-output-data may be nil).  In this case, we enqueue instead
+  available (and when the window is present, the stream in it may not
+  be ready (dob-output-data may be nil).  Furthermore, it looks like
+  the GUI thread just cannot write to the listener windows.
+
+  In this case, we enqueue instead
   the data that must be output, and we will write it when the listener
   window stream becomes available.
 
@@ -91,6 +94,8 @@
   Note: functions enqueued with ccl:process-interrupt are called in
   "random" order (eg. LIFO).  Therefore we cannot use them
   directly to display ordered data: we need to go thru a buffer.
+
+ (eq *current-process* *cocoa-event-process*)
   |#
 
   #+cocoa
