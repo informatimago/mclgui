@@ -39,7 +39,7 @@
 ;;;;**************************************************************************
 (in-package "MCLGUI")
 (objcl:enable-objcl-reader-macros)
-
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 
 
 (defgeneric application-name (application))
