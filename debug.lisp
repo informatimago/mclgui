@@ -61,7 +61,10 @@
   (declare (ignore method arguments))
   'nil)
 #+debug-trace
-(defun format-trace (method &rest arguments)
+(defmacro format-trace (method &rest arguments)
+  `(format-trace* ,method ,@arguments))
+#+debug-trace
+(defun format-trace* (method &rest arguments)
   (declare (stepper disable))
   (unless *format-trace-mutex*
     (setf *format-trace-mutex* (make-mutex "FORMAT-TRACE Mutex")))
