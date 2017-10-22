@@ -72,92 +72,64 @@
 (defvar *listener-io-queue* nil "For debugging.")
 
 (defun make-listener-io ()
-  #-cocoa
-  *terminal-io*
-
-  #|
-
-  We should return a stream that reads and writes from the hemlock
-  listener window.  However, such a listener window is not always
-  available (and when the window is present, the stream in it may not
-  be ready (dob-output-data may be nil).  Furthermore, it looks like
-  the GUI thread just cannot write to the listener windows.
-
-  In this case, we enqueue instead
-  the data that must be output, and we will write it when the listener
-  window stream becomes available.
-
-  This is implemented by using two redirecting-streams, and a
-  filter-stream is used to enqueue data written to it.
-
-
-  Note: functions enqueued with ccl:process-interrupt are called in
-  "random" order (eg. LIFO).  Therefore we cannot use them
-  directly to display ordered data: we need to go thru a buffer.
-
- (eq *current-process* *cocoa-event-process*)
-  |#
-
   #+cocoa
   (flet ((input-stream  ()
-           (hemlock-ext:top-listener-input-stream))
+           (or (hemlock-ext:top-listener-input-stream)
+               (make-string-input-stream "")))
          (output-stream ()
-           (let ((hemlock-stream (hemlock-ext:top-listener-output-stream)))
-             (when (and hemlock-stream
-                        #+ccl (slot-value hemlock-stream 'gui::buffer))
-               hemlock-stream))))
+           ;; (let ((hemlock-stream
+           ;;   (hemlock-ext:top-listener-output-stream))) (when (and
+           ;;   hemlock-stream #+ccl (slot-value hemlock-stream
+           ;;   'gui::buffer)) hemlock-stream))
+           (or (hemlock-ext:top-listener-output-stream)
+               (make-broadcast-stream))))
 
+    (let* ((queue           (setf *listener-io-queue* (make-queue "Output Queue")))
+           (output-lock     (bt:make-lock "Output Lock"))
+           (output-full     (bt:make-condition-variable :name "Output Full"))
+           (listener-thread (bt:make-thread
+                             (lambda ()
+                               (loop
+                                 :for message := (bt:with-lock-held (output-lock)
+                                                   (when (queue-emptyp queue)
+                                                     (bt:condition-wait output-full output-lock))
+                                                   (unless (queue-emptyp queue)
+                                                     (dequeue queue)))
+                                 :do (when message
+                                       (write-string message (output-stream)))))
+                             :name "Output Thread")))
       (make-two-way-stream
        (make-instance 'redirecting-character-input-stream
-                      :input-stream-function
-                      (let ((default-stream (make-string-input-stream "")))
-                        (lambda () (or (input-stream) default-stream))))
+                      :input-stream-function (function input-stream))
        (make-instance 'redirecting-character-output-stream
                       :output-stream-function
-
-                      (let ((queue      (setf *listener-io-queue* (make-queue "Output")))
-                            (flush-lock (bt:make-lock "Output Flush Lock")))
-                        (labels ((flush-lower ()
-                                   (bt:with-lock-held (flush-lock)
-                                    (loop
-                                      :until (queue-emptyp queue)
-                                      :do (write-string (dequeue queue)))))
-                                 (flush ()
-                                   (let ((process (gui::top-listener-process)))
-                                     (when process
-                                       (ccl:process-interrupt process (function flush-lower))))))
-                          (let ((output-stream
-                                   (make-output-filter-stream
-                                    queue
-                                    (lambda (operation queue &rest arguments)
-                                      (ecase operation
-                                        ;; character
-                                        (write-char
-                                         (if (eql (bt:current-thread) (gui::top-listener-process))
-                                             (write-char (first arguments))
-                                             (progn
-                                               (enqueue queue (string (first arguments)))
-                                               (flush))))
-                                        (write-string
-                                         (let ((string (subseq (first arguments) (second arguments) (third arguments))))
-                                          (if (eql (bt:current-thread) (gui::top-listener-process))
-                                              (write-string string)
-                                              (progn
-                                                (enqueue queue string)
-                                                (flush)))))
-                                        ;; both:
-                                        (write-sequence
-                                         (let ((string (coerce (subseq (first arguments) (second arguments) (third arguments))
-                                                                'string)))
-                                          (if (eql (bt:current-thread) (gui::top-listener-process))
-                                              (write-string string)
-                                              (progn
-                                                (enqueue queue string)
-                                                (flush)))))
-                                        (close          #|ignore|#)))
-                                    :element-type 'character)))
-                            (lambda ()
-                              output-stream))))))))
+                      (flet ((flush () (bt:condition-notify output-full)))
+                        (let ((output-stream
+                                (make-output-filter-stream
+                                 queue
+                                 (lambda (operation queue &rest arguments)
+                                   (ecase operation
+                                     ;; character
+                                     (write-char
+                                      (bt:with-lock-held (output-lock)
+                                        (enqueue queue (string (first arguments))))
+                                      (flush))
+                                     (write-string
+                                      (let ((string (subseq (first arguments) (second arguments) (third arguments))))
+                                        (bt:with-lock-held (output-lock)
+                                          (enqueue queue string))
+                                        (flush)))
+                                     ;; both:
+                                     (write-sequence
+                                      (let ((string (coerce (subseq (first arguments) (second arguments) (third arguments))
+                                                            'string)))
+                                        (bt:with-lock-held (output-lock)
+                                          (enqueue queue string))
+                                        (flush)))
+                                     (close          #|ignore|#)))
+                                 :element-type 'character)))
+                          (lambda ()
+                            output-stream))))))))
 
 
 (defvar *old-terminal-io* (make-synonym-stream '*terminal-io*))
