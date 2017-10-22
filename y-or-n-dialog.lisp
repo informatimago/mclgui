@@ -113,10 +113,12 @@ button.
   (case (#_NSRunInformationalAlertPanel (objcl:objc-string window-title)
                                         (objcl:objc-string message)
                                         (objcl:objc-string (or yes-text "OK"))
-                                        (when cancel-text
-                                          (objcl:objc-string cancel-text))
-                                        (when no-text
-                                          (objcl:objc-string no-text)))
+                                        (if cancel-text
+                                            (objcl:objc-string cancel-text)
+                                            oclo:*null*)
+                                        (if no-text
+                                            (objcl:objc-string no-text)
+                                            oclo:*null*))
     ((-1) nil)
     ((0)  (throw-cancel))
     ((+1) t))
