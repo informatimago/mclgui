@@ -811,6 +811,12 @@ DO:             Evaluates the BODY in a lexical environment where
         (values (or contents-needs window-needs)
                 window-needs)))))
 
+(defun window-flush (window)
+  (when window
+    (with-handle (winh window)
+      [winh flushWindow]
+      [winh flushWindowIfNeeded])))
+
 ;;;------------------------------------------------------------
 ;;; MclguiView
 
