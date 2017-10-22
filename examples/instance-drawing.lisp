@@ -59,8 +59,7 @@
     (ui::with-error-file
       (format *trace-output* "~&~S~%" `(view-draw-contents ,view))
       (format *trace-output* "~&~A = ~S~%" 'erase-region   (window-erase-region   (view-window view)))
-      (format *trace-output* "~&~A = ~S~%" 'invalid-region (window-invalid-region (view-window view)))))
-  (y-or-n-p "Continue?"))
+      (format *trace-output* "~&~A = ~S~%" 'invalid-region (window-invalid-region (view-window view))))))
 
 (defmethod view-click-event-handler ((view instance-drawing-view) where)
   (let ((container (view-window view)))
@@ -80,6 +79,20 @@
         :finally (new-instance view)))))
 
 
+
+(defclass instance-drawing-window (window)
+  ())
+
+(defmethod window-size-parts ((window instance-drawing-window))
+  (let* ((size (view-size window))
+         (h    (point-h size))
+         (v    (point-v size)))
+    (dovector (subview (view-subviews window))
+      (typecase subview
+        (static-text-dialog-item (set-view-size subview h 18))
+        (instance-drawing-view   (set-view-size subview h (- v 20)))))))
+
+
 (eval-when (:compile-toplevel :execute)
   (defmacro source-directory ()
     #.(namestring (or *compile-file-truename*
@@ -88,7 +101,7 @@
 
 (defun run ()
   (initialize)
-  (let ((win  (make-instance 'window
+  (let ((win  (make-instance 'instance-drawing-window
                              :window-title "Example: Instance Drawing"
                              :view-size #@(512 532)))
         (path (merge-pathnames "../tests/test-picture-1--512x512.jpg"
