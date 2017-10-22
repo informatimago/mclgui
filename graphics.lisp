@@ -156,9 +156,9 @@
 (defun draw-rect* (x y w h)
   #+debug-graphics (format-trace "draw-rect*" x y w h *current-view* (when *current-view* (view-window *current-view*)))
   (unless *current-view*
-    (print-backtrace)
-    (format *error-output* "~&draw-rect* with null *current-view*!")
-    (finish-output *error-output*))
+    (with-error-file
+      (print-backtrace)
+      (format *error-output* "~&draw-rect* with null *current-view*!~%")))
   (when *current-view*
     (let ((window  (view-window *current-view*)))
       (when window
