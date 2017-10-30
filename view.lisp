@@ -242,20 +242,6 @@ RETURN:    the view-font-codes of the font-view or of the application-font.
 
 ;; [(font-from-codes 65536 0) set]
 
-(declaim (inline graphics-flush))
-(defun graphics-flush ()
-  #+debug-view (format-trace 'graphics-flush)
-  ;; (#_CGContextSynchronize [[NSGraphicsContext currentContext] CGContext])
-  [[NSGraphicsContext currentContext] flushGraphics])
-
-(defun set-window-origin (window h v)
-  "
-Set the origin of the bounds of the window contentView to the given
-coordinates.
-"
-  (with-handle (winh window)
-    [[winh contentView] setBoundsOrigin:(ns:make-ns-point (cgfloat h) (cgfloat v))]))
-
 (defun reset-window-origin (window)
     "
 Reset the origin of the bounds of the window contentView to the window
@@ -269,8 +255,8 @@ view-scroll-position.
 
 (defmethod set-origin ((window window) h &optional v)
   (let ((p (make-point h v)))
-    (set-window-origin window (point-h p) (point-v p))
-    (call-next-method window p)))
+    (call-next-method window p)
+    (set-window-origin window (point-h p) (point-v p))))
 
 (defgeneric focus-font-view (font-view)
   (:method ((font-view null))
@@ -378,6 +364,8 @@ FONT-VIEW:      A view or NIL. If NIL, the font is unchanged.  If
                     (when unlock
                       (refocus-view *current-view*)
                       (graphics-flush)
+                      (when (and *current-view* (view-window *current-view*))
+                        (window-flush (view-window *current-view*)))
                       [viewh unlockFocus]))))))))))
 
 (defmacro with-focused-view (view &body body &environment env)
@@ -1724,72 +1712,83 @@ RETURN:         The cursor shape to display when the mouse is at
 
 (defun focused-screenshot (view)
   ;; #+debug-views #|DEBUG-PJB|#(print-backtrace *standard-output*)
-  (with-focused-view (view-window view)
-    (with-view-handle (viewh view)
-      (let ((image [[[NSImage alloc] initWithSize:(unwrap (size-to-nssize (view-size view)))] autorelease])
-            bitmap)
-        [viewh lockFocus]
-        (unwind-protect
-             ;; [viewh bounds]
-             (setf bitmap [[[NSBitmapImageRep alloc]
-                            initWithFocusedViewRect:(unwrap (rect-to-nsrect (convert-rectangle (view-bounds view)
-                                                                                               view
-                                                                                               (view-window view))))]
-                           autorelease])
-          [viewh unlockFocus])
-        [image addRepresentation:bitmap]
-        #+debug-views-instance
-        (format-trace 'focused-screenshot
-                      :size (point-to-list  (view-size view))
-                      :from-rect (rect-to-list (convert-rectangle (view-bounds view)
-                                                                  view
-                                                                  (view-window view)))
-                      ;; :ctm (get-at* (get-ctm (view-window view)))
-                      :viewh viewh
-                      :bitmap bitmap
-                      :image image)
-        #-cocoa-10.6 [image setFlipped:YES]
-        (wrap image)))))
+  (let ((window (view-window view)))
+    (with-focused-view window
+      (with-view-handle (viewh view)
+
+        ;; Since we have only one MclguiView per MclguiWindow, we need
+        ;; to use the window size (contentView size) instead of the view
+        ;; size.
+
+        (let ((image [[[NSImage alloc] initWithSize:(unwrap (size-to-nssize (view-size window)))] autorelease])
+              bitmap)
+          [viewh lockFocus]
+          (unwind-protect
+               ;; [viewh bounds]
+               (setf bitmap [[[NSBitmapImageRep alloc]
+                              initWithFocusedViewRect:(unwrap (rect-to-nsrect (view-bounds window)))]
+                             autorelease])
+            [viewh unlockFocus])
+          [image addRepresentation:bitmap]
+          #+debug-views-instance
+          (format-trace 'focused-screenshot
+                        :size (point-to-list  (view-size view))
+                        :from-rect (rect-to-list (view-bounds window))
+                        ;; :ctm (get-at* (get-ctm window))
+                        :viewh viewh
+                        :bitmap bitmap
+                        :image image)
+          #-cocoa-10.6 [image setFlipped:YES]
+          (wrap image))))))
 
 
 (defmacro with-instance-drawing (view &body body)
   (let ((vview (gensym)))
     `(let ((,vview ,view))
        (push (focused-screenshot ,vview) (view-instance ,vview))
-       (unwind-protect (progn ,@body)
+       (unwind-protect (with-focused-view ,vview ,@body)
+         (new-instance ,vview)
          (pop (view-instance ,vview))))))
 
+(defmacro drawing-instance (view &body body)
+  `(progn
+     (new-instance ,view)
+     (prog1 (progn ,@body)
+       (graphics-flush))))
 
 (defun new-instance (view)
   ;; #|DEBUG-PJB|#(print-backtrace *standard-output*)
   (when (view-instance view)
-    (with-focused-view view
-      (with-view-handle (viewh view)
-        #+debug-views-instance
-        (format-trace 'new-instance :before
-                      :frame (get-nsrect [viewh frame])
-                      :bounds (get-nsrect [viewh bounds]))
-        #+debug-views-instance
-        (format-trace 'new-instance
-                      :instance (first (view-instance view)))
-        #-cocoa-10.6
-        [(handle (first (view-instance view)))
-         drawInRect:[viewh bounds]
-         fromRect:(unwrap (make-nsrect :x 0 :y 0 :size (view-size view)))
-         operation:#$NSCompositeCopy
-         fraction:(cgfloat 1.0)]
-        #+cocoa-10.6
-        [(handle (first (view-instance view)))
-         drawInRect:[viewh bounds]
-         fromRect:(unwrap (make-nsrect :x 0 :y 0 :size (view-size view)))
-         operation:#$NSCompositeCopy
-         fraction:(cgfloat 1.0)
-         respectFlipped:yes
-         hints: *null*]
-        #+debug-views-instance
-        (format-trace 'new-instance :after_
-                      :frame (get-nsrect [viewh frame])
-                      :bounds (get-nsrect [viewh bounds]))))))
+    ;; Since we have only one MclguiView per MclguiWindow, we restore
+    ;; the whole window contentView.
+    (let ((window (view-window view)))
+      (with-focused-view window
+        (with-view-handle (viewh view)
+          #+debug-views-instance
+          (format-trace 'new-instance :before
+                        :frame (get-nsrect [viewh frame])
+                        :bounds (get-nsrect [viewh bounds]))
+          #+debug-views-instance
+          (format-trace 'new-instance
+                        :instance (first (view-instance view)))
+          #-cocoa-10.6
+          [(handle (first (view-instance view)))
+           drawInRect:[viewh bounds]
+           fromRect:(unwrap (make-nsrect :x 0 :y 0 :size (view-size window)))
+           operation:#$NSCompositeCopy
+           fraction:(cgfloat 1.0)]
+          #+cocoa-10.6
+          [(handle (first (view-instance view)))
+           drawInRect:[viewh bounds]
+           fromRect:(unwrap (make-nsrect :x 0 :y 0 :size (view-size window)))
+           operation:#$NSCompositeCopy
+           fraction:(cgfloat 1.0)
+           respectFlipped:yes
+           hints: *null*]
+          #+debug-views-instance
+          (format-trace 'new-instance :after_
+                        :frame (get-nsrect [viewh frame])
+                        :bounds (get-nsrect [viewh bounds])))))))
 
 
 (defun example/instance-drawing ()

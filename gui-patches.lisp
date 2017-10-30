@@ -67,7 +67,6 @@
 ;; 
 ;; (defun call-with-dob-data (thunk dob)
 ;;   (ui::with-error-file
-;;     (ui::print-backtrace)
 ;;     (format *error-output* "call-with-dob-data thread=~S~%" *current-process*))
 ;;   (unless (eq *current-process* *cocoa-event-process*)
 ;;     (with-lock-grabbed ((dob-data-lock dob))
@@ -75,7 +74,6 @@
 ;; 
 ;; (defun call-with-dob-output-data (thunk dob)
 ;;   (ui::with-error-file
-;;     (ui::print-backtrace)
 ;;     (format *error-output* "call-with-dob-output-data thread=~S~%" *current-process*))
 ;;   (with-lock-grabbed ((dob-output-data-lock dob))
 ;;     (funcall thunk (dob-output-data dob))))

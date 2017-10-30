@@ -361,31 +361,49 @@ FORM:           A symbol, function or lisp form.
 
 (defun run-loop-task ()
   (with-event-environment
-    (event-dispatch)))
+    (let ((pool (objc:send (objc:send ns::ns-autorelease-pool 'alloc) 'init)
+                #-(and) [[NSAutoreleasePool alloc] init]))
+      (unwind-protect
+           (event-dispatch)
+        [pool release]))))
 
 ;; (application-eval-enqueue *application* '(invoke-debugger (make-condition 'error)))
 ;; (setf (evaluator-thunk *run-loop-evaluator*) (function run-loop-task))
 
 (defun initialize-run-loop-evaluator ()
-  (when *run-loop-timer*
-    [*run-loop-timer* invalidate])
-  (let* ((evaluator [[MclguiEvaluator alloc] init])
-         (timer [NSTimer timerWithTimeInterval: (cgfloat 1/60)
-                         target:evaluator
-                         selector:(objc:@selector |evaluate|)
-                         userInfo:*null*
-                         repeats:t]))
-    (setf (evaluator-thunk evaluator) (function run-loop-task))
-    (setf *run-loop-modes*    (list #$NSDefaultRunLoopMode
-                                    #$NSRunLoopCommonModes
-                                    ;; #$NSConnectionReplyMode
-                                    #$NSModalPanelRunLoopMode
-                                    #$NSEventTrackingRunLoopMode)
-          *run-loop-timer*     timer
-          *run-loop-evaluator* evaluator)
-    (dolist (mode *run-loop-modes*)
-      [[NSRunLoop mainRunLoop] addTimer:timer forMode:mode])
-    (values)))
+
+  (progn
+    (when *run-loop-timer*
+      (bt:destroy-thread *run-loop-timer*))
+    (setf *run-loop-timer*
+          (bt:make-thread (lambda ()
+                            (loop
+                              (sleep (cgfloat 1/60))
+                              (run-loop-task)))
+                          :name "run loop task")))
+
+  #-(and)
+  (progn
+    (when *run-loop-timer*
+      [*run-loop-timer* invalidate])
+    (let* ((evaluator [[MclguiEvaluator alloc] init])
+           (timer [NSTimer timerWithTimeInterval: (cgfloat 1/60)
+                           target:evaluator
+                           selector:(objc:@selector |evaluate|)
+                           userInfo:*null*
+                           repeats:t]))
+      (setf (evaluator-thunk evaluator) (function run-loop-task))
+      (setf *run-loop-modes*    (list #$NSDefaultRunLoopMode
+                                      #$NSRunLoopCommonModes
+                                      ;; #$NSConnectionReplyMode
+                                      #$NSModalPanelRunLoopMode
+                                      #$NSEventTrackingRunLoopMode)
+            *run-loop-timer*     timer
+            *run-loop-evaluator* evaluator)
+      (dolist (mode *run-loop-modes*)
+        [[NSRunLoop mainRunLoop] addTimer:timer forMode:mode])))
+
+  (values))
 
 
 ;;;---------------------------------------------------------------------

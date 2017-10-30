@@ -31,6 +31,7 @@
 ;;;;    You should have received a copy of the GNU General Public License
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
+(mclgui.readtable:enable-objcl+ccl-reader-macros)
 (in-package "MCLGUI")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -164,12 +165,24 @@
   (values))
 
 
+(defun initialize/threads ()
+  (unless [NSThread isMultiThreaded]
+    [NSThread detachNewThreadSelector:(objc:@selector "self")
+              toTarget:[[NSObject alloc] init]
+              withObject:*null*]))
+
+
 (defvar *initialized* nil)
+
 
 (defun initialize ()
   "Initialize the MCL GUI."
   (unless *initialized*
     (progn
+      (ccl:open-shared-library "/System/Library/Frameworks/Foundation.framework/Foundation")
+      (ccl:use-interface-dir :foundation)
+
+      (ui::reporting-errors (initialize/threads))
       (ui::reporting-errors (mclgui.wrapper::initialize/wrapper))
       (ui::reporting-errors (initialize-streams))
       (ui::reporting-errors (initialize-event-environment-bindings))

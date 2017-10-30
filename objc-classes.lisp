@@ -483,18 +483,48 @@ DO:             Evaluates the BODY in a lexical environment where
          (let ((,handle [,winh contentView]))
            ,@body)))))
 
+
+(declaim (inline graphics-flush))
+(defun graphics-flush ()
+  #+debug-view (format-trace 'graphics-flush)
+  ;; (#_CGContextSynchronize [[NSGraphicsContext currentContext] CGContext])
+  [[NSGraphicsContext currentContext] flushGraphics])
+
+
+(defun window-offset (window)
+  "
+RETURN: the difference between the view-origin of the window and the
+        current contentView bounds origin.
+"
+  (with-handle (winh window)
+    (subtract-points (nspoint-to-point (nsrect-origin (get-nsrect [[winh contentView] bounds])))
+                     (view-origin window))))
+
+
+(defun set-window-origin (window h v)
+  "
+Set the origin of the bounds of the window contentView to the given
+coordinates.
+"
+  (with-handle (winh window)
+    [[winh contentView] setBoundsOrigin:(ns:make-ns-point (cgfloat h) (cgfloat v))]))
+
+
 (defun window-mouse (window)
   "Current position of the mouse in the coordinates of the given window."
   ;; see also view-mouse-position
   (or (with-handle (winh window)
         (with-view-handle (viewh window)
-          (nspoint-to-point
-           ;; only for 10.6+
-           #-(and) (unwrap (nsrect-origin (get-nsrect [winh convertRectFromScreen:[NSEvent mouseLocation]])))
-           ;; deprecated, but 10.6+ doesn't work on ccl-1.8.
-           (get-nspoint [viewh convertPoint:[winh mouseLocationOutsideOfEventStream]
-                               fromView:*null*]))))
+          (subtract-points
+           (nspoint-to-point
+            ;; only for 10.6+
+            #-(and) (unwrap (nsrect-origin (get-nsrect [winh convertRectFromScreen:[NSEvent mouseLocation]])))
+            ;; deprecated, but 10.6+ doesn't work on ccl-1.8.
+            (get-nspoint [viewh convertPoint:[winh mouseLocationOutsideOfEventStream]
+                                fromView:*null*]))
+           (window-offset window))))
       (screen-mouse)))
+
 
 (defun screen-mouse ()
   "Current position of the mouse in screen coordinates."

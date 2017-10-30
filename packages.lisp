@@ -654,7 +654,7 @@
    "VIEW-FRAME" "VIEW-BOUNDS"
    "FIND-SUBVIEW-OF-TYPE"
    ;; Instance drawing, to replace srcXor
-   "WITH-INSTANCE-DRAWING" "NEW-INSTANCE")
+   "WITH-INSTANCE-DRAWING" "NEW-INSTANCE" "DRAWING-INSTANCE")
 
   (:export ;; region extensions
    "RECT-REGION"

@@ -203,10 +203,12 @@ RETURN: A NSRect containing the frame of the window, compute from the position a
       #+debug-views
       (format-trace '(update-handle window)
                     :cview-frame  (nswindow-frame-from-window-frame window))
+      ;; [winh setAllowsConcurrentViewDrawing:YES]
       (let ((cviewh [[MclguiView alloc]
                      initWithFrame:(unwrap (nswindow-frame-from-window-frame window))]))
         (setf (slot-value cviewh 'view) window)
         [cviewh setAutoresizingMask:(logior #$NSViewWidthSizable #$NSViewHeightSizable)]
+        ;; [cviewh setCanDrawConcurrently:YES]
         [winh setContentView:cviewh] window)
       [winh setReleasedWhenClosed:YES]
       [winh setHasShadow:yes]

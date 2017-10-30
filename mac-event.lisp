@@ -87,7 +87,7 @@ DO: Store the current stream special variable bindings into *EVENT-ENVIRONMENT-B
                (*print-circle* t)
                (*print-pretty* nil)
                (*print-case*   :downcase))
-           (format ,verror "~%~A~2%" (date))
+           (format ,verror "~2%~A~2%" (date))
            (print-backtrace ,verror)
            (unwind-protect (locally ,@body)
              (finish-output ,verror)))))))

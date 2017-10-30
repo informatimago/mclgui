@@ -541,3 +541,22 @@ ui> [NSUnarchiver unarchiveObjectWithData:*font-data*]
 ;;
 ;; (ui::print-backtrace)
 ;; (format t "~2%~S~%" (bt:current-thread))
+
+
+
+    #-(and)
+    (let ((ui::*allow-print-backtrace* nil))
+      (ui::with-error-file
+        (format *error-output* "~&where         = ~S~%" (ui::point-to-list where))
+        (format *error-output* "~&view scroll   = ~S~%" (ui::point-to-list (view-scroll-position view)))
+        (format *error-output* "~&view origin   = ~S~%" (ui::point-to-list (ui::view-origin view)))
+        (format *error-output* "~&window origin = ~S~%" (ui::point-to-list (ui::view-origin container)))
+        (format *error-output* "~&start-pt      = ~S~%" (ui::point-to-list start-pt)))
+
+      (progn
+        (format t "~&where         = ~S~%" (ui::point-to-list where))
+        (format t "~&view scroll   = ~S~%" (ui::point-to-list (view-scroll-position view)))
+        (format t "~&view origin   = ~S~%" (ui::point-to-list (ui::view-origin view)))
+        (format t "~&window origin = ~S~%" (ui::point-to-list (ui::view-origin container)))
+        (format t "~&start-pt      = ~S~%" (ui::point-to-list start-pt))))
+

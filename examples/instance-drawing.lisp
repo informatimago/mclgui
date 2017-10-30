@@ -44,16 +44,16 @@
 (defclass instance-drawing-view (picture-view)
   ())
 
+
 (defun draw-test-rect (view where)
   (with-focused-view view
-    (draw-rect* (+ 40 (point-h where)) (point-v where)
-                (+ 50 (point-h where)) (+ 20 (point-v where)))
-    (with-pen-state (:pattern *gray-pattern*
+    (with-pen-state (:pattern *white-pattern*
                      :size #@(3 3)
                      :mode :patCopy)
-      (draw-rect* (point-h where) (point-v where)
-                  (+ 10 (point-h where)) (+ 20 (point-v where))))))
+      (draw-rect* (- (point-h where) 20) (- (point-v where) 20) 40 40))))
 
+
+#-(and)
 (defmethod view-draw-contents :after ((view instance-drawing-view))
   (let ((ui::*allow-print-backtrace* t))
     (ui::with-error-file
@@ -61,22 +61,26 @@
       (format *trace-output* "~&~A = ~S~%" 'erase-region   (window-erase-region   (view-window view)))
       (format *trace-output* "~&~A = ~S~%" 'invalid-region (window-invalid-region (view-window view))))))
 
+
 (defmethod view-click-event-handler ((view instance-drawing-view) where)
-  (let ((container (view-window view)))
-    (ui::with-error-file (format *trace-output* "~&where = ~S~%" (ui::point-to-list where)))
-    (draw-test-rect view where)
-    (with-instance-drawing view
-      (loop
-        :while (still-down)
-        :for pt := (convert-coordinates (get-mouse) container view)
-        :do (new-instance view)
-            (with-focused-view view
+  (with-instance-drawing view
+    (loop
+      :with container := (view-window view)
+      :with start-pt := where
+      :while (still-down)
+      :for old-pt := start-pt :then pt
+      :for pt := (convert-coordinates (get-mouse) container view)
+      :unless (eql pt old-pt)
+        :do (drawing-instance view
               (with-pen-state (:pattern *gray-pattern*
                                :size #@(3 3)
                                :mode :patCopy)
-                (draw-rect* (point-h where) (point-v where)
-                            (point-h pt)    (point-v pt))))
-        :finally (new-instance view)))))
+                (draw-rect* (point-h start-pt) (point-v start-pt)
+                            (- (point-h pt)
+                               (point-h start-pt))
+                            (- (point-v pt)
+                               (point-v start-pt))))))))
+
 
 
 
@@ -90,7 +94,7 @@
     (dovector (subview (view-subviews window))
       (typecase subview
         (static-text-dialog-item (set-view-size subview h 18))
-        (instance-drawing-view   (set-view-size subview h (- v 20)))))))
+        (instance-drawing-view   (set-view-size subview (- h 40) (- v 60)))))))
 
 
 (eval-when (:compile-toplevel :execute)
@@ -115,10 +119,11 @@
 
     (make-instance 'instance-drawing-view
                    :view-container win
-                   :view-position #@(0 20)
-                   :view-size #@(512 512)
+                   :view-position (add-points  #@(0 20)    #@(20 20))
+                   :view-size (subtract-points #@(512 512) #@(40 40))
                    :image-file path)
 
+    (view-draw-contents win)
     win))
 
 ;;;; THE END ;;;;
