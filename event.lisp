@@ -492,21 +492,14 @@ RETURN:         T if the click currently being processed was the
                 WINDOW-DO-FIRST-CLICK is false.
 
 "
-  (let ((nsevent [[NSApplication sharedApplication] currentEvent]))
+
+  (let ((nsevent  (or (and *current-event*
+                           (event-nsevent *current-event*))
+                      [[NSApplication sharedApplication] currentEvent])))
     (and nsevent
          (find [nsevent type] '#.(list #$NSLeftMouseDown #$NSRightMouseDown #$NSOtherMouseDown))
          (= 2 [nsevent clickCount])
          t)))
-
-;; TODO: perhaps it would be preferable to use *current-event* to
-;; track double-click-p etc, to keep them synchronized with the
-;; mac-event state.
-;;
-;; (defun double-click-p ()
-;;   (and (and (boundp '*current-event*) *current-event*)
-;;        (eql $MButDwnEvt (rref *current-event* eventrecord.what))
-;;        (> *multi-click-count* 1)))
-
 
 
 (defun double-click-spacing-p (point1 point2)
