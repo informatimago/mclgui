@@ -918,15 +918,12 @@ DO:             Order the WINDOW above every other.
   "
 DO:             Order the WINDOW behind the OTHER-WINDOW.
 "
-  (let ((winh (handle window))
-        (wino (handle other-window)))
-    (delete-from-list *window-list* window)
-    (insert-into-list *window-list*
-                      (or (position other-window *window-list*)
-                          (length *window-list*))
-                      window)
-    (when (and winh wino)
-      (on-main-thread [winh orderBelow:wino]))))
+  (delete-from-list *window-list* window)
+  (insert-into-list *window-list*
+                    (or (position other-window *window-list*)
+                        (length *window-list*))
+                    window)
+  (%window-order-below window other-window))
 
 
 (defun reselect-windows ()

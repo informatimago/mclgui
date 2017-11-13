@@ -847,6 +847,12 @@ coordinates.
       [winh flushWindow]
       [winh flushWindowIfNeeded])))
 
+(defun %window-order-below (window other-window)
+  (let ((winh (handle window))
+        (wino (handle other-window)))
+    (when (and winh wino)
+      (on-main-thread [winh orderBelow:wino]))))
+
 ;;;------------------------------------------------------------
 ;;; MclguiView
 
@@ -902,8 +908,8 @@ coordinates.
           (set-rect-region (window-erase-region window) 0 0 0 0)))
       (let ((invalid-region  (window-invalid-region window)))
         (declare (ignorable invalid-region))
-        (ui::with-error-file
-          (format *trace-output* "invalid-region = ~S" invalid-region))
+        ;; (ui::with-error-file
+        ;;   (format *trace-output* "invalid-region = ~S" invalid-region))
         (view-focus-and-draw-contents window visrgn visrgn)
         ;; (unless (empty-region-p invalid-region)
         ;;   (view-focus-and-draw-contents window visrgn invalid-region #|(view-clip-region window)|#))
