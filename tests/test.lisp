@@ -38,6 +38,7 @@
   (test/region)
   (test/region-paths)
   (test/pattern)
-  (test/menu))
+  (test/menu)
+  (test/mac-event))
 
 ;;;; THE END ;;;;
