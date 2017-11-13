@@ -48,6 +48,7 @@
                (:file "tests/test-region-path"        :depends-on ())
                (:file "tests/test-pattern"            :depends-on ())
                (:file "tests/test-menu"               :depends-on ())
+               (:file "tests/test-mac-event"          :depends-on ())
                ;; ---
                (:file "tests/test-graphics"           :depends-on ())
                ;; (:file "tests/test-little"             :depends-on ())
@@ -73,7 +74,8 @@
                                                 "tests/test-region"
                                                 "tests/test-region-path"
                                                 "tests/test-pattern"
-                                                "tests/test-menu")))
+                                                "tests/test-menu"
+                                                "tests/test-mac-event")))
   :perform (asdf:prepare-op
             :after (operation system) (declare (ignore operation system))
             (funcall (find-symbol "INITIALIZE" "UI")))
