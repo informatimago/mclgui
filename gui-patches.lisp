@@ -1,7 +1,7 @@
 
 (in-package "CCL")
 (let ((*warn-if-redefine-kernel* nil))
-  
+
  (defun y-or-n-p (&optional format-string &rest arguments &aux response)
    "Y-OR-N-P prints the message, if any, and reads characters from
    *QUERY-IO* until the user enters y or Y as an affirmative, or either
@@ -9,13 +9,13 @@
    characters."
    (declare (dynamic-extent arguments))
    (if (eq *current-process* *cocoa-event-process*)
-      
+
        (ui:y-or-n-dialog (format nil "~?" format-string arguments)
                          :yes-text "Yes"
                          :no-text "No"
                          :cancel-text nil
                          :window-title "Yes or No?")
-      
+
        (with-terminal-input
          (clear-input *query-io*)
          (loop
@@ -40,13 +40,13 @@
    YES or NO."
     (declare (dynamic-extent arguments))
     (if (eq *current-process* *cocoa-event-process*)
-        
+
         (ui:y-or-n-dialog (format nil "~?" format-string arguments)
                           :yes-text "Yes"
                           :no-text "No"
                           :cancel-text nil
                           :window-title "Yes or No?")
-        
+
         (with-terminal-input
           (loop
             (when format-string
@@ -64,14 +64,14 @@
 
 
 ;; (in-package "GUI")
-;; 
+;;
 ;; (defun call-with-dob-data (thunk dob)
 ;;   (ui::with-error-file
 ;;     (format *error-output* "call-with-dob-data thread=~S~%" *current-process*))
 ;;   (unless (eq *current-process* *cocoa-event-process*)
 ;;     (with-lock-grabbed ((dob-data-lock dob))
 ;;       (funcall thunk (dob-data dob)))))
-;; 
+;;
 ;; (defun call-with-dob-output-data (thunk dob)
 ;;   (ui::with-error-file
 ;;     (format *error-output* "call-with-dob-output-data thread=~S~%" *current-process*))
