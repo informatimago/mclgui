@@ -183,7 +183,7 @@ If :CANCEL is thrown, the application doesn't terminate.")
 
 #+ccl
 (defmacro on-load-and-now (function-name &body body)
-  `(progn
+   `(progn
      (setf (symbol-function ',function-name) (lambda () (block ,function-name ,@body)))
      (def-load-pointers ,function-name () ,@body)))
 
