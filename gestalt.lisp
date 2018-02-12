@@ -52,7 +52,7 @@
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  
+
   (defun version (major minor &rest rest)
     (list* major minor rest))
 
@@ -201,4 +201,3 @@ otherwise uses the result to build the resuling tree."
 
 
 ;;;; THE END ;;;;
-
