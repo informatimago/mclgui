@@ -60,11 +60,18 @@
                (:file "gestalt"
                 :depends-on ())
 
+               ;; -- patches:
+
                (:file "ccl-patches"
+                :depends-on ())
+
+               (:file "cocoa-listener"
                 :depends-on ())
 
                (:file "gui-patches"
                 :depends-on ("packages"))
+
+               ;; --
 
                (:file "packages"
                 :depends-on ("ccl-patches" "gestalt"))
