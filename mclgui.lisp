@@ -62,7 +62,9 @@
 
 (defvar *listener-io-queue* nil "For debugging.")
 
+#-(and)
 (defun make-listener-io ()
+
   #+cocoa
   (flet ((input-stream  ()
            (or (hemlock-ext:top-listener-input-stream)
@@ -89,6 +91,7 @@
                                  :do (when message
                                        (write-string message (output-stream)))))
                              :name "Output Thread")))
+      (declare (ignorable listener-thread))
       (make-two-way-stream
        (make-instance 'redirecting-character-input-stream
                       :input-stream-function (function input-stream))
@@ -121,8 +124,6 @@
                                  :element-type 'character)))
                           (lambda ()
                             output-stream))))))))
-
-
 
 
 (defun make-listener-io ()

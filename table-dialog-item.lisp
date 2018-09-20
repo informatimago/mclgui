@@ -228,6 +228,7 @@ the entire table is visible.
 
 
 (defun highlight-rect-frame (rect)
+  (declare (ignorable rect))
   (niy highlight-rect-frame rect)
   #-(and)
   (with-macptrs ((rgn  (#_newrgn))  ; temp regions already in use
@@ -636,6 +637,7 @@ FONT-SPEC:      A font spec.
 
 
 (defun invert-cell-selection (item h v selected-p)
+  (declare (ignorable item h v selected-p))
   (with-focused-dialog-item (item)
     (with-back-color (or (and (eql (cell-colors item) :background)
                               (part-color-h-v item h v))
@@ -1381,6 +1383,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
                  (invalidate-view item t))))))
 
 (defun string-width-for-focused-control (string ff ms)
+  (declare (ignorable string ff ms))
   (niy string-width-for-focused-control string ff ms)
   #-(and)
   (let ((len (length string)))
@@ -1686,6 +1689,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 
 (defun dispose-selection-regions (item)
+  (declare (ignorable item))
   (niy dispose-selection-regions item)
   #-(and)
   (let ((rgn (table-selection-region item)))
@@ -1701,7 +1705,8 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 (defgeneric add-to-selection-region (item selected-p h &optional v dont-compute-outline-region)
   (:method ((item table-dialog-item) selected-p h &optional v
-            dont-compute-outline-region)
+                                                    dont-compute-outline-region)
+    (declare (ignorable selected-p dont-compute-outline-region))
     (let ((selection-region (table-selection-region item))
           (visible-dimensions (visible-dimensions item)))
       (when visible-dimensions
@@ -1993,6 +1998,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 ;;; draw gray if not enabled and color-p
 (defun %draw-table-cell-new (item h v rect selectedp)
+  (declare (ignorable selectedp))
   (let* ((container (view-container item))
          (enabled-p (dialog-item-enabled-p item))
          (color-p (if (not enabled-p)(color-or-gray-p item))))
@@ -2554,6 +2560,7 @@ V:              Vertical index. If the value of v is NIL, h is assumed
 
 
 (defun two-byte-script-p (script)
+  (declare (ignorable script))
   (niy two-byte-script-p script)
   #-(and)
   (not (logbitp #$smsfSingByte (#_getscriptvariable script #$smscriptflags))))
