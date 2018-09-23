@@ -219,6 +219,7 @@ INDEX:          An index to the sequence (zero based, as would be
 
 ;; put-scrap a lisp object and a textual representation thereof
 (defun put-scraps (value text)
+  (declare (ignorable value text))
   (niy put-scraps value text)
   #-(and)
   (put-scrap :lisp value)

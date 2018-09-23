@@ -312,6 +312,7 @@ NEW-SCROLLEE: The new scrollee of item.
 
 
 (defun outside-scroll-bar-setting (scroll-bar handle)
+  (declare (ignorable scroll-bar handle))
   (niy outside-scroll-bar-setting scroll-bar handle)
   #-(and)
   (let ((mac-setting (#_GetControlValue handle))
@@ -330,6 +331,7 @@ NEW-SCROLLEE: The new scrollee of item.
 
 
 (defmethod install-view-in-window :after ((item scroll-bar-dialog-item) view)
+  (declare (ignorable view))
   (let* ((window (view-window item))
          (my-size (view-size item))
          (my-position (view-position item))
@@ -617,6 +619,7 @@ NEW-SCROLLEE: The new scrollee of item.
 
 
 (defmethod view-click-event-handler ((item scroll-bar-dialog-item) where)
+  (declare (ignorable where))
   (niy view-click-event-handler item where)
   #-(and)
   (let* ((sb-handle (dialog-item-handle item))
@@ -697,6 +700,7 @@ SCROLL-BAR:     A scroll bar.
 
 
 (defun %set-scroll-bar-setting (item new-value only-if-new-value)
+  (declare (ignorable only-if-new-value))
   (setf new-value (max (scroll-bar-min item) (min (scroll-bar-max item) new-value)))
   (niy %set-scroll-bar-setting item new-value only-if-new-value)
   #-(and)
@@ -788,6 +792,7 @@ NEW-VALUE:     The new maximum setting of item.
 
 
 (defun update-scroll-bar-max-min-setting (item)
+  (declare (ignorable item))
   (niy update-scroll-bar-max-min-setting item)
   #-(and)
   (let ((handle (dialog-item-handle item)))
@@ -1062,6 +1067,7 @@ NEW-VALUE:      The new width of item.
     (view-window scrollee)))
 
 (defun track-and-draw (container function pos direction delta min-pos max-pos)
+  (declare (ignorable track-and-draw container function pos direction delta min-pos max-pos))
   (niy track-and-draw container function pos direction delta min-pos max-pos)
   #-(and)
   (let* ((mouse-pos (view-mouse-position container))
@@ -1169,7 +1175,7 @@ NEW-VALUE:      The new width of item.
 
 (defgeneric draw-pane-splitter-outline (scrollee scroll-bar pos min max direction)
   (:method (scrollee scroll-bar pos min max direction)
-    ;; (declare (ignore scrollee scroll-bar))
+    (declare (ignorable draw-pane-splitter-outline scrollee scroll-bar pos min max direction))
     (niy draw-pane-splitter-outline scrollee scroll-bar pos min max direction)
     #-(and)
     (if (eql direction :horizontal)
@@ -1232,29 +1238,26 @@ NEW-VALUE:      The new width of item.
 
 (defgeneric scroll-wheel-handler (w delta direction wherep)
   (:method ((w t) delta direction wherep)
-                                        ; belt and suspenders
-    (declare (ignore delta direction wherep))
-                                        ;(format t "Attempting to wheel scroll ~S" w)
-    0                                   ; #$noerr
-    ))
-
+    (declare (ignorable w delta direction wherep))
+    ;; (format t "Attempting to wheel scroll ~S" w)
+    ;; #$noerr
+    0))
 
 (defmethod scroll-wheel-handler ((w simple-view) delta direction wherep)
   "Default method for any viewlike thing that doesn't have its own specialized handler. Just
    punt back out to the handler for the enclosing window."
-                                        ;(format t "Attempting to wheel scroll ~S" w)
+  (declare (ignorable w delta direction wherep))
+  ;;(format t "Attempting to wheel scroll ~S" w)
   (setf w (view-window w))
   (if w
       (scroll-wheel-handler w delta direction wherep)
-      0 ; #$noerr
-      ))
-
-
+      ;; #$noerr
+      0))
 
 (defmethod scroll-wheel-handler ((w window) delta direction wherep)
   "Default handler for Fred windows and most everything else. Now makes
    both horizontal (shift-wheel) and vertical scrolling in Fred windows instantaneous."
-  (declare (ignorable wherep))
+  (declare (ignorable scroll-wheel-handler w delta direction wherep))
   (niy scroll-wheel-handler w delta direction wherep)
   #-(and)
   (let ((res #$eventNotHandledErr))

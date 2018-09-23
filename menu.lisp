@@ -778,6 +778,7 @@ RETURN:         NIL.
                 (%attach-item-to-menu item menu)
               #+ccl
               (ccl::ns-exception (err)
+                (declare (ignorable err))
                 (format-trace 'remove-menu-item :err err)))
             (set-part-color-loop item (slot-value item 'color-list))))))
 
@@ -805,6 +806,7 @@ RETURN:         NIL.
                       [nsmenu removeItem:nsitem]
                     #+ccl
                     (ccl::ns-exception (err)
+                      (declare (ignorable err))
                       (format-trace 'remove-menu-item :err err))))))
             (setf (slot-value item 'owner) nil)
             (setf (slot-value menu 'item-list) (delete item (slot-value menu 'item-list)))))))))

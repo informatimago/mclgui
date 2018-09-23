@@ -96,6 +96,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 
 
 (defun make-new-pop-up-control (menu &optional (window (view-window menu)))
+  (declare (ignorable menu window))
   (niy make-new-pop-up-control menu window) #-(and)
   (with-pstrs ((sp ""))  ;; we draw the title if any for highlighting
     (rlet ((fake-rect :rect))
@@ -145,6 +146,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 
 
 (defun add-menu-height (pop-up-menu height)
+  (declare (ignorable pop-up-menu height))
   ;; does make it bigger for all the good that does
   ;; seems to add to default height rather than current
   (niy add-menu-height pop-up-menu height)
@@ -233,6 +235,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 
 
 (defmethod set-view-size ((menu pop-up-menu) h &optional v)
+  (declare (ignorable h v))
   (with-focused-dialog-item (menu)
     (invalidate-view menu t)
     (call-next-method)
@@ -247,6 +250,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 
 
 (defmethod set-view-position ((menu pop-up-menu) h &optional v)
+  (declare (ignorable h v))
   (with-focused-dialog-item (menu)
     (invalidate-view menu t)
     (call-next-method)
@@ -545,6 +549,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 ;; Adding/removing items
 
 (defmethod add-menu-items ((menu pop-up-menu) &rest items)
+  (declare (ignorable items))
   ;; this is stupidly inefficient when control-handle
   (call-next-method)
   (when (pop-up-menu-auto-update-default menu)
@@ -612,6 +617,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 
 
 (defmethod remove-menu-items :around ((menu pop-up-menu) &rest items)
+  (declare (ignore items))
   (let* ((default-item-number (pop-up-menu-default-item menu))
          (default-item (unless (eql default-item-number 0)
                          (nth (1- default-item-number) (menu-items menu)))))
@@ -879,6 +885,7 @@ default menu item.  Otherwise the value itself is displayed as if by
 
 
 (defmethod view-click-event-handler ((menu pull-down-menu) where)
+  (declare (ignore where))
   (when (menu-enabled-p menu)
     (multiple-value-bind (ff ms) (view-font-codes menu)
       (declare (ignore ff ms))

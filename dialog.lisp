@@ -499,6 +499,7 @@ STRING:         A string against which to compare the text of the
 
 
 (defun draw-theme-text-box (text rect &optional (text-justification :center) truncwhere (active-p t))
+  (declare (ignore active-p truncwher text-justification rect))
   ;; could add a truncate option and use TruncateThemeText
   (let ((start 0)
         (end (length text)))
