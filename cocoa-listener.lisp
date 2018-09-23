@@ -112,9 +112,6 @@
            (lambda () (display-cocoa-listener-output-buffer stream)))))))
 
 (defmethod ccl:stream-write-string ((stream cocoa-listener-output-stream) string &OPTIONAL start end)
-  (format *trace-output* "~&ccl:stream-write-string ((stream cocoa-listener-output-stream) ~%
-                                    ~S &OPTIONAL start=~S end=~S)~%" string start end)
-  (format *trace-output* "~&(eq *current-process* *cocoa-event-process*) = ~S~%" (eq *current-process* *cocoa-event-process*))
   (if (eq *current-process* *cocoa-event-process*)
       (gui-write-string stream string start end)
       (when (dob-push-string stream string (or start 0) (or end (length string)))
@@ -122,8 +119,6 @@
 
 (defmethod ccl:stream-write-string ((s deferred-cocoa-listener-output-stream)
                                     string &OPTIONAL start end)
-  (format *trace-output* "~&ccl:stream-write-string ((s deferred-cocoa-listener-output-stream) ~%
-                                    ~S &OPTIONAL start=~S end=~S)~%" string start end)
   (with-autorelease-pool
     (stream-write-string (underlying-output-stream s) string start end)))
 

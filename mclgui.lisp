@@ -56,16 +56,6 @@
                                                   (gui::cocoa-listener-process-output-stream process))))
       ))
 
-
-;; (defun ccl::display-cocoa-listener-output-buffer (stream)
-;;   (with-slots (ccl::hemlock-view gui::buffer) stream
-;;     (unwind-protect
-;;          (gui::with-dob-output-data (gui::data ccl::buffer)
-;;            (when (and gui::data (> (fill-pointer gui::data) 0))
-;;              (gui::append-output ccl::hemlock-view gui::data)
-;;              (setf (fill-pointer gui::data) 0)))
-;;       (gui::dob-return-output-data gui::buffer))))
-
 ;; (com.informatimago.common-lisp.cesarum.stream:stream-input-stream  *terminal-io*)
 ;; (com.informatimago.common-lisp.cesarum.stream:stream-output-stream *terminal-io*)
 
@@ -133,15 +123,32 @@
                             output-stream))))))))
 
 
+
+
+(defun make-listener-io ()
+  #+cocoa
+  (flet ((input-stream  ()
+           (or (hemlock-ext:top-listener-input-stream)
+               (make-string-input-stream "")))
+         (output-stream ()
+           (or (hemlock-ext:top-listener-output-stream)
+               (make-broadcast-stream))))
+          (make-two-way-stream
+       (make-instance 'redirecting-character-input-stream
+                      :input-stream-function (function input-stream))
+       (make-instance 'redirecting-character-output-stream
+                      :output-stream-function  (function output-stream)))))
+
+
 (defvar *old-terminal-io* (make-synonym-stream '*terminal-io*))
 (defvar *application-io*  *old-terminal-io*)
 
 #+swank (defvar swank::*current-terminal-io* *old-terminal-io*)
 
-
 (defun initialize-streams ()
   (setf *old-terminal-io* *terminal-io*)
   (setf *application-io* (make-listener-io))
+  ;; (setf *application-io* *terminal-io*)
   #+swank (setf swank::*current-terminal-io* *application-io*)
   (let ((stream (make-synonym-stream '*terminal-io*)))
     (setf *terminal-io*       *application-io*
