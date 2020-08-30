@@ -195,19 +195,21 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
       ;; events may be processed in a different thread.
       #-(and) (unless *modal-dialog-on-top*
                 (update-menus :disable))
-      (unwind-protect
-           (with-handle (winh dialog)
-             (window-show dialog)
-             (setf *eventhook* eventhook)
-             (push (list dialog eventhook) *modal-dialog-on-top*)
-             [(unwrap *application*) runModalForWindow:winh])
-        (deletef *modal-dialog-on-top* dialog :key (function car))
-        #-(and) (unless *modal-dialog-on-top*
-                  (update-menus :enable *first-menustate*))
-        (setf *eventhook* old-eventhook)
-        (if close-on-exit
-            (window-close dialog)
-            (window-hide dialog)))
+      (warn "Not Implemented yet (~S ~S ~S ~S)" 'modal-dialog dialog close-on-exit event-hook)
+      (progn ;; ui::on-main-thread
+        (unwind-protect
+             (with-handle (winh dialog)
+               (window-show dialog)
+               (setf *eventhook* eventhook)
+               (push (list dialog eventhook) *modal-dialog-on-top*)
+               [(unwrap *application*) runModalForWindow:winh])
+          (deletef *modal-dialog-on-top* dialog :key (function car))
+          #-(and) (unless *modal-dialog-on-top*
+                    (update-menus :enable *first-menustate*))
+          (setf *eventhook* old-eventhook)
+          (if close-on-exit
+              (window-close dialog)
+              (window-hide dialog))))
       (results-from-modal-dialog))))
 
 
