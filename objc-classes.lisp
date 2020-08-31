@@ -258,10 +258,10 @@
 (defun mac-event-mask-to-ns-event-mask (mac-mask)
   (loop
     :with ns-mask = 0
-    :for (ns-event . mac-event) :in *event-map*
+    :for (nsevent . mac-event) :in *event-map*
     :do (when (and (/= null-event mac-event)
                    (plusp (logand (ash 1 mac-event) mac-mask)))
-          (setf ns-mask (logior ns-mask (ash 1 ns-event))))
+          (setf ns-mask (logior ns-mask (ash 1 nsevent))))
     :finally (return ns-mask)))
 
 
@@ -588,6 +588,7 @@ coordinates.
   body:
   #+debug-objc (format-trace "-[NSWindow setFrame:]")
   [self setFrame:rect display:YES]]
+
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   @[NSWindow

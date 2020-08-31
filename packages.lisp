@@ -126,6 +126,7 @@
                           "DEFMETHOD" "DEFGENERIC")
   (:import-from "COM.INFORMATIMAGO.OCLO"  "*NULL*" "NULLP")
   (:import-from "COM.INFORMATIMAGO.OBJCL" "YES" "NO")
+  #+ccl (:use "NS") #+ccl (:shadowing-import-from "CL" "NIL")
   #+ccl (:import-from "CCL"
                       "*APPLICATION*" "APPLICATION-INIT-FILE"
                       "APPLICATION" "LISP-DEVELOPMENT-SYSTEM"
