@@ -88,7 +88,7 @@
   (destructuring-bind (ff ms) *current-font-codes*
     (multiple-value-bind (descriptor mode) (font-descriptor-from-codes ff ms)
       (declare (ignore mode)) ; TODO: manage mode (:srcOr …)
-      (let ((attributes (font-attributes descriptor)))
+      (let ((attributes [(font-attributes descriptor) mutableCopy]))
         ;; [context setCompositingOperation:(mode-to-compositing-operation (pen-mode pen))]
         [attributes setObject:(unwrap (make-paragraph-style
                                        :alignment justification
