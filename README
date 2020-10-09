@@ -1,7 +1,6 @@
--*- mode:rst-mode -*-
+# -*- mode:org-mode -*-
 
-MCLGUI
-============================================================
+* MCLGUI
 
 This is an implementation of the MCL GUI (CLOS layer on MacOS
 Toolbox), targetting CCL on MacOSX.
@@ -11,11 +10,10 @@ Some parts of the code may come from the rmcl 5.1b2 sources (LGPL).
 This library is under the GPL3 license.
 
 
+** Features used by MCLGUI
 
-Features used by MCLGUI
-------------------------------------------------------------
 
-Features: ::
+Features:
 
     :test                    activate running tests upon loading.
 
@@ -25,33 +23,38 @@ Features: ::
     :debug-on-error          invokes the debugger when reporting a detected error.
 
 
-The following features produce a lot of trace output. ::
+The following features produce a lot of trace output.
 
-    :debug-application       activates debugging application class..
-    :debug-event             activates debugging events.
-    :debug-objc              activates debugging objc-classes.
-    :debug-focused-view      activates debugging of call-with-focused-view.
-    :debug-views-colors      activates debugging views (with colors).
-    :debug-views             activates debugging views.
-    :debug-wrapper           activates debugging wrappers.
+|---------------------+------------------------------------------------|
+| :debug-application  | activates debugging application class..        |
+| :debug-event        | activates debugging events.                    |
+| :debug-objc         | activates debugging objc-classes.              |
+| :debug-focused-view | activates debugging of call-with-focused-view. |
+| :debug-views-colors | activates debugging views (with colors).       |
+| :debug-views        | activates debugging views.                     |
+| :debug-wrapper      | activates debugging wrappers.                  |
+|---------------------+------------------------------------------------|
 
-
+#+BEGIN_CODE
     (pushnew :debug-objc     *features*)
     (pushnew :debug-graphics *features*)
     (pushnew :debug-on-error *features*)
+#+END_CODE
 
 
-Systems
-------------------------------------------------------------
+** Systems
 
-Systems: ::
+Systems:
 
+#+BEGIN_CODE
     :mclgui
     :mclgui-test
     :mclgui-examples
+#+END_CODE
 
-Commands: ::
+Commands:
 
+#+BEGIN_CODE
     ;; Loads and run the batch tests:
     (ql:quickload :mclgui-test)
     (asdf:oos 'asdf:test-op :mclgui-test)
@@ -59,5 +62,4 @@ Commands: ::
     ;; Loads and open the example windows:
     (ql:quickload :mclgui-examples)
     (asdf:oos 'asdf:test-op :mclgui-examples)
-
-
+#+END_CODE
