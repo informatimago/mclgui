@@ -84,27 +84,28 @@ WINDOW:         A window.
   (or (find nswindow *window-list* :key (function handle))
       (make-instance 'unknown-window :handle nswindow)))
 
-(defmethod wrap ((nswindow gui::hemlock-listener-frame))
-  ;; (format-trace 'wrap nswindow)
-  (or (find nswindow *window-list* :key (function handle))
-      (make-instance 'hemlock-listener-frame :handle nswindow)))
-
 (defmethod wrap ((nswindow gui::hemlock-frame))
   ;; (format-trace 'wrap nswindow)
   (or (find nswindow *window-list* :key (function handle))
       (make-instance 'hemlock-frame :handle nswindow)))
 
+(defmethod wrap ((nswindow gui::hemlock-listener-frame))
+  ;; (format-trace 'wrap nswindow)
+  (or (find nswindow *window-list* :key (function handle))
+      (make-instance 'hemlock-listener-frame :handle nswindow)))
+
 (defgeneric wrap-only-my-windows (nswindow)
+  (:method   ((window window))
+    window)
   (:method   ((nswindow ns:ns-window))
-    (find nswindow *window-list* :key (function handle)))
-  (:method   ((nswindow gui::hemlock-listener-frame))
-    ;; (format-trace 'wrap nswindow)
-    (or (find nswindow *window-list* :key (function handle))
-        (make-instance 'hemlock-listener-frame :handle nswindow)))
+    ;; (find nswindow *window-list* :key (function handle))
+    nil)
   (:method   ((nswindow gui::hemlock-frame))
     ;; (format-trace 'wrap nswindow)
-    (or (find nswindow *window-list* :key (function handle))
-        (make-instance 'hemlock-frame :handle nswindow))))
+    (wrap nswindow))
+  (:method   ((nswindow gui::hemlock-listener-frame))
+    ;; (format-trace 'wrap nswindow)
+    (wrap nswindow)))
 
 
 ;;;---------------------------------------------------------------------
