@@ -85,7 +85,8 @@ RETURN: A form performing BODY on the main thread.
                           (application-eval-enqueue *application*
                                                     (lambda ()
                                                       (declaim (stepper disable))
-                                                      (mailbox-post ,vmb (ignore-errors ,@body))))
+                                                      (mailbox-post ,vmb
+                                                                    (reporting-errors ,@body))))
                           (mailbox-collect ,vmb)))
                      `(application-eval-enqueue *application* (lambda ()
                                                                 (declaim (stepper disable))
