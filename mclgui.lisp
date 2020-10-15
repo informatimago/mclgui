@@ -159,6 +159,19 @@
           *query-io*          stream
           *debug-io*          stream)))
 
+;; When running with swank:
+;;    *old-terminal-io* is the *inferior-lisp* buffer.
+;;    *application-io*  is the Clozure CL Listener window.
+;;    *terminal-io*     is the slime-repl buffer.
+
+#+DEBUG
+(progn
+  (write-line "This is swank::*current-terminal-io*" swank::*current-terminal-io*)
+  (write-line "This is *old-terminal-io*" *old-terminal-io*)
+  (write-line "This is *terminal-io*" *terminal-io*)
+  (write-line "This is *application-io*" *application-io*)
+  (values))
+#+DEBUG (inspect (hemlock-ext:top-listener-output-stream))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Initialize the screen.
