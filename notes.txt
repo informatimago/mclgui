@@ -1,12 +1,8 @@
-;; -*- mode:rst -*-
+# -*- mode:org -*-
+* Mclgui Implementation Notes
+** MCL GUI Mechanisms
 
-###########################
-Mclgui Implementation Notes
-###########################
-
-
-MCL GUI Mechanisms
-==================
+#+BEGIN_EXAMPLE
 
 set-view-position  -> invalidate-view
 set-view-size      -> invalidate-view
@@ -29,10 +25,9 @@ validate-corners   => erases the rectangle defined by the corners
 
 validate-region    -> ValidRgn
 
+#+END_EXAMPLE
 
-
-Implementation Mechanisms
-=========================
+** Implementation Mechanisms
 
 Actions can be initiated from two sides:
 
@@ -58,11 +53,7 @@ But the same principle applies: the lower layer calls the upper layers
 and the upper layer calls the lower layer, with care to avoid an
 infinite loop.
 
-
-
-
-Window Closing
---------------
+*** Window Closing
 
 - `-[NSWindow performClose:]` calls `-[MclguiWindow windowShouldClose:]`.
 
@@ -77,10 +68,7 @@ Window Closing
 
 - `-[MclguiWindow doClose]` calls `-[NSWindow close]`.
 
-
-
-Window Zooming
---------------
+*** Window Zooming
 
 - `-[MclguiWindow windowShouldZoom:toFrame:]`  returns `YES` iff
   `window-type` is `:document-with-zoom`.
@@ -91,9 +79,7 @@ Window Zooming
 
 - `window-do-zoom` calls `window-size-parts`.
 
-
-Window Moving
--------------
+*** Window Moving
 
 - if `*window-moving*` is `nil` then `(set-view-position window)` calls
   `-[MclguiWindow setFrame:]` which calls `-[NSWindow setFrameOrigin:]`
@@ -107,10 +93,7 @@ Window Moving
 -  `window-grow-event-handler` binds `*window-growing*` to true and
    calls `set-view-position`.
 
-
-
-Window Resizing (Growing)
--------------------------
+*** Window Resizing (Growing)
 
 - if `*window-growing*` is `nil` then `(set-view-size window)` calls
   `-[MclguiWindow setFrame:]` which calls `-[NSWindow setFrame:display:]`
@@ -124,11 +107,7 @@ Window Resizing (Growing)
 -  `window-grow-event-handler` binds `*window-growing*` to true and
    calls `set-view-size`.
 
-
-
-
-Window Activating
------------------
+*** Window Activating
 
 - `-[MclguiWindow becomeMainWindow]` calls `view-activate-event-handler`
 
@@ -138,13 +117,60 @@ Window Activating
 
 - `window-select-event-handler`
 
+*** Event Processing
 
+|------------------------------+------------------------------------------------------------------------------|
+| ccl threads:                 |                                                                              |
+|------------------------------+------------------------------------------------------------------------------|
+|                              | #<process housekeeping(17) [Sleep] #x30200412178D>                           |
+|                              | #<process repl-thread(16) [Active] #x302001F5FD6D>                           |
+|                              | #<process auto-flush-thread(15) [Sleep] #x302001F6056D>                      |
+|                              | #<process reader-thread(7) [Active] #x302001E261ED>                          |
+|                              | #<process control-thread(6) [semaphore wait] #x302001E2431D>                 |
+|------------------------------+------------------------------------------------------------------------------|
+| swank threads:               |                                                                              |
+|------------------------------+------------------------------------------------------------------------------|
+|                              | #<process Swank 50423(5) [Active] #x302001E2289D>                            |
+|                              | #<process Swank Sentinel(4) [semaphore wait] #x302001E22FCD>                 |
+|                              | #<process swank-indentation-cache-thread(8) [semaphore wait] #x302001E25ADD> |
+|------------------------------+------------------------------------------------------------------------------|
+|                              | #<tty-listener listener(1) [Active] #x3020003B731D>                          |
+|------------------------------+------------------------------------------------------------------------------|
+| mclgui threads:              |                                                                              |
+|------------------------------+------------------------------------------------------------------------------|
+|                              |                                                                              |
+| Cocoa AppKit main thread     | #<appkit-process Initial(0) [Reset] #x3020000B6B4D>                          |
+|                              |                                                                              |
+| Clozure CL Listener          | #<cocoa-listener-process Listener(18) [Toplevel Read] #x302004176CCD>        |
+|                              |                                                                              |
+| ui:application run-loop-task | #<process run loop task(43) [Sleep] #x302005EB128D>                          |
+|                              | (event-dispatch)                                                             |
+|------------------------------+------------------------------------------------------------------------------|
 
+objc-class.lisp NSReceiver methods and others catch Cocoa events, convert them to mclgui events and post them.
+ui:application run-loop-task dequeues the events and dispatch them to mclgui objects.
 
-Message Mapping
-===============
+** CCL cocoa-listener
 
-::
+*** class cocoa-listener-output-stream
+
+Uses a double-output-buffer to queue the data to be written to the listener window.
+
+*** class double-output-buffer
+
+- data
+- output-data
+- other-data
+- data-lock
+- output-data-lock
+- semaphore
+
+output-data-lock  locks  output-data other-data
+data-lock         locks  output-data other-data data
+
+** Message Mapping
+
+#+BEGIN_EXAMPLE
 
     (setf (slot-value window 'view-position))                 <-- (windowDidMove:(:id)nsnotification)
     (setf (slot-value window 'view-size))                     <-- (windowDidResize:(:id)nsnotification)
@@ -173,30 +199,23 @@ Message Mapping
     (defgeneric window-do-first-click (window))               no corresponding feature (not used in patchwork).
     (defgeneric window-draw-grow-icon (window))               no corresponding feature (not used in patchwork).
 
+#+END_EXAMPLE
 
-
-
-Other applications using MCL GUI
-================================
+** Other applications using MCL GUI
 
 OM-5.2.1
 
-Error Messages
-==============
+** Error Messages
 
-::
+#+BEGIN_EXAMPLE
 
    (step-notrace ui::object-identity ui::call-print-parseable-object)
 
+#+END_EXAMPLEp
 
-References
-================================
+** References
 
 `http://www.kreativekorp.com/charset/unicode.php?pua=appl&block=F700`_
 
 
-.. comment
-                    -----------------------------
-                            -------------
-                                  -
-                                  .
+# The end
