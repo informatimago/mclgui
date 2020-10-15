@@ -89,10 +89,10 @@
 
 
 (defun choose-file-dialog (&key
-                           (directory *default-directory*)
-                           file-types
-                           (button-string "Open")
-                           (prompt "Open a file"))
+                             (directory *default-directory*)
+                             file-types
+                             (button-string "Open")
+                             (prompt "Open a file"))
   "
 The CHOOSE-FILE-DIALOG function displays the standard Macintosh
 SFGetFile dialog box, allowing you to select a file for reading.
@@ -153,9 +153,9 @@ PROMPT:         A string, displayed as title of the choose file dialog.
 
 
 (defun choose-new-file-dialog (&key
-                               (directory *default-directory*)
-                               (prompt "Save a new file")
-                               (button-string "Save file"))
+                                 (directory *default-directory*)
+                                 (prompt "Save a new file")
+                                 (button-string "Save file"))
   "
 The CHOOSE-NEW-FILE-dialog function displays the standard Macintosh
 SFPutFile dialog box, allowing you to specify a destination file for
@@ -200,8 +200,8 @@ PROMPT:         A string, displayed as title of the choose new file dialog.
 
 
 (defun choose-directory-dialog (&key
-                               (directory *default-directory*)
-                               (prompt "Select a directory"))
+                                  (directory *default-directory*)
+                                  (prompt "Select a directory"))
   "
 The function CHOOSE-DIRECTORY-DIALOG displays a variation of the
 standard Macintosh SfGetFile dialog box.  Unless canceled, it returns
@@ -275,7 +275,7 @@ CHOOSE-DIRECTORY-DIALOG dialog box to pathname.  It returns pathname.
   " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~")
 
 (defparameter *macroman-characters*
-   "ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄¤‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ")
+  "ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄¤‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ")
 
 (defun macroman-char (code)
   (cond
