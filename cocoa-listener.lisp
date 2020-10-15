@@ -5,40 +5,137 @@
 
 (in-package "GUI")
 
+;;;---------------------------------------------------------------------
+;;; double-output-buffer
+;;;---------------------------------------------------------------------
 
+(defparameter $listener-flush-limit 4095)
 
-;; Printing from the GUI thread uses a different mechanism:
-;; all the output is buffered, and it's written directly to the hemlock view upon finish-output.
-;; The dob mechanism shall ignore attempts from the GUI thread.
+(defclass double-output-buffer ()
+  ((flush-limit :initarg :flush-limit :accessor dob-flush-limit)
+   (data :initarg :data :accessor dob-data)
+   (other-data :initform nil :accessor dob-other-data)
+   (output-data :initarg :output-data :accessor dob-output-data)
+   (data-lock :initform (ccl::make-recursive-lock) :accessor dob-data-lock)
+   (output-data-lock :initform (ccl::make-recursive-lock) :accessor dob-output-data-lock)
+   (semaphore :initform (make-semaphore) :accessor dob-semaphore)))
 
+(defun make-double-output-buffer (&optional (flush-limit $listener-flush-limit))
+  (check-type flush-limit (integer 0))
+  (flet ((make-buffer ()
+	       (make-array (1+ flush-limit)
+		               :adjustable t
+		               :fill-pointer 0
+		               :element-type 'character)))
+    (let* ((data (make-buffer))
+	       (output-data (make-buffer))
+	       (res (make-instance 'double-output-buffer
+			                   :flush-limit flush-limit
+			                   :data data
+			                   :output-data output-data)))
+      (dob-return-output-data res)
+      res)))
 
-(defclass cocoa-listener-output-stream (fundamental-character-output-stream)
-  ((buffer :initform (make-double-output-buffer $listener-flush-limit))
-   (gui-buffer :initform nil)  ; lazy initialization
-   (hemlock-view :initarg :hemlock-view)))
+(defmacro with-dob-data ((data dob) &body body)
+  (let ((thunk (gensym "THUNK")))
+    `(flet ((,thunk (,data)
+	          ,@body))
+       (declare (dynamic-extent #',thunk))
+       (call-with-dob-data #',thunk ,dob))))
 
-(defmethod stream-element-type ((stream cocoa-listener-output-stream))
-  (with-slots (buffer) stream
-    (array-element-type (dob-data buffer))))
+;; The GUI thread isn't allowed to print on a listener output-stream,
+;; so ignore all attempts.
+(defun call-with-dob-data (thunk dob)
+  (unless (eq *current-process* *cocoa-event-process*)
+    (with-lock-grabbed ((dob-data-lock dob))
+      (funcall thunk (dob-data dob)))))
 
+(defmacro without-dob-data (dob &body body)
+  (let ((vdob (gensym)))
+    `(let ((,vdob ,dob))
+       (unwind-protect
+            (progn
+              (release-lock (dob-data-lock ,vdob))
+              ,@body)
+         (grab-lock  (dob-data-lock ,vdob))))))
 
+(defmacro with-dob-output-data ((data dob) &body body)
+  (let ((thunk (gensym "THUNK")))
+    `(flet ((,thunk (,data)
+	          ,@body))
+       (declare (dynamic-extent #',thunk))
+       (call-with-dob-output-data #',thunk ,dob))))
 
+(defun call-with-dob-output-data (thunk dob)
+  (with-lock-grabbed ((dob-output-data-lock dob))
+    (funcall thunk (dob-output-data dob))))
 
-(defun display-cocoa-listener-output-buffer (stream)
-  (with-slots (hemlock-view buffer gui-buffer) stream
-    (when (eq *current-process* *cocoa-event-process*)
-      (when (and gui-buffer (plusp (fill-pointer gui-buffer)))
-        (let ((data nil))
-          (rotatef data gui-buffer)
-          (append-output hemlock-view data)))
-      (unwind-protect
-           (with-dob-output-data (data buffer)
-             (when (and data (plusp (fill-pointer data)))
-               (append-output hemlock-view data)
-               (setf (fill-pointer data) 0)))
-        (dob-return-output-data buffer)))))
+(defmacro without-dob-output-data (dob &body body)
+  (let ((vdob (gensym)))
+    `(let ((,vdob ,dob))
+       (unwind-protect
+            (progn
+              (release-lock (dob-output-data-lock ,vdob))
+              ,@body)
+         (grab-lock  (dob-output-data-lock ,vdob))))))
 
+;; Should be called only in the GUI thread, except when
+;; initializing a new double-output-buffer instance (or
+;; debugging the semaphore wait code).
+(defun dob-return-output-data (dob)
+  (with-dob-output-data (output-data dob)
+    (when output-data
+      (setf (fill-pointer output-data) 0)
+      (setf (dob-output-data dob) nil
+	        (dob-other-data dob) output-data)
+      (signal-semaphore (dob-semaphore dob))
+      output-data)))
 
+;; Must be called inside WITH-DOB-DATA
+(defun dob-queue-output-data (dob &optional force)
+  (unless (and (not force) (eql 0 (length (dob-data dob))))
+    (wait-on-semaphore (dob-semaphore dob))
+    (when (dob-other-data dob)
+      (setf (dob-output-data dob) (dob-data dob)
+	        (dob-data dob) (dob-other-data dob)
+	        (dob-other-data dob) nil)
+      t)))
+
+;; True return means we overflowed the current buffer
+(defun dob-push-char (dob char)
+  (with-dob-data (data dob)
+    (when (>= (vector-push-extend char data) (dob-flush-limit dob))
+      (dob-queue-output-data dob t)
+      t)))
+
+(defun dob-push-string (stream string start end)
+  ;; Write as much of the string as will fit in the buffer.
+  ;; Return the new start if some remain to be written,
+  ;; T when we overflowed the current buffer,
+  ;; NIL otherwise.
+  (when (< start end)
+    (with-slots (buffer) stream
+      (let ((dob buffer))
+        (with-dob-data (data dob)
+          (let* ((start1  (length data))
+                 (end1    (+ start1 (- end start))))
+            (if (< end1 (array-dimension data 0))
+                (progn ;; we can queue everything.
+                  (setf (fill-pointer data) end1)
+                  (replace data string :start1 start1 :start2 start :end2 end)
+                  (when (>= (length data) (dob-flush-limit dob))
+                    (dob-queue-output-data dob t)
+                    t))
+                (let ((end1       (1- (array-dimension data 0)))
+                      (new-end    (+ (- end1 start1) start)))
+                  (setf (fill-pointer data) end1)
+                  (replace data string :start1 start1 :start2 start :end2 new-end)
+                  (dob-queue-output-data dob t)
+                  new-end))))))))
+
+;;;---------------------------------------------------------------------
+;;; gui-buffer
+;;;---------------------------------------------------------------------
 
 (defun gui-ensure-buffer (stream)
   (with-slots (gui-buffer) stream
@@ -79,48 +176,61 @@
   (let ((buffer (gui-ensure-buffer stream)))
     (setf (fill-pointer buffer) 0)0))
 
+;;;---------------------------------------------------------------------
 
 
 
-(defun dob-push-string (stream string start end)
-  (loop
-    (with-slots (buffer) stream
-      (let ((dob buffer))
-        (with-dob-data (data dob)
-          (let* ((start1     (length data))
-                 (new-length (+ start1 (- end start))))
-            (if (< new-length (array-dimension data 0))
-                (progn (setf (fill-pointer data) new-length)
-                       (replace data string :start1 start1 :start2 start :end2 end)
-                       (return-from dob-push-string
-                         (when (>= (length data) (dob-flush-limit dob))
-                           (dob-queue-output-data dob t)
-                           t)))
-                (let ((new-length (1- (array-dimension data 0)))
-                      (new-end    (- (+ new-length start) start1)))
-                  (setf (fill-pointer data) new-length)
-                  (replace data string :start1 start1 :start2 start :end2 new-end)
-                  (setf start new-end)
-                  (dob-queue-output-data dob t)))))))))
+;; Printing from the GUI thread uses a different mechanism:
+;; all the output is buffered, and it's written directly to the hemlock view upon finish-output.
+;; The dob mechanism shall ignore attempts from the GUI thread.
+
+
+(defclass cocoa-listener-output-stream (fundamental-character-output-stream)
+  ((buffer :initform (make-double-output-buffer $listener-flush-limit))
+   (gui-buffer :initform nil)          ; lazy initialization
+   (hemlock-view :initarg :hemlock-view)))
+
+(defmethod stream-element-type ((stream cocoa-listener-output-stream))
+  (with-slots (buffer) stream
+    (array-element-type (dob-data buffer))))
+
+
+(defun display-cocoa-listener-output-buffer (stream)
+  (with-slots (hemlock-view buffer gui-buffer) stream
+    (when (eq *current-process* *cocoa-event-process*)
+      (when (and gui-buffer (plusp (fill-pointer gui-buffer)))
+        (let ((data nil))
+          (rotatef data gui-buffer)
+          (append-output hemlock-view data)))
+      (unwind-protect
+	       (with-dob-output-data (output-data buffer)
+	         (when (and output-data (> (fill-pointer output-data) 0))
+	           (append-output hemlock-view output-data)
+	           (setf (fill-pointer output-data) 0)))
+        (dob-return-output-data buffer)))))
 
 (defmethod ccl:stream-write-char ((stream cocoa-listener-output-stream) char)
   (if (eq *current-process* *cocoa-event-process*)
       (gui-write-char stream char)
       (with-slots (buffer) stream
         (when (dob-push-char buffer char)
-          (queue-for-gui
-           (lambda () (display-cocoa-listener-output-buffer stream)))))))
+          (queue-for-gui (lambda () (display-cocoa-listener-output-buffer stream)))))))
 
 (defmethod ccl:stream-write-string ((stream cocoa-listener-output-stream) string &OPTIONAL start end)
   (if (eq *current-process* *cocoa-event-process*)
       (gui-write-string stream string start end)
-      (when (dob-push-string stream string (or start 0) (or end (length string)))
-        (queue-for-gui (lambda () (display-cocoa-listener-output-buffer stream))))))
+      (let ((start (or start 0))
+            (end   (or end (length string))))
+        (loop
+          :for remain := (dob-push-string stream string start end)
+          :while remain
+          :do (queue-for-gui (lambda () (display-cocoa-listener-output-buffer stream)))
+              (setf start remain)))))
 
 (defmethod ccl:stream-write-string ((s deferred-cocoa-listener-output-stream)
                                     string &OPTIONAL start end)
   (with-autorelease-pool
-    (stream-write-string (underlying-output-stream s) string start end)))
+    (ccl:stream-write-string (underlying-output-stream s) string start end)))
 
 
 
@@ -164,9 +274,9 @@
       (gui-stream-force-output stream)
       (with-slots (buffer) stream
         (with-dob-data (data buffer)
-          data
+          (declare (ignore data))
           (when (dob-queue-output-data buffer)
-            (queue-for-gui #'(lambda () (stream-force-output stream))))))))
+            (queue-for-gui (lambda () (display-cocoa-listener-output-buffer stream))))))))
 
 (defmethod ccl:stream-clear-output ((stream cocoa-listener-output-stream))
   (if (eq *current-process* *cocoa-event-process*)
