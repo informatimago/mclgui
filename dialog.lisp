@@ -195,7 +195,7 @@ EVENTHOOK:      A hook.  The function modal-dialog binds *EVENTHOOK*
       ;; events may be processed in a different thread.
       #-(and) (unless *modal-dialog-on-top*
                 (update-menus :disable))
-      (warn "Not Implemented yet (~S ~S ~S ~S)" 'modal-dialog dialog close-on-exit event-hook)
+      (warn "Not Implemented yet (~S ~S ~S ~S)" 'modal-dialog dialog close-on-exit eventhook)
       (progn ;; ui::on-main-thread
         (unwind-protect
              (with-handle (winh dialog)
@@ -501,7 +501,7 @@ STRING:         A string against which to compare the text of the
 
 
 (defun draw-theme-text-box (text rect &optional (text-justification :center) truncwhere (active-p t))
-  (declare (ignore active-p truncwher text-justification rect))
+  (declare (ignore active-p truncwhere text-justification rect))
   ;; could add a truncate option and use TruncateThemeText
   (let ((start 0)
         (end (length text)))
