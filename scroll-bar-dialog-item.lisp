@@ -1067,7 +1067,7 @@ NEW-VALUE:      The new width of item.
     (view-window scrollee)))
 
 (defun track-and-draw (container function pos direction delta min-pos max-pos)
-  (declare (ignorable track-and-draw container function pos direction delta min-pos max-pos))
+  (declare (ignorable container function pos direction delta min-pos max-pos))
   (niy track-and-draw container function pos direction delta min-pos max-pos)
   #-(and)
   (let* ((mouse-pos (view-mouse-position container))
@@ -1175,7 +1175,7 @@ NEW-VALUE:      The new width of item.
 
 (defgeneric draw-pane-splitter-outline (scrollee scroll-bar pos min max direction)
   (:method (scrollee scroll-bar pos min max direction)
-    (declare (ignorable draw-pane-splitter-outline scrollee scroll-bar pos min max direction))
+    (declare (ignorable scrollee scroll-bar pos min max direction))
     (niy draw-pane-splitter-outline scrollee scroll-bar pos min max direction)
     #-(and)
     (if (eql direction :horizontal)
@@ -1257,7 +1257,7 @@ NEW-VALUE:      The new width of item.
 (defmethod scroll-wheel-handler ((w window) delta direction wherep)
   "Default handler for Fred windows and most everything else. Now makes
    both horizontal (shift-wheel) and vertical scrolling in Fred windows instantaneous."
-  (declare (ignorable scroll-wheel-handler w delta direction wherep))
+  (declare (ignorable w delta direction wherep))
   (niy scroll-wheel-handler w delta direction wherep)
   #-(and)
   (let ((res #$eventNotHandledErr))
