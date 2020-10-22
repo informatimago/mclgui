@@ -1238,7 +1238,7 @@ RETURN:         The list of MENUs collected.
 
 #+(and ccl cocoa)
 (defun cocoa-menu-initializedp ()
-  (< 1 [[[NSApplication sharedApplication]mainMenu] numberOfItems]))
+  (< 1 [[[NSApplication sharedApplication] mainMenu] numberOfItems]))
 
 (defun initialize/menu ()
   #+(and ccl cocoa) (unless (cocoa-menu-initializedp)
