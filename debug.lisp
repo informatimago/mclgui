@@ -108,7 +108,8 @@
   `(let ((trace-output *trace-output*))
      (let ((*trace-output* *standard-output*))
        (time (let ((*trace-output* trace-output))
-               ,@body)))))
+               ,@body))
+       (finish-output *trace-output*))))
 
 
 (defun function-address (function)
