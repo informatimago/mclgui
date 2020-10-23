@@ -225,7 +225,8 @@
           :for remain := (dob-push-string stream string start end)
           :while remain
           :do (queue-for-gui (lambda () (display-cocoa-listener-output-buffer stream)))
-              (setf start remain)))))
+              (when (integerp remain)
+                (setf start remain))))))
 
 (defmethod ccl:stream-write-string ((s deferred-cocoa-listener-output-stream)
                                     string &OPTIONAL start end)
