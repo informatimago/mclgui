@@ -1,6 +1,14 @@
 (in-package :ui)
 (mclgui.readtable:enable-objcl+ccl-reader-macros)
 (enable-sharp-at-reader-macro)
+(values [NSApplication sharedApplication]
+        [NSBundle mainBundle])
+
+[[NApplication sharedApplication] orderFrontStandardAboutPanel:cffi-sys:null-pointer]
+
+objc:null
+(apropos "NULL")
+                                          cffi-sys:null-pointer
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (error "Do not load ~S." (or *compile-file-pathname* *load-pathname*)))
