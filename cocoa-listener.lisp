@@ -9,7 +9,7 @@
 ;;; double-output-buffer
 ;;;---------------------------------------------------------------------
 
-(defparameter $listener-flush-limit 4095)
+(defparameter $listener-flush-limit 8131)
 
 (defclass double-output-buffer ()
   ((flush-limit :initarg :flush-limit :accessor dob-flush-limit)
@@ -117,19 +117,19 @@
     (with-slots (buffer) stream
       (let ((dob buffer))
         (with-dob-data (data dob)
-          (let* ((start1  (length data))
-                 (end1    (+ start1 (- end start))))
-            (if (< end1 (array-dimension data 0))
+          (let* ((startd  (fill-pointer data))
+                 (endd    (+ startd (- end start))))
+            (if (< endd (array-dimension data 0))
                 (progn ;; we can queue everything.
-                  (setf (fill-pointer data) end1)
-                  (replace data string :start1 start1 :start2 start :end2 end)
-                  (when (>= (length data) (dob-flush-limit dob))
+                  (setf (fill-pointer data) endd)
+                  (replace data string :start1 startd :end1 endd :start2 start)
+                  (when (>= (fill-pointer data) (dob-flush-limit dob))
                     (dob-queue-output-data dob t)
                     t))
-                (let ((end1       (1- (array-dimension data 0)))
-                      (new-end    (+ (- end1 start1) start)))
-                  (setf (fill-pointer data) end1)
-                  (replace data string :start1 start1 :start2 start :end2 new-end)
+                ;; else we cannot queue everything, so we fill it up, and return the remaining start.
+                (let ((endd       (1- (array-dimension data 0))))
+                  (setf (fill-pointer data) endd)
+                  (replace data string :start1 startd :end1 endd :start2 start)
                   (dob-queue-output-data dob t)
                   new-end))))))))
 
