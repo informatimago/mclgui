@@ -8,6 +8,10 @@
 ;;;;
 ;;;;    MAILBOX: to send one message between two threads.
 ;;;;
+;;;;    The consummer may call MAILBOX-COLLECT before or after the
+;;;;    producer calls MAILBOX-POST.   If it calls before, then it
+;;;;    waits until the producer notifies the mailbox is full.
+;;;;
 ;;;;AUTHORS
 ;;;;    <PJB> Pascal J. Bourguignon <pjb@informatimago.com>
 ;;;;MODIFICATIONS
@@ -35,9 +39,6 @@
 (declaim (declaration stepper))
 
 
-;;; The consummer may call MAILBOX-COLLECT before or after the
-;;; producer calls MAILBOX-POST.   If it calls before, then it waits
-;;; until the producer notifies the mailbox is full.
 
 (defstruct (mailbox
             (:conc-name %mailbox-)
