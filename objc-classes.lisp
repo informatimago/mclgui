@@ -34,7 +34,8 @@
 (mclgui.readtable:enable-objcl+ccl-reader-macros)
 (in-package "MCLGUI")
 
-
+(eval-when (:compile-toplevel :load-toplevel :execute)
+ (ccl::define-classname-translation "NSApplication" ns:+ns-application))
 
 ;;; MCLGUI use the coordinates system of the Macintosh OS,
 ;;; that is, origin is at the top-left corner, and Y axis goes downward.

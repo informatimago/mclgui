@@ -33,7 +33,6 @@
 ;;;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;;**************************************************************************
 
-
 (defpackage "MCLGUI.READTABLE"
   (:use "COMMON-LISP")
   (:export "ENABLE-OBJCL+CCL-READER-MACROS"
@@ -106,6 +105,7 @@
 
 
 (defpackage "MCLGUI"
+  (:nicknames "UI")
   ;; (:use "COMMON-LISP-STEPPER")
   (:use "COMMON-LISP")
   (:use "COM.INFORMATIMAGO.COMMON-LISP.CESARUM.SIMPLE-TEST")
@@ -118,7 +118,8 @@
         "COM.INFORMATIMAGO.CLEXT.FILTER-STREAM"
         "COM.INFORMATIMAGO.CLEXT.REDIRECTING-STREAM")
   (:use "MCLGUI.MUTEX" "MCLGUI.DEBUGGING" "MCLGUI.SYSTEM" "MCLGUI.CIRCULAR" "MCLGUI.WRAPPER")
-  (:nicknames "UI")
+  (:shadowing-import-from "SPLIT-SEQUENCE"
+                          "SPLIT-SEQUENCE" "SPLIT-SEQUENCE-IF")
   (:shadowing-import-from "MCLGUI.DEBUGGING"
                           "OBJECT-IDENTITY")
   (:shadowing-import-from "CLOSER-MOP"
